@@ -1,0 +1,44 @@
+# The install page on the host's pages: the folder builder/ as it stands on main, served over HTTPS, which the page's
+# USB MIDI and folder access need (builder/README.md, "On a host's pages"). It is published once the checks have
+# passed on main, or by hand. The host's pages are switched on once in the repository's settings, with this workflow
+# as their source.
+name: pages
+
+on:
+  workflow_run:
+    workflows: [checks]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/configure-pages@v5
+
+      - name: The folder served
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: builder
+
+      - id: publish
+        uses: actions/deploy-pages@v4

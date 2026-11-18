@@ -1,0 +1,45 @@
+{
+  "about": "What tools/build_all.py builds. The loader, our small piece inside the firmware file, is linked by itself from its sources; its binary is the file the installer's builder adds to an owner's firmware file, named under `blob`. The packs are built from their recipes in packs/: the base (base.pack), which every unit with open-field needs, and the four features. Each example is a pack in a folder of its own, with its own recipe, built into out/examples/; the one that changes places of the firmware has a profile of its own. The sizes and hashes of the results are kept in packs/built.json.",
+  "profile": "profiles/op1f-1.7.0.json",
+  "loader": {
+    "name": "build_m4_loader",
+    "linker": "linker/op1f-1.7.0-base.ld",
+    "sources": [
+      "module/build_j_boot.s",
+      "module/build_j_base.s",
+      "module/build_m4_loader.cpp",
+      "module/build_k6_base_disk.s",
+      "module/build_m1_loader_disk.cpp",
+      "module/build_l1_base_table.s",
+      "module/build_j5b_base.s",
+      "module/build_l1_base_text_table.s"
+    ]
+  },
+  "packs": [
+    "8 tracks",
+    "base",
+    "fx train",
+    "lfo",
+    "sidechain"
+  ],
+  "blob": "loader-1.7.0-v3.bin",
+  "examples": [
+    {
+      "name": "list",
+      "recipe": "examples/list/recipe.json"
+    },
+    {
+      "name": "trampolines",
+      "recipe": "examples/trampolines/recipe.json",
+      "profile": "examples/trampolines/profile.json"
+    },
+    {
+      "name": "wink",
+      "recipe": "examples/wink/recipe.json"
+    },
+    {
+      "name": "yoyo",
+      "recipe": "examples/yoyo/recipe.json"
+    }
+  ]
+}

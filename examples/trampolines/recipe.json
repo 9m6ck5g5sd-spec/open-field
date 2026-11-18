@@ -1,0 +1,20 @@
+{
+  "about": "The example pack of docs/first-pack.md: two small routines of ours at the first instructions of two functions of the firmware that the start-up calls once each, and one line in the log. Each routine goes on into the firmware's function through a trampoline the base makes in the pack's zeroed data. It needs no other pack and no pack needs it. tools/build_all.py builds it into out/examples/. It is no feature: it shows what a pack is made of.",
+  "name": "trampolines",
+  "version": 1,
+  "interface": 1,
+  "build": "example_trampolines",
+  "sources": [
+    "examples/trampolines/trampolines.s",
+    "examples/trampolines/trampolines.cpp",
+    "examples/trampolines/trampolines_table.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

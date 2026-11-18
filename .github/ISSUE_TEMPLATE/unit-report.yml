@@ -1,0 +1,76 @@
+name: A report from a unit
+description: What happened on your OP-1 Field with open-field on it, or during an install.
+title: "On a unit: "
+labels: ["from a unit"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. One rule first: **never attach a log file of the unit, a firmware file, an update package or a copy of the unit's disk**, and no picture made from the unit's own files. This repository and its issues hold nothing of the firmware (`CONTRIBUTING.md`). Say in your own words what you did and what the screen showed. Quoting one line of the screen or of the log is fine.
+
+  - type: input
+    id: os
+    attributes:
+      label: OS version
+      description: The version on the start screen, before the words open-field. open-field is for 1.7.0 only.
+      placeholder: "1.7.0"
+    validations:
+      required: true
+
+  - type: input
+    id: bootloader
+    attributes:
+      label: Bootloader version
+      description: Step 1 of the install page shows it.
+      placeholder: "1000.1.1"
+    validations:
+      required: true
+
+  - type: input
+    id: start-screen
+    attributes:
+      label: What the start screen reads
+      description: All of the line under the version, as the screen shows it.
+      placeholder: "1.7.0 - open-field 0.3"
+    validations:
+      required: true
+
+  - type: textarea
+    id: packs
+    attributes:
+      label: The pack files on the unit
+      description: The names in the folder packs, as the disk mode shows them, and where each came from (the install page, a build of this repository, someone who shared it).
+      placeholder: |
+        base.pack (the install page)
+        8 tracks.pack (built from this repository)
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: What you did
+      description: Step by step, in the unit's own terms - the keys you pressed, the knobs you turned, what the screen showed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+
+  - type: input
+    id: computer
+    attributes:
+      label: For an install - your computer and browser
+      placeholder: "Windows 11, Edge"
+
+  - type: checkboxes
+    id: nothing-of-the-firmware
+    attributes:
+      label: Before you send it
+      options:
+        - label: This report holds no log file, no firmware file, no update package and no copy of the unit's disk.
+          required: true

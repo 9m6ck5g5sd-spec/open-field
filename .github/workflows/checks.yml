@@ -1,0 +1,73 @@
+# The checks a host runs on every pull request and every change to main, with no firmware: the build held to
+# packs/built.json, the tree's own tests, the install page's three checks, and the part of the check before a commit
+# that needs no firmware.
+#
+# A green run is not the whole check. The check for anything of the firmware in a file needs the maintainer's own copy
+# of the firmware, which a host never gets: it runs on the maintainer's computer before every commit
+# (docs/checking.md). A green run also says nothing about a unit: only a try on one does.
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    # The compiler the build is pinned to (open-xy's toolchain, docs/build.md) is offered for Windows and macOS only:
+    # the checks run on the host's standard Windows machine.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: The compiler, kept between runs
+        id: compiler
+        uses: actions/cache@v4
+        with:
+          path: open-xy
+          key: open-xy-f10f6bdc397b2766bb02ee68041687fcc478bdd1-${{ runner.os }}
+
+      - name: The compiler, fetched as docs/build.md says when it was not kept
+        if: steps.compiler.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/etcetc000/open-xy open-xy
+          git -C open-xy checkout --detach f10f6bdc397b2766bb02ee68041687fcc478bdd1
+          python open-xy/sdk.py toolchain fetch
+
+      - name: The build, held to packs/built.json
+        run: python -I tools/build_all.py
+
+      - name: The tree's own tests
+        run: python -I -m unittest discover -s tools/tests
+
+      - name: The builder's check, without a firmware file
+        run: node builder/validate-builder.mjs
+
+      - name: The unit's check over USB MIDI, against a made-up bootloader
+        run: node builder/validate-devmode.mjs
+
+      - name: The install's plan
+        run: node builder/validate-install.mjs
+
+      - name: The part of the check before a commit that needs no firmware
+        run: python -I tools/publish_check.py --forms-only .github builder catalog docs examples hooks linker module packs pictures profiles tools AGENTS.md CLAUDE.md CONTRIBUTING.md LICENSE NOTICE.md README.md THIRD-PARTY.md build.json

@@ -1,0 +1,49 @@
+{
+ "about": "What a build of this tree gives: the size and the SHA-256 of each finished pack file (base.pack, the shared pack every other relies on, and the four features), of the loader (our piece inside the firmware file, as linked and as the file the installer's builder uses) and of the example packs. tools/build_all.py holds its results to these, and its option --update writes them anew after a change that is meant to change them.",
+ "files": {
+  "8 tracks.pack": {
+   "bytes": 99476,
+   "sha256": "c80be48f3623e551fb6a65d518c59966212a35b955dbbf923c271b8ec8df346e"
+  },
+  "base.pack": {
+   "bytes": 107492,
+   "sha256": "a95a6c3e9c94e5c85bed97669b9926a05f5d6ba83407f2aa456be87e7c623f6e"
+  },
+  "fx train.pack": {
+   "bytes": 426790,
+   "sha256": "dd8666939dd3e939fa0065d9988ac07284676af09202010f349f36b3d8846429"
+  },
+  "lfo.pack": {
+   "bytes": 375422,
+   "sha256": "6df6301e9e2e222bdb4dc331d71b6982e0b2529067ea686a9c3eada1f5e68b6c"
+  },
+  "sidechain.pack": {
+   "bytes": 104062,
+   "sha256": "217125222686ebb9d0aeaf2f0e8e5eb5fa3baf3bbbbe710febc6d4a1cd196a00"
+  },
+  "loader.bin": {
+   "bytes": 25876,
+   "sha256": "ccbef99e365f42538bc2320c1c13613dac5849ae473cb7bac5e9e388b940f76f"
+  },
+  "loader-1.7.0-v3.bin": {
+   "bytes": 25876,
+   "sha256": "ccbef99e365f42538bc2320c1c13613dac5849ae473cb7bac5e9e388b940f76f"
+  },
+  "examples/list.pack": {
+   "bytes": 7281,
+   "sha256": "973413192503526b0f3e7d8b8201de84a512a1b716f8341598ce1c2478b071f8"
+  },
+  "examples/trampolines.pack": {
+   "bytes": 848,
+   "sha256": "81acc44398c6eaa289034717769f9f829f0466245c270991c9b015aaf705156f"
+  },
+  "examples/wink.pack": {
+   "bytes": 2130,
+   "sha256": "b8b685f2b13cf058c000382a643db2a2c270f1604bdee59df24f082e003784a0"
+  },
+  "examples/yoyo.pack": {
+   "bytes": 4381,
+   "sha256": "053ca1c45125c494e1679b284119099c86a106fd7256a701d79082e5dabd9f27"
+  }
+ }
+}

@@ -1,0 +1,65 @@
+{
+  "about": "One tape track turned down by another, or by the beat, with a page of its own. Needs the base (base.pack) and nothing else. With the pack 8 tracks there it works on eight tracks; without it, on the original four.",
+  "name": "sidechain",
+  "version": 7,
+  "interface": 1,
+  "build": "build_m1_sidechain",
+  "sources": [
+    "module/build_g_duck.cpp",
+    "module/build_j5g_duck_alone.s",
+    "module/build_j5g_duck_alone.cpp",
+    "module/build_l3_sidechain_table.s",
+    "module/build_m1_sidechain_pictures.s",
+    "module/build_p3_sidechain_needs.s"
+  ],
+  "works_with": [
+    {
+      "name": "base",
+      "interface": 2,
+      "needed": true
+    },
+    {
+      "name": "8 tracks",
+      "interface": 1,
+      "needed": false
+    }
+  ],
+  "serves": [
+    "base",
+    "8 tracks",
+    "fx train",
+    "lfo"
+  ],
+  "exports": [],
+  "pictures": [
+    {
+      "name": "signalflow.svg",
+      "file": "pictures/sidechain/signalflow.svg.make"
+    },
+    {
+      "name": "signalflow4.svg",
+      "file": "pictures/sidechain/signalflow4.svg.make"
+    }
+  ],
+  "marks": [
+    {
+      "site": "0x11a0822e",
+      "away": "8 tracks"
+    },
+    {
+      "site": "0x8fc33bb8",
+      "away": "8 tracks"
+    },
+    {
+      "site": "0x8c0c1408",
+      "away": "8 tracks"
+    },
+    {
+      "site": "0x8c0c2adc",
+      "away": "8 tracks"
+    }
+  ],
+  "named": true,
+  "sum": true,
+  "path": null
+}

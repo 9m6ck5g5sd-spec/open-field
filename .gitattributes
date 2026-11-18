@@ -1,0 +1,4 @@
+# No line-ending conversion for anything: the pictures' instructions and the built files are held by their bytes.
+* -text
+*.bin binary
+*.pack binary

@@ -1,0 +1,42 @@
+{
+  "os": "1.7.0",
+  "stock": {
+    "sha256": "f97775d61eda503f28c1712013017c80acd894c5890f57b1f45a680163465833",
+    "bytes": 2070248,
+    "records": 311,
+    "entry": "0x11a00000"
+  },
+  "reserve": {
+    "module_base": "0x8d2e36cc",
+    "reserved_bytes": 2097152,
+    "heap_fill_base": "0x8c0e36cc",
+    "heap_fill_bytes": 20971520
+  },
+  "loader": {
+    "file": "loader-1.7.0-v3.bin",
+    "bytes": 25876,
+    "sha256": "ccbef99e365f42538bc2320c1c13613dac5849ae473cb7bac5e9e388b940f76f",
+    "stub": "0x8d2e36cc",
+    "version": "v3",
+    "status": "ran on a unit (2026-11-18)"
+  },
+  "edits": [
+    {
+      "kind": "imm32",
+      "address": "0x8d4e36f8",
+      "file_offset": "0xfb88c",
+      "new_imm": "0x01200000"
+    },
+    {
+      "kind": "call",
+      "address": "0x8c0b3a88",
+      "file_offset": "0xcbbfc",
+      "length": 8,
+      "target": "stub"
+    }
+  ],
+  "output": {
+    "bytes": 2096140,
+    "sha256": "9666e6e35e91def5a040c96357d2dd72d36039581f7d8035ca178e0260a781d9"
+  }
+}

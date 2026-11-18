@@ -1,0 +1,10 @@
+#!/bin/sh
+# open-field: a commit is refused unless the publication check answers 0 for the tree as it would be committed.
+# Switch it on once in a clone:   git config core.hooksPath hooks
+# docs/checking.md says what the check needs (your own copy of the firmware, which is never in this repository).
+if command -v python3 >/dev/null 2>&1 && python3 -c "import sys" >/dev/null 2>&1; then
+  PY=python3
+else
+  PY=python
+fi
+exec "$PY" -I tools/commit_check.py

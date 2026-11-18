@@ -1,0 +1,35 @@
+{
+  "about": "The example of level 3 (docs/base.md): one folder of its own, `list`, shown in the disk mode, files and words on its page. Shift and the help key open and close its page, which lists the files of its folder; the blue knob scrolls; when the page closes it writes list.txt into the folder. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "list",
+  "version": 1,
+  "interface": 1,
+  "build": "build_m3_list",
+  "sources": [
+    "examples/list/list.cpp",
+    "examples/list/list_card.s",
+    "examples/list/list_pictures.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [
+    {
+      "name": "list.svg",
+      "file": "examples/list/list.svg.make"
+    }
+  ],
+  "card": {
+    "level": 3,
+    "frame": "list_frame",
+    "pick": null,
+    "pictures": true,
+    "input": "list_input",
+    "folders": [
+      {}
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

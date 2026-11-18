@@ -1,0 +1,426 @@
+#!/usr/bin/env python3
+"""Check the listing of packs, catalog/packs.json: what the install page offers an owner (docs/catalog.md).
+
+  python -I tools/catalog_check.py                                  # the listing's form: every entry, every name held once
+  python -I tools/catalog_check.py --files out/packs --files out/examples   # and every entry with a file held to it, in those folders
+  python -I tools/catalog_check.py --fetch                          # and every listed entry held to its file, downloaded at its commit
+  python -I tools/catalog_check.py --before before.json --fetch     # a pull request: against the listing before it, fetching what changed
+
+An entry names a pack file that lies in its author's own repository, at one commit, with the file's SHA-256; nothing
+of a pack is copied into this repository, but base.pack. An entry is `reserved` (its id and its folders held, no file
+to offer yet), `bundled` (its file lies in this repository beside the install page, under builder/, and the page puts
+it on every unit it installs: base.pack alone), `listed` (offered on the install page) or `retired` (no longer
+offered; its id and its folders stay held for good). It only moves that way.
+
+What is held, with nothing but this repository:
+
+- the form of every entry, and that it holds the fields its status asks for and no other;
+- that no two entries share an id or a folder, in small letters or capitals, and that no folder takes a name the
+  firmware, the loader or the base already shows in the disk mode;
+- that every pack an entry needs is in the listing, and that no pack needs a level the listed base does not offer.
+
+A bundled entry is always held to its file in this repository. With a pack file at hand (`--files`, or `--fetch`,
+which downloads it from its repository at the entry's commit):
+its size and its SHA-256, and that what the file says of itself is what the entry says: its name, its version, the
+firmware it is for, how many places of the firmware it changes, the packs it needs, the level of the base it needs
+or offers, the folders its card asks for. The file is read by tools/pack_build.py, as `check` reads it.
+
+With `--before`, the listing before the change: no entry is taken out, no status moves back, an id is never changed,
+and a new file comes with a higher version. With `--fetch`, only the entries that changed are downloaded then.
+
+What it does not hold, and the review does: that the source at the commit is what the author says, and that the
+pack does what its description says on a unit. It answers 0 when every entry is in order, 1 otherwise.
+"""
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+import re
+import sys
+import urllib.parse
+import urllib.request
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CATALOG = os.path.join(ROOT, "catalog", "packs.json")
+PROFILES = os.path.join(ROOT, "profiles")
+
+
+def tool(name):
+    spec = importlib.util.spec_from_file_location("catalog_" + name, os.path.join(ROOT, "tools", name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+pack_build = tool("pack_build")
+
+STATUSES = ("reserved", "bundled", "listed", "retired")          # the way an entry moves, never back
+ALWAYS = ("id", "author", "status", "categories", "description")
+LOCATION = ("repository", "commit", "path")                     # where a listed entry's file lies
+BUNDLED_IN = "builder/"                                         # where a bundled entry's file lies in this repository: beside the install page
+FILE_FACTS = ("sha256", "bytes", "version", "firmware", "places", "needs", "folders")   # what the file says, held to it
+OPTIONAL = ("level", "offers_level")                            # a pack with a card needs a level; the base offers them
+KEYS = set(ALWAYS + LOCATION + FILE_FACTS + OPTIONAL)
+TOP_KEYS = {"about", "categories", "packs"}
+
+NOT_IN_A_NAME = set('/\\:*?"<>|')                              # what no file name on the unit or on a computer holds
+AUTHOR_FORM = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")             # a GitHub user or organisation
+REPOSITORY_FORM = re.compile(r"https://github\.com/([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)/([A-Za-z0-9._-]{1,100})")
+COMMIT_FORM = re.compile(r"[0-9a-f]{40}")
+SHA256_FORM = re.compile(r"[0-9a-f]{64}")
+CATEGORY_FORM = re.compile(r"[a-z]{1,16}")
+PATH_PART = re.compile(r"[A-Za-z0-9 _.()+-]+")
+VERSION_FORM = re.compile(r"op1f-(\d+\.\d+\.\d+)\.json")       # a profile, profiles/op1f-<firmware>.json
+LEVEL_NAME = "op1f_level_"
+CATEGORIES_MOST = 3
+DESCRIPTION_MOST = 140
+FOLDERS_MOST = pack_build.FOLDERS_MOST
+LARGEST = 2 * 1024 * 1024                                       # a pack file larger than this is not downloaded
+RAW = "https://raw.githubusercontent.com/%s/%s/%s/%s"           # a file of a repository at a commit: a web page can read it too
+
+
+def is_int(value):
+    return type(value) is int                                   # JSON's true and false are no numbers here
+
+
+def plain(text, most):
+    return isinstance(text, str) and 0 < len(text) <= most and all(0x20 <= ord(c) < 0x7f for c in text)
+
+
+def id_in_form(text):
+    """A pack's id: its name as its header holds it, one to fifteen plain characters, which the install page also
+    names its file after on the unit (`<id>.pack`): none of / \\ : * ? " < > |, no space or dot at either end."""
+    return plain(text, 15) and not NOT_IN_A_NAME & set(text) and text[0] not in " ." and text[-1] not in " ."
+
+
+def firmwares(folder=PROFILES):
+    """The firmware versions this tree has a profile for, by the word a pack's header names its firmware with."""
+    out = {}
+    for name in sorted(os.listdir(folder)):
+        found = VERSION_FORM.fullmatch(name)
+        if found:
+            with open(os.path.join(folder, name), encoding="utf-8") as f:
+                out[pack_build.os_id(json.load(f)["stock_sha256"])] = found.group(1)
+    return out
+
+
+def path_faults(path):
+    if not plain(path, 200):
+        return ["its path is not one to two hundred plain characters"]
+    parts = path.split("/")
+    if not path.lower().endswith(".pack"):
+        return ["its path does not end in .pack"]
+    if any(part in ("", ".", "..") or not PATH_PART.fullmatch(part) for part in parts):
+        return ["its path is not a plain path inside the repository: parts of letters, digits, spaces and . _ ( ) + -, parted by /"]
+    return []
+
+
+def folder_faults(folders):
+    if not isinstance(folders, list) or len(folders) > FOLDERS_MOST:
+        return ["its folders are not a list of none to %d" % FOLDERS_MOST]
+    faults = []
+    for folder in folders:
+        if not isinstance(folder, dict) or set(folder) != {"name", "place"}:
+            faults.append("a folder is not a name and a place")
+        elif not all(isinstance(folder[key], str) and pack_build.FOLDER_FORM.fullmatch(folder[key]) for key in ("name", "place")):
+            faults.append("the folder %r is not named as the base takes a folder's name" % (folder,))
+    return faults
+
+
+def entry_faults(entry, categories, known_firmwares):
+    """What is not in order with one entry's form, as texts."""
+    if not isinstance(entry, dict):
+        return ["it is not an entry"]
+    faults = []
+    status = entry.get("status")
+    if status not in STATUSES:
+        return ["its status is not one of %s" % ", ".join(STATUSES)]
+    unknown = sorted(set(entry) - KEYS)
+    if unknown:
+        faults.append("it has keys the listing does not know: %s" % ", ".join(unknown))
+    missing = [key for key in ALWAYS if key not in entry]
+    if status == "listed":
+        missing += [key for key in LOCATION + FILE_FACTS if key not in entry]
+    elif status == "bundled":
+        missing += [key for key in ("path",) + FILE_FACTS if key not in entry]
+    elif any(key in entry for key in FILE_FACTS):               # a reserved or retired entry with a file says all of it
+        missing += [key for key in FILE_FACTS if key not in entry]
+    if missing:
+        faults.append("it lacks %s" % ", ".join(missing))
+    if status == "reserved" and any(key in entry for key in ("repository", "commit")):
+        faults.append("a reserved entry names no repository or commit: it has no file to offer yet")
+    if status == "bundled" and any(key in entry for key in ("repository", "commit")):
+        faults.append("a bundled entry names no repository or commit: its file lies in this repository")
+    if status == "bundled" and isinstance(entry.get("path"), str) and not entry["path"].startswith(BUNDLED_IN):
+        faults.append("a bundled entry's file lies beside the install page: its path begins with %s" % BUNDLED_IN)
+    if "id" in entry and not id_in_form(entry["id"]):
+        faults.append("its id is not one to fifteen plain characters that can name a file: none of / \\ : * ? \" < > |, no space or dot at either end")
+    if "author" in entry and not (isinstance(entry["author"], str) and AUTHOR_FORM.fullmatch(entry["author"])):
+        faults.append("its author is not a GitHub user's or organisation's name")
+    if "categories" in entry:
+        chosen = entry["categories"]
+        if (not isinstance(chosen, list) or not 0 < len(chosen) <= CATEGORIES_MOST or len(set(map(str, chosen))) != len(chosen)
+                or any(not isinstance(c, str) or c not in categories for c in chosen)):
+            faults.append("its categories are not one to %d of the listing's: %s" % (CATEGORIES_MOST, ", ".join(categories)))
+    if "description" in entry and not plain(entry["description"], DESCRIPTION_MOST):
+        faults.append("its description is not one line of one to %d plain characters" % DESCRIPTION_MOST)
+    if "repository" in entry and not (isinstance(entry["repository"], str) and REPOSITORY_FORM.fullmatch(entry["repository"])):
+        faults.append("its repository is not https://github.com/<owner>/<name>")
+    if "commit" in entry and not (isinstance(entry["commit"], str) and COMMIT_FORM.fullmatch(entry["commit"])):
+        faults.append("its commit is not a full commit id: forty digits of 0-9 and a-f")
+    if "path" in entry:
+        faults += path_faults(entry["path"])
+    if "sha256" in entry and not (isinstance(entry["sha256"], str) and SHA256_FORM.fullmatch(entry["sha256"])):
+        faults.append("its sha256 is not sixty-four digits of 0-9 and a-f")
+    if "bytes" in entry and not (is_int(entry["bytes"]) and pack_build.HEADER3_BYTES < entry["bytes"] <= LARGEST):
+        faults.append("its size is not a number of bytes from %d to %d" % (pack_build.HEADER3_BYTES + 1, LARGEST))
+    if "version" in entry and not (is_int(entry["version"]) and entry["version"] >= 1):
+        faults.append("its version is not a whole number from 1")
+    if "firmware" in entry and entry["firmware"] not in known_firmwares.values():
+        faults.append("its firmware is not one this repository has a profile for: %s" % ", ".join(sorted(set(known_firmwares.values()))))
+    if "places" in entry and not (is_int(entry["places"]) and entry["places"] >= 0):
+        faults.append("its count of places is not a whole number from 0")
+    if "needs" in entry and not (isinstance(entry["needs"], list) and all(isinstance(n, str) for n in entry["needs"])
+                                 and len(set(entry["needs"])) == len(entry["needs"])):
+        faults.append("what it needs is not a list of packs' ids, each once")
+    for key in OPTIONAL:
+        if key in entry and not (is_int(entry[key]) and entry[key] >= 1):
+            faults.append("its %s is not a whole number from 1" % key.replace("_", " "))
+    if "folders" in entry:
+        faults += folder_faults(entry["folders"])
+    return faults
+
+
+def listing_faults(listing, known_firmwares):
+    """What is not in order with the listing: (faults of the whole, {index of an entry: its faults})."""
+    whole, each = [], {}
+    if not isinstance(listing, dict) or set(listing) != TOP_KEYS:
+        return ["the listing is not an object with %s and nothing else" % ", ".join(sorted(TOP_KEYS))], each
+    if not plain(listing["about"], 2000):
+        whole.append("its about is not one line of plain characters")
+    categories = listing["categories"]
+    if (not isinstance(categories, dict) or not categories
+            or not all(CATEGORY_FORM.fullmatch(key) and plain(label, 30) for key, label in categories.items())):
+        whole.append("its categories are not words of a to z, each with a label of up to 30 plain characters")
+        categories = {}
+    packs = listing["packs"]
+    if not isinstance(packs, list):
+        return whole + ["its packs are not a list"], each
+    for number, entry in enumerate(packs):
+        faults = entry_faults(entry, categories, known_firmwares)
+        if faults:
+            each[number] = faults
+    held_ids, held_folders = {}, {}
+    taken = {name.casefold(): whose for name, whose in pack_build.FOLDER_NAMES_TAKEN.items()}
+    for number, entry in enumerate(packs):
+        if number in each:                                      # an entry out of form is not held against the others
+            continue
+        key = entry["id"].casefold()
+        if key in held_ids:
+            each.setdefault(number, []).append("its id is the id of %r, in small letters or capitals" % held_ids[key])
+        held_ids.setdefault(key, entry["id"])
+        for folder in entry.get("folders", []):
+            for part in ("name", "place"):
+                word = folder[part].casefold()
+                if word in taken:
+                    each.setdefault(number, []).append("its folder's %s %r is %s" % (part, folder[part], taken[word]))
+                elif (part, word) in held_folders and held_folders[(part, word)] != entry["id"]:
+                    each.setdefault(number, []).append("its folder's %s %r is held by %r" % (part, folder[part], held_folders[(part, word)]))
+                held_folders.setdefault((part, word), entry["id"])
+    present = {entry["id"]: entry for number, entry in enumerate(packs) if number not in each}
+    offered = max((entry["offers_level"] for entry in present.values() if entry["status"] != "retired" and "offers_level" in entry), default=0)
+    for number, entry in enumerate(packs):
+        if number in each:
+            continue
+        for needed in entry.get("needs", []):
+            if needed not in present or present[needed]["status"] == "retired":
+                each.setdefault(number, []).append("it needs %r, which the listing does not offer" % needed)
+        if entry.get("level", 0) > offered:
+            each.setdefault(number, []).append("it needs level %d of the base, and the listing's base offers %d" % (entry["level"], offered))
+    return whole, each
+
+
+def level_of(names, needed_only):
+    levels = [int(name[len(LEVEL_NAME):]) for name, flag in names if name.startswith(LEVEL_NAME) and name[len(LEVEL_NAME):].isdigit()
+              and (flag or not needed_only)]
+    return max(levels) if levels else None
+
+
+def file_faults(entry, data, known_firmwares):
+    """What the pack file says of itself that the entry does not, as texts: none for a file that is the entry's."""
+    faults = []
+    if len(data) != entry["bytes"]:
+        faults.append("the file has %d bytes, the entry says %d" % (len(data), entry["bytes"]))
+    if hashlib.sha256(data).hexdigest() != entry["sha256"]:
+        faults.append("the file's SHA-256 is %s, not the entry's" % hashlib.sha256(data).hexdigest())
+        return faults                                           # another file: what it says of itself does not matter
+    try:
+        fields, _body = pack_build.parse(data)
+    except ValueError as problem:
+        return faults + ["the file is no pack the loader takes: %s" % problem]
+    if fields["format"] != pack_build.FORMAT_LINKED:
+        return faults + ["the file is a pack of format %d, which the loader no longer takes" % fields["format"]]
+    lists = fields["lists"]
+    said = {
+        "id": fields["name"],
+        "version": fields["version"],
+        "firmware": known_firmwares.get(fields["os_id"], "one this repository has no profile for (0x%08x)" % fields["os_id"]),
+        "places": fields["entries"],
+        "needs": sorted(name for name, _interface, needed in lists["works"] if needed),
+        "level": level_of([(name, needed) for name, needed in lists["imports"]], True),
+        "offers_level": level_of([(name, True) for name, _offset in lists["exports"]], False),
+        "folders": [{"name": name, "place": place} for name, place, _shown in pack_build.folders_in(data)],
+    }
+    for key, value in said.items():
+        stated = sorted(entry.get(key, [])) if key == "needs" else entry.get(key)
+        if stated != value:
+            faults.append("the file's %s is %s, the entry says %s" % (key.replace("_", " "), json.dumps(value), json.dumps(stated)))
+    if pack_build.card_in(data) is not None:
+        faults += ["its card: %s" % fault for fault in pack_build.card_faults(data)]
+    try:
+        pack_build.release_in(data)
+    except ValueError as problem:
+        faults.append("its release: %s" % problem)
+    return faults
+
+
+def before_faults(listing, before):
+    """What a change to the listing may not do, held against the listing before it: {id: faults}."""
+    out = {}
+    now = {entry.get("id", "").casefold(): entry for entry in listing["packs"] if isinstance(entry, dict) and isinstance(entry.get("id"), str)}
+    for old in before.get("packs", []):
+        if not isinstance(old, dict) or not isinstance(old.get("id"), str):
+            continue
+        new = now.get(old["id"].casefold())
+        if new is None:
+            out[old["id"]] = ["it was taken out: an entry stays for good, retired when its pack is no longer offered"]
+            continue
+        faults = []
+        if new["id"] != old["id"]:
+            faults.append("its id was %r: an id never changes" % old["id"])
+        if new.get("status") in STATUSES and old.get("status") in STATUSES and STATUSES.index(new["status"]) < STATUSES.index(old["status"]):
+            faults.append("its status moved back, from %s to %s" % (old["status"], new["status"]))
+        if (old.get("sha256") and new.get("sha256") and new["sha256"] != old["sha256"]
+                and not (is_int(new.get("version")) and is_int(old.get("version")) and new["version"] > old["version"])):
+            faults.append("its file changed and its version did not grow past %s" % old.get("version"))
+        if faults:
+            out[new["id"]] = faults
+    return out
+
+
+def changed(entry, before):
+    """Whether an entry is new, or names another file than it did before."""
+    for old in before.get("packs", []):
+        if isinstance(old, dict) and old.get("id") == entry["id"]:
+            return any(old.get(key) != entry.get(key) for key in LOCATION + ("sha256",))
+    return True
+
+
+def raw_link(entry):
+    owner, name = REPOSITORY_FORM.fullmatch(entry["repository"]).groups()
+    return RAW % (owner, name, entry["commit"], urllib.parse.quote(entry["path"]))
+
+
+def fetch(url):
+    """The file at a link, up to the largest a pack may be."""
+    request = urllib.request.Request(url, headers={"User-Agent": "open-field-catalog-check"})
+    with urllib.request.urlopen(request, timeout=60) as answer:
+        data = answer.read(LARGEST + 1)
+    if len(data) > LARGEST:
+        raise ValueError("it is larger than %d bytes" % LARGEST)
+    return data
+
+
+def repository_file(path, root=None):
+    """A bundled entry's file, from this repository: its bytes, or None."""
+    full = os.path.join(root or ROOT, *path.split("/"))
+    if not os.path.isfile(full):
+        return None
+    with open(full, "rb") as f:
+        return f.read()
+
+
+def local_file(entry, folders):
+    name = os.path.basename(entry.get("path") or entry["id"] + ".pack")
+    for folder in folders:
+        path = os.path.join(folder, name)
+        if os.path.isfile(path):
+            with open(path, "rb") as f:
+                return f.read()
+    return None
+
+
+def check(listing, known_firmwares, before=None, folders=(), download=False, get=None):
+    """Every entry with its faults: (lines to print, whether all is in order)."""
+    get = get or fetch
+    whole, each = listing_faults(listing, known_firmwares)
+    lines = ["REFUSED: the listing: %s" % fault for fault in whole]
+    packs = listing.get("packs", []) if isinstance(listing, dict) and isinstance(listing.get("packs"), list) else []
+    earlier = before_faults(listing, before) if before is not None else {}
+    for gone, faults in earlier.items():                        # an entry taken out has no place among today's
+        if not any(isinstance(e, dict) and e.get("id") == gone for e in packs):
+            lines += ["REFUSED: %s: %s" % (gone, fault) for fault in faults]
+    refused = bool(whole) or bool(earlier)
+    for number, entry in enumerate(packs):
+        label = entry.get("id", "entry %d" % (number + 1)) if isinstance(entry, dict) else "entry %d" % (number + 1)
+        faults = list(each.get(number, [])) + (earlier.get(label, []) if isinstance(label, str) else [])
+        held = ""
+        if number not in each and entry.get("sha256") and entry["status"] != "retired":
+            data, where = None, None
+            if entry["status"] == "bundled":
+                data, where = repository_file(entry["path"]), "this repository"
+                if data is None:
+                    faults.append("its file is not in this repository at %s" % entry["path"])
+            elif download and entry["status"] == "listed" and (before is None or changed(entry, before)):
+                where = raw_link(entry)
+                try:
+                    data = get(where)
+                except Exception as problem:                    # a link that does not answer is the entry's fault
+                    faults.append("its file could not be downloaded from %s: %s" % (where, problem))
+            elif folders:
+                data, where = local_file(entry, folders), "the folders given"
+                if data is None:
+                    faults.append("its file is not in %s" % ", ".join(folders))
+            if data is not None:
+                faults += file_faults(entry, data, known_firmwares)
+                held = ", its file held"
+        if faults:
+            refused = True
+            lines += ["REFUSED: %s: %s" % (label, fault) for fault in faults]
+        else:
+            lines.append("ok: %s (%s%s)" % (label, entry["status"], held))
+    lines.append("%d entries, %s" % (len(packs), "REFUSED" if refused else "all in order"))
+    return lines, not refused
+
+
+def read_json(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Check the listing of packs, catalog/packs.json.")
+    parser.add_argument("--catalog", default=CATALOG, help="the listing (default: catalog/packs.json)")
+    parser.add_argument("--before", help="the listing before the change, to hold the change against")
+    parser.add_argument("--files", action="append", default=[], help="a folder with pack files to hold the entries to (more than one may be given)")
+    parser.add_argument("--fetch", action="store_true", help="download each listed entry's file at its commit and hold the entry to it")
+    args = parser.parse_args(argv)
+    try:
+        listing = read_json(args.catalog)
+        before = read_json(args.before) if args.before else None
+    except (OSError, ValueError) as problem:
+        print("REFUSED: the listing cannot be read: %s" % problem)
+        return 1
+    if before is not None and not (isinstance(before, dict) and isinstance(before.get("packs"), list)):
+        print("REFUSED: the listing before the change is not a listing")
+        return 1
+    lines, in_order = check(listing, firmwares(), before=before, folders=args.files, download=args.fetch)
+    for line in lines:
+        print(line)
+    return 0 if in_order else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

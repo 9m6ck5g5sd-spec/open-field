@@ -1,0 +1,32 @@
+{
+  "about": "The example of level 2 (docs/base.md): a page of its own with keys and knobs. Shift and the metronome key open and close it in any mode; the blue knob moves a yoyo, its press brings the yoyo back. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "yoyo",
+  "version": 1,
+  "interface": 1,
+  "build": "build_m2_yoyo",
+  "sources": [
+    "examples/yoyo/yoyo.cpp",
+    "examples/yoyo/yoyo_card.s",
+    "examples/yoyo/yoyo_pictures.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [
+    {
+      "name": "yoyo.svg",
+      "file": "examples/yoyo/yoyo.svg.make"
+    }
+  ],
+  "card": {
+    "level": 2,
+    "frame": "yoyo_frame",
+    "pick": null,
+    "pictures": true,
+    "input": "yoyo_input"
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

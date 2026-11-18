@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>open-field · install</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1c1e; --muted: #5b6670; --line: #d7dbe0;
+    --card: #f5f7f9; --ok: #1a7f37; --stop: #b3261e; --accent: #2d6cdf; --wait: #9a6700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15171a; --fg: #e6e8ea; --muted: #9aa3ad; --line: #2b3036;
+      --card: #1d2024; --ok: #4ac26b; --stop: #ef5350; --accent: #6ea0ff; --wait: #d4a72c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  main { max-width: 780px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; display: flex; gap: 10px; align-items: center; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; }
+  .num { flex: 0 0 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+  .card.done .num { background: var(--ok); }
+  .card.later { opacity: .55; }
+  a { color: var(--accent); }
+  button { font: inherit; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--accent); color: #fff; cursor: pointer; font-weight: 600; }
+  button.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  code { font: 13px ui-monospace, Consolas, monospace; background: var(--bg); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line); }
+  pre.cmd { font: 13px ui-monospace, Consolas, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; white-space: pre-wrap; word-break: break-all; margin: 8px 0; }
+  .note { color: var(--muted); font-size: 13px; }
+  .warn { color: var(--stop); }
+  .ok { color: var(--ok); }
+  .wait { color: var(--wait); }
+  .keys { margin: 6px 0; padding-left: 22px; } .keys li { margin: 5px 0; }
+  ul { padding-left: 20px; } li { margin: 4px 0; }
+  .pill { display: inline-block; font-size: 12px; border: 1px solid var(--line); border-radius: 20px; padding: 2px 10px; color: var(--muted); }
+  .lines { font: 12px ui-monospace, Consolas, monospace; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; max-height: 260px; overflow: auto; margin: 8px 0; }
+  .lines:empty { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 8px 0; }
+  .k { color: var(--muted); font-size: 12px; } .v { font-weight: 600; font-variant-numeric: tabular-nums; word-break: break-all; }
+  label.gate { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; }
+  .hidden { display: none; }
+  .big { font-size: 17px; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <h1>open-field <span class="pill">unofficial · for OP-1 Field</span></h1>
+  <p class="sub">Put open-field on your own OP-1 Field. This page builds the new firmware file from the one already on
+    your unit, in this browser: nothing of Teenage Engineering's is downloaded, and no firmware is uploaded anywhere.</p>
+
+  <div class="card">
+    <h2>Before you start</h2>
+    <ul>
+      <li><b>This is unofficial, and you do it at your own risk.</b> It is not made, endorsed or supported by Teenage
+        Engineering, and it is not affiliated with them. Changing a device's firmware is risky: a unit can end up unable
+        to start for good ("bricked"), and installing this will void the warranty of your device. Whether to do it is
+        your choice alone.</li>
+      <li>You need a <b>Windows</b> computer with <b>Chrome or Edge</b>, a USB cable that carries data, a
+        <b>charged</b> unit on <b>OS 1.7.0</b> with bootloader <b>1000.1.1</b> (step 1 checks both), and half an hour.
+        Mac and Linux are not supported yet.</li>
+      <li><b>Keep your own firmware file.</b> Step 3 copies it off your unit into a folder on this computer. Put a copy
+        somewhere else as well (a USB stick, another computer): it is your way back.</li>
+      <li><b>In the bootloader's menus, press only the keys this page names.</b> In its main menu, <code>3</code>
+        opens the developer menu. In the developer menu, press only <code>2</code> and <code>4</code>: its key
+        <code>1</code> is a factory reset, which erases your recordings and sounds at once and asks nothing, and its
+        key <code>3</code> resets a calibration.</li>
+    </ul>
+    <p class="note" id="loaderInfo">Loading the builder's files…</p>
+    <p class="warn hidden" id="loadError"></p>
+  </div>
+
+  <div class="card" id="s1">
+    <h2><span class="num">1</span>Check your unit</h2>
+    <ol class="keys">
+      <li>Switch the unit off. Hold <b>COM</b> and switch it on: the bootloader's menu shows.</li>
+      <li>Plug in the USB cable.</li>
+      <li>Press <b>Find my OP-1 Field</b> and allow MIDI when the browser asks.</li>
+    </ol>
+    <p><button type="button" id="find">Find my OP-1 Field</button> <span class="note" id="findStatus"></span></p>
+    <p id="gate"></p>
+    <div id="devBox" class="hidden">
+      <p>If the bootloader's menu does not show <code>3. dev menu</code> yet, switch it on (once for a unit). Then leave
+        the menu and come back, or switch off and on holding COM: <code>3. dev menu</code> shows.</p>
+      <p><button type="button" class="ghost" id="enable">Switch on the developer menu</button></p>
+    </div>
+  </div>
+
+  <div class="card later" id="s2">
+    <h2><span class="num">2</span>Open the unit's drive</h2>
+    <p>On the unit, in the bootloader's menu: press <b><code>3</code></b> (the developer menu opens), then
+      <b><code>2</code></b> (its drive mode). The unit now shows on the computer as a drive named OP-1. Never press
+      <code>1</code> in the developer menu.</p>
+  </div>
+
+  <div class="card later" id="s3">
+    <h2><span class="num">3</span>Choose the folder</h2>
+    <p>This page and the helper share one folder on this computer: <code>open-field</code> in your user folder
+      (<code>C:\Users\</code> and your name). Press <b>Choose the folder</b>. In the dialog, open your user folder; if
+      there is no <code>open-field</code> in it yet, make one (the dialog's <b>New folder</b>, named
+      <code>open-field</code>). Choose it, and let the browser view and edit its files. The page keeps it for the rest
+      of the install, and offers it again next time.</p>
+    <p><button type="button" id="choose">Choose the folder</button>
+      <button type="button" class="ghost hidden" id="reuse">Use open-field again</button>
+      <span class="note" id="folderName"></span></p>
+    <p class="warn" id="folderError"></p>
+  </div>
+
+  <div class="card later" id="s4">
+    <h2><span class="num">4</span>Run the helper</h2>
+    <p>A web page cannot reach the unit's files on Windows, so a small helper does that part. Open PowerShell (press
+      the Windows key, type <code>PowerShell</code>, press Enter), paste this line and press Enter:</p>
+    <pre class="cmd" id="command"></pre>
+    <p><button type="button" class="ghost" id="copy">Copy the line</button> <span class="note" id="copied"></span></p>
+    <p class="note">It checks that the folder you chose in step 3 is its own, finds the unit, copies your own firmware
+      file off into that folder, takes the unit's log files off into the same folder, lists the unit's disk, and waits for this page.
+      Leave its window open. What it changes on the unit, and nothing else: it takes the files in <code>logs</code>
+      off, and the pad files earlier installs left (<code>open-field-pad.bin</code> and the like), and later writes
+      <code>os.ldr</code> at the top of the drive, a pad file if one is needed, and your pack files. <a id="readHelper" href="./open-field-helper.ps1" target="_blank" rel="noopener">Read the helper</a>
+      before you run it, if you like.</p>
+    <p class="note"><b>Pack files.</b> <code>base.pack</code>, the shared pack every feature needs, comes with this
+      page: step 5 puts it into the folder <code>packs</code> inside <code>open-field</code>, and the helper copies it
+      onto the unit with the new firmware file. If <code>packs</code> holds a <code>base.pack</code> already, this
+      page's takes its place; one with other bytes is first kept in the folder <code>replaced</code>. Other pack files
+      (features, from whoever shares them) can go into <code>packs</code> too before step 5's button, or onto the
+      unit later in its disk mode.</p>
+    <p class="note"><b>A pack is a program that can read and write the files on your unit: take packs only from people
+      you trust.</b> Holding the <b>help</b> key while you switch the unit on starts it with no packs.</p>
+  </div>
+
+  <div class="card later" id="s5">
+    <h2><span class="num">5</span>Build, and plan the write</h2>
+    <p class="note">This starts by itself once the helper has listed the unit's disk: the page checks your file,
+      builds the new one and works out the write.</p>
+    <div class="lines" id="helperLines"></div>
+    <p id="helperStatus" class="note"></p>
+    <div id="notOriginal" class="hidden">
+      <p class="warn">The firmware file on your unit is not the original OS 1.7.0 file, so nothing can be built from
+        it. If you kept your own original file from before, put it into the folder as <code>os-1.7.0-yours.ldr</code>
+        (the page finds it there by itself), or choose it:</p>
+      <p><input type="file" id="keptFile" accept=".ldr,application/octet-stream" hidden>
+        <button type="button" class="ghost" id="chooseKept">Choose the firmware file you kept…</button>
+        <span class="note" id="keptStatus"></span></p>
+    </div>
+    <div id="planBox" class="hidden">
+      <p><b>What to write:</b><br>
+        <label><input type="radio" name="what" value="new" checked> the new open-field firmware file</label><br>
+        <label><input type="radio" name="what" value="back"> my own original file: the way back to the original firmware</label></p>
+      <div class="row">
+        <div><div class="k">your own file</div><div class="v" id="pStock"></div></div>
+        <div><div class="k">written as os.ldr</div><div class="v" id="pImage"></div></div>
+        <div><div class="k">pad file</div><div class="v" id="pPad"></div></div>
+        <div><div class="k">pack files</div><div class="v" id="pPacks"></div></div>
+      </div>
+      <p class="note" id="pPlace"></p>
+      <p><button type="button" class="ghost" id="lookAgain">Look at the packs folder again</button></p>
+      <label class="gate"><input type="checkbox" id="kept">
+        <span>I have put a copy of <code id="stockName">os-1.7.0-yours.ldr</code> from the folder somewhere other than
+          this computer.</span></label>
+      <p><button type="button" id="go" disabled>Put the files on the unit</button></p>
+      <p class="note">This writes the new file, <code>base.pack</code> and the plan into the folder. The helper then puts
+        them on the unit and checks every copy.</p>
+    </div>
+    <p class="warn" id="planError"></p>
+  </div>
+
+  <div class="card later" id="s6">
+    <h2><span class="num">6</span>The helper puts the files on the unit</h2>
+    <p id="putStatus" class="note">Waiting for step 5.</p>
+    <div class="lines" id="checkLines"></div>
+  </div>
+
+  <div class="card later" id="s7">
+    <h2><span class="num">7</span>Write</h2>
+    <ol class="keys">
+      <li>On the unit, press <code>2</code> to close the drive, and switch the unit off. <b>Leave it off until the
+        write</b>: a start in between writes to its disk, and the placement no longer holds (then go back to step 2 and
+        run the helper's line again, step 4).</li>
+      <li>Hold <b>COM</b> and switch on. Press <code>3</code>: the developer menu opens. Wait five seconds. Press
+        <code>4</code>, the entry <code>write os to boot partition</code>.</li>
+      <li>The screen reads <code>looking for /os.ldr</code> and then <b>stands still for up to half a minute. Do not
+        touch the unit and do not switch it off while it is still.</b></li>
+      <li>When <code>firmware written ok!</code> shows, switch the unit off. That line by itself proves nothing: the
+        bootloader prints it whatever happened.</li>
+      <li>Wait five seconds, and switch the unit on with no key held.</li>
+    </ol>
+    <p class="note">If small text shows instead, naming a source file and a line (<code>rsi.c</code> and a number), the
+      write stopped before it touched the firmware your unit runs: switch off, then on with no key, and the unit starts
+      as before. The unit's spare copy of its firmware is gone after such a stop, which is one more reason to keep your
+      own file. Run the install again from step 1.</p>
+  </div>
+
+  <div class="card later" id="s8">
+    <h2><span class="num">8</span>Read the start screen</h2>
+    <p>The proof is the start screen. With the new firmware file and this page's <code>base.pack</code> it reads
+      <code id="startWords">1.7.0 - open-field 0.3</code>: the number is the release of <code>base.pack</code>. If a pack
+      file cannot run, the words end in <code>(1 left out)</code> and the others run. Holding the <b>help</b> key while
+      you switch on starts the unit as the original firmware for one start, with no packs, and the start screen reads
+      <code>1.7.0 stock (help key)</code>.</p>
+    <p>After the way back (step 5's second choice), the start screen shows the original firmware's version line with
+      nothing added.</p>
+    <p class="note">The owner's guide, <code>docs/guide.md</code> in the repository, has the rest: adding and taking
+      away a pack, the way back, and what to do when something is not as described.</p>
+  </div>
+
+  <div class="card">
+    <h2>log</h2>
+    <div class="lines" id="log"></div>
+    <p class="note">The developer menu step reuses code of <a href="https://github.com/bagofwaffles/ferret" target="_blank"
+      rel="noopener">Ferret</a> and open-xy (MIT).</p>
+  </div>
+</main>
+
+<script type="module">
+  import { Session } from "./ferret.mjs";
+  import { buildImage, ours } from "./patch.mjs";
+  import { NAMES, prepare, readHelper, readPacks, checkFolder, sha256 } from "./install.mjs";
+
+  const $ = (id) => document.getElementById(id);
+  const SUPPORTED_BL = ["1000.1.1", "1000.1.1+0"];   // te-boot answers "1000.1.1" (2026-11-15); its screen says "+0"
+  const SUPPORTED_OS = ["1.7.0", "1.7.0+0"];
+  let manifest = null, loader = null, session = null, folder = null, folderHandle = null, keptStock = null;
+  let basePack = null;      // the page's own base.pack, {bytes, sha256, version, release}, checked against base-pack.json
+  let gate = null;          // what the bootloader said, once it passed
+  let polling = false;
+  let helperNow = null;     // the state of the helper run that follows this page (its mark), or null
+  let ready = false;        // the helper said ready and this page's own check agrees
+
+  // This page's mark: written into the folder it chose (page.json) and named in the helper's line, so that the helper
+  // checks it works in the folder this page reads. Kept for the browser tab, so that a reload follows the same helper.
+  const PAGE_ID = (() => {
+    try { const kept = sessionStorage.getItem("open-field-page"); if (kept && /^[0-9a-f]{8}$/.test(kept)) return kept; } catch { /* none kept */ }
+    const id = [...crypto.getRandomValues(new Uint8Array(4))].map((b) => b.toString(16).padStart(2, "0")).join("");
+    try { sessionStorage.setItem("open-field-page", id); } catch { /* not kept */ }
+    return id;
+  })();
+
+  function log(msg, cls) {
+    const span = document.createElement("span");
+    span.textContent = new Date().toTimeString().slice(0, 8) + "  " + msg + "\n";
+    if (cls) span.className = cls;
+    $("log").appendChild(span); $("log").scrollTop = $("log").scrollHeight;
+  }
+  const show = (id, on = true) => $(id).classList.toggle("hidden", !on);
+
+  // A step is greyed only while it cannot be done yet, and marked done when what it asks for is seen to be done.
+  // The keys on the unit (step 2) are seen done when the helper has found the unit's drive and listed it.
+  // helperNow is the helper's own state, or this page's: "planned" once its plan is written and the helper has not
+  // taken it yet, "stopped-putting" when the helper stopped after the plan.
+  function refresh() {
+    const putting = ["planned", "putting", "ready", "stopped-putting"].includes(helperNow);
+    const listed = helperNow === "listed" || putting;
+    const steps = [
+      { open: true, done: !!gate },                                  // 1 check the unit
+      { open: !!gate, done: listed },                                // 2 open the unit's drive
+      { open: !!gate, done: !!folder },                              // 3 choose the folder
+      { open: !!gate && !!folder, done: listed },                    // 4 run the helper
+      { open: listed, done: putting },                               // 5 build, and plan the write
+      { open: putting, done: ready },                                // 6 the helper puts the files on
+      { open: ready, done: false },                                  // 7 write
+      { open: ready, done: false },                                  // 8 read the start screen
+    ];
+    steps.forEach((step, i) => {
+      $("s" + (i + 1)).classList.toggle("done", step.done);
+      $("s" + (i + 1)).classList.toggle("later", !step.open && !step.done);
+    });
+  }
+
+  // ---- the builder's files: loader.json, or a version kept beside it, asked for as ?loader=1.7.0-v4 ----
+  // (the loader is our small piece inside the firmware file; the base is the pack base.pack)
+  async function loadLoader() {
+    try {
+      const asked = new URLSearchParams(location.search).get("loader");
+      if (asked !== null && !/^[0-9]+(\.[0-9]+)*-v[0-9]+$/.test(asked)) throw new Error("no such loader: " + asked);
+      const get = (name) => fetch("./" + name).then((r) => (r.ok ? r.json() : null));
+      manifest = asked === null ? await get("loader.json") : await get("loader-" + asked + ".json");
+      if (asked !== null && !manifest) {            // the version loader.json itself names may be asked for by name
+        const own = await get("loader.json");
+        if (own && own.os + "-" + ours(own).version === asked) manifest = own;
+      }
+      if (!manifest) throw new Error(asked === null ? "loader.json" : "no manifest for the loader " + asked);
+      const our = ours(manifest);
+      const r = await fetch("./" + our.file);
+      if (!r.ok) throw new Error(our.file);
+      loader = new Uint8Array(await r.arrayBuffer());
+      // base.pack, beside the page: held to the size and SHA-256 that base-pack.json keeps for it
+      const named = await get("base-pack.json");
+      if (!named || named.file !== "base.pack") throw new Error("base-pack.json");
+      const b = await fetch("./" + named.file);
+      if (!b.ok) throw new Error(named.file);
+      const bytes = new Uint8Array(await b.arrayBuffer());
+      if (bytes.length !== named.bytes || (await sha256(bytes)) !== named.sha256) throw new Error("base.pack is not the file base-pack.json names");
+      basePack = { bytes, sha256: named.sha256, version: named.version, release: named.release };
+      $("startWords").textContent = manifest.os + " - open-field " + named.release;
+      $("loaderInfo").textContent = "Builder: loader " + our.version + " for OS " + manifest.os + (our.status ? " · " + our.status : "") +
+        " · base.pack " + named.version + " (release " + named.release + ")";
+    } catch (e) {
+      manifest = null; basePack = null;
+      $("loadError").textContent = "Could not load the builder's files (" + e.message + ")." + (location.protocol === "file:" ? " Open this page from a web address, not from a file." : "");
+      show("loadError");
+    }
+  }
+
+  // ---- step 1: the bootloader, over USB MIDI ----
+  function restoreGate() {
+    try { gate = JSON.parse(sessionStorage.getItem("open-field-gate") || "null"); } catch { gate = null; }
+    if (gate) { $("gate").innerHTML = "<span class='ok'>Bootloader " + gate.bl + ", OS " + (gate.os || "not said") + ": supported. ✔</span>"; show("devBox"); }
+    refresh();
+  }
+  $("find").addEventListener("click", async () => {
+    if (!navigator.requestMIDIAccess) { log("This browser has no USB MIDI: use Chrome or Edge on a desktop computer.", "warn"); return; }
+    gate = null; sessionStorage.removeItem("open-field-gate"); show("devBox", false); $("gate").textContent = "";
+    $("findStatus").textContent = "connecting…";
+    try {
+      if (session) { try { session.close(); } catch { /* never opened */ } }
+      session = new Session((o) => navigator.requestMIDIAccess(o), () => log("the unit went away from USB MIDI", "warn"), 2500, {
+        onProgress: (m) => log(m),
+        onPorts: ({ inputs, outputs }) => log("MIDI ports: " + [...inputs, ...outputs].map((p) => '"' + p.name + '"').join(", ")),
+      });
+      const id = await session.connect();
+      $("findStatus").textContent = "";
+      log("the unit says: " + Object.entries(id).filter(([k]) => !/serial/i.test(k)).map(([k, v]) => k + ":" + v).join("; "));
+      const blOk = SUPPORTED_BL.includes(id.bl_version || "");
+      const osOk = !id.os_version || SUPPORTED_OS.includes(id.os_version);
+      if (blOk && osOk) {
+        gate = { bl: id.bl_version, os: id.os_version || null };
+        sessionStorage.setItem("open-field-gate", JSON.stringify(gate));
+        $("gate").innerHTML = "<span class='ok'>Bootloader " + id.bl_version + ", OS " + (id.os_version || "not said by the bootloader; the firmware file's check in step 5 decides") + ": supported. ✔</span>";
+        show("devBox"); refresh();
+      } else {
+        $("gate").innerHTML = "<span class='warn'>" + (blOk ? "OS " + id.os_version + " is not 1.7.0" : "Bootloader " + (id.bl_version || "?") + " is not 1000.1.1") +
+          ". open-field is made for OS 1.7.0 with bootloader 1000.1.1 only. Stop here on this unit.</span>";
+        log("refused: not the supported versions", "warn");
+      }
+    } catch (e) { $("findStatus").textContent = ""; log("could not reach the unit: " + (e.message || e), "warn"); }
+  });
+  $("enable").addEventListener("click", async () => {
+    if (!session || !gate) { log("Press Find first, with the unit in the bootloader's menu.", "warn"); return; }
+    try { await session.enable(); log("sent: leave the bootloader's menu and come back, and 3. dev menu shows", "ok"); }
+    catch (e) { log("could not switch it on: " + (e.message || e), "warn"); }
+  });
+
+  // ---- step 4: the helper's command, made from this page's own address, with this page's mark ----
+  const helperUrl = new URL("./open-field-helper.ps1", location.href).href;
+  $("command").textContent = "$openFieldPage = '" + PAGE_ID + "'; irm '" + helperUrl + "' | iex";
+  $("copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("command").textContent); $("copied").textContent = "copied"; }
+    catch { $("copied").textContent = "select the line and copy it"; }
+  });
+
+  // ---- step 3: the shared folder, chosen once, through the browser's folder access ----
+  function browserFolder(dir) {
+    const place = async (name, create) => {
+      const parts = name.split("/");
+      let d = dir;
+      for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create });
+      return [d, parts[parts.length - 1]];
+    };
+    const gone = (e) => e && (e.name === "NotFoundError" || e.name === "TypeMismatchError");
+    const read = async (name) => { const [d, f] = await place(name, false); return (await d.getFileHandle(f)).getFile(); };
+    const write = async (name, data) => {
+      const [d, f] = await place(name, true);
+      const w = await (await d.getFileHandle(f, { create: true })).createWritable();
+      await w.write(data); await w.close();
+    };
+    return {
+      async readBytes(name) { try { return new Uint8Array(await (await read(name)).arrayBuffer()); } catch (e) { if (gone(e)) return null; throw e; } },
+      async readText(name) { try { return await (await read(name)).text(); } catch (e) { if (gone(e)) return null; throw e; } },
+      async list(sub) {
+        try {
+          let d = dir;
+          for (const p of sub.split("/")) d = await d.getDirectoryHandle(p);
+          const out = [];
+          for await (const [name, h] of d.entries()) out.push({ name, kind: h.kind === "directory" ? "folder" : "file" });
+          return out;
+        } catch (e) { if (gone(e)) return []; throw e; }
+      },
+      writeBytes: write,
+      writeText: write,
+    };
+  }
+
+  // The folder chosen is kept in the browser's own storage, so that the next visit offers it again with one click
+  // (the browser asks the owner again for leave to use it). Where that storage is missing, the folder is chosen again.
+  function stored(mode, act) {
+    return new Promise((resolve) => {
+      try {
+        const open = indexedDB.open("open-field", 1);
+        open.onupgradeneeded = () => open.result.createObjectStore("kept");
+        open.onerror = () => resolve(null);
+        open.onsuccess = () => {
+          try {
+            const tx = open.result.transaction("kept", mode);
+            const asked = act(tx.objectStore("kept"));
+            tx.oncomplete = () => resolve(asked.result ?? null);
+            tx.onerror = tx.onabort = () => resolve(null);
+          } catch { resolve(null); }
+        };
+      } catch { resolve(null); }
+    });
+  }
+  const keepFolder = (handle) => stored("readwrite", (s) => s.put(handle, "folder"));
+  const keptFolder = () => stored("readonly", (s) => s.get("folder"));
+
+  // The folder must be named open-field, which is where the helper works; the page writes its mark there, and the
+  // helper checks the mark before it does anything, so that the two cannot work in two different folders.
+  async function useFolder(handle) {
+    $("folderError").textContent = "";
+    if (handle.name !== "open-field") {
+      $("folderError").textContent = "The folder you chose is named " + handle.name + ". The helper works in the folder open-field in your user folder: choose that one, or make it there.";
+      return false;
+    }
+    const chosen = browserFolder(handle);
+    try { await chosen.writeText(NAMES.page, JSON.stringify({ page: 1, id: PAGE_ID, made: new Date().toISOString() }, null, 1)); }
+    catch (e) { $("folderError").textContent = "The page could not write into that folder (" + (e.message || e) + "): choose it again, and let the browser edit its files."; return false; }
+    folderHandle = handle; folder = chosen;
+    await keepFolder(handle);
+    $("folderName").innerHTML = "<span class='ok'>folder: " + handle.name + " ✔</span>";
+    show("reuse", false);
+    log("folder chosen: " + handle.name);
+    refresh();
+    if (!polling) poll();
+    return true;
+  }
+  window.openFieldUseFolder = useFolder;              // also called by a test, in place of the browser's dialog
+  $("choose").addEventListener("click", async () => {
+    if (!window.showDirectoryPicker) { log("This browser cannot open a folder for a page: use Chrome or Edge.", "warn"); return; }
+    try { await useFolder(await window.showDirectoryPicker({ id: "open-field", mode: "readwrite" })); }
+    catch (e) { if (e.name !== "AbortError") log("no folder: " + (e.message || e), "warn"); }
+  });
+  let keptHandle = null;
+  $("reuse").addEventListener("click", async () => {
+    try {
+      const leave = { mode: "readwrite" };
+      if ((await keptHandle.queryPermission(leave)) !== "granted" && (await keptHandle.requestPermission(leave)) !== "granted") {
+        $("folderError").textContent = "The browser did not let the page use that folder again: press Choose the folder.";
+        return;
+      }
+      await useFolder(keptHandle);
+    } catch (e) { $("folderError").textContent = "That folder cannot be used again (" + (e.message || e) + "): press Choose the folder."; }
+  });
+  keptFolder().then((handle) => {
+    if (handle && handle.kind === "directory" && handle.name === "open-field" && !folder) { keptHandle = handle; show("reuse"); }
+  });
+
+  let shownLines = 0, lastRun = null, planned = null;
+  function showHelper(h) {
+    if (h.run !== lastRun) { $("helperLines").textContent = ""; shownLines = 0; lastRun = h.run; }
+    const lines = h.lines || [];
+    for (; shownLines < lines.length; shownLines++) $("helperLines").textContent += lines[shownLines] + "\n";
+    $("helperLines").scrollTop = $("helperLines").scrollHeight;
+  }
+
+  async function poll() {
+    polling = true;
+    for (;;) {
+      try { await tick(); } catch (e) { $("helperStatus").textContent = "reading the folder: " + (e.message || e); }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  async function tick() {
+    const h = await readHelper(folder).catch(() => null);
+    // Only a helper run that carries this page's mark is followed: an earlier run's words stay in the folder until
+    // the next run writes over them.
+    if (!h || h.page !== PAGE_ID) {
+      helperNow = null; ready = false; refresh();
+      $("helperStatus").innerHTML = "<span class='wait'>" + (h ? "The folder holds the words of an earlier run of the helper (" + h.run + "). " : "No word from the helper yet. ") +
+        "Run its line (step 4).</span>";
+      return;
+    }
+    showHelper(h);
+    helperNow = h.state;
+    if (h.state === "starting") { $("helperStatus").innerHTML = "<span class='wait'>The helper is at work…</span>"; refresh(); return; }
+    if (h.state === "listed") {
+      if (planned && planned.run === h.run) { helperNow = "planned"; refresh(); return; }     // our plan is written; the helper picks it up
+      refresh();
+      await offerPlan(h);
+      return;
+    }
+    // putting, ready or stopped: the run's plan, as this page wrote it (before a reload too)
+    const plan = JSON.parse((await folder.readText(NAMES.plan))?.replace(/^﻿/, "") || "null");
+    if (!plan || plan.run !== h.run) {
+      if (h.state === "stopped") $("helperStatus").innerHTML = "<span class='warn'>The helper stopped: " + (h.message || "") + ". Run its line again (step 4).</span>";
+      refresh();
+      return;
+    }
+    planned = plan;
+    show("planBox", false);
+    $("helperStatus").textContent = "";
+    $("checkLines").textContent = (h.checks || []).join("\n");
+    if (h.state === "putting") { $("putStatus").innerHTML = "<span class='wait'>The helper is putting the files on the unit…</span>"; refresh(); return; }
+    if (h.state === "stopped") {
+      helperNow = "stopped-putting";
+      $("putStatus").innerHTML = "<span class='warn'>The helper stopped: " + (h.message || "") + ". Read its lines above. Run its line again to start over.</span>";
+      refresh();
+      return;
+    }
+    if (h.state === "ready") {
+      const result = await checkFolder(folder);
+      $("checkLines").textContent = [...(h.checks || []), "", "This page's own check:", ...result.lines].join("\n");
+      ready = result.ok;
+      if (result.ok) $("putStatus").innerHTML = "<span class='ok big'>Ready to write. ✔</span>";
+      else $("putStatus").innerHTML = "<span class='warn'>The helper says ready, but this page's check does not agree. Do not write: run the helper's line again.</span>";
+      refresh();
+    }
+  }
+
+  // The plan, offered once the helper waits: the owner's file checked, the build, the placement. Written on the
+  // owner's word only (the gate), and only after the bootloader's version passed in step 1.
+  let offered = null;
+  async function offerPlan(h) {
+    if (offered === h.run) return;
+    offered = h.run;
+    $("planError").textContent = "";
+    $("helperStatus").innerHTML = "<span class='ok'>The helper has listed the unit's disk and waits for this page.</span>";
+    if (!manifest) { $("planError").textContent = "The builder's files did not load: reload the page."; return; }
+    const original = h.stock && h.stock.sha256 === manifest.stock.sha256;
+    // The unit's own file is not the original one: the original may be in the folder already, kept there by an earlier
+    // run or put there by the owner. Taken from there with no file dialog (one browser kept its window locked after it).
+    if (!original && !keptStock) {
+      const there = await folder.readBytes(NAMES.stock).catch(() => null);
+      if (there && (await sha256(there)) === manifest.stock.sha256) {
+        keptStock = there;
+        log("your original OS 1.7.0 file is in the folder as " + NAMES.stock + ": it is used", "ok");
+      }
+    }
+    show("notOriginal", !original && !keptStock);
+    if (!original && !keptStock) { offered = null; return; }
+    await showPlan(h);
+  }
+
+  let preview = null;
+  const wayBack = () => document.querySelector("input[name=what]:checked").value === "back";
+  async function showPlan(h) {
+    // a dry run of prepare() on a folder that keeps its writes in memory: what the plan will be, before the owner's word
+    const memory = { ...folder, writes: {}, async writeBytes(n, b) { this.writes[n] = b; }, async writeText(n, t) { this.writes[n] = t; } };
+    try {
+      preview = await prepare(memory, { build: (s) => buildImage(s, manifest, loader), stock: keptStock, wayBack: wayBack(), base: basePack });
+    } catch (e) { $("planError").textContent = "No plan: " + e.message + ". Run the helper's line again to start over."; return; }
+    const p = preview.plan;
+    $("pStock").textContent = keptStock ? NAMES.stock + " (the original)" : h.stock.file;
+    $("stockName").textContent = keptStock ? "os-1.7.0-yours.ldr" : h.stock.file;
+    $("pImage").textContent = (p.wayBack ? p.image.file + " (your own original file)" : NAMES.image) + " · " + p.image.bytes.toLocaleString() + " bytes";
+    $("pPad").textContent = p.pad ? p.pad.name + " · " + p.pad.bytes.toLocaleString() + " bytes" : "none needed";
+    $("pPacks").textContent = p.packs.length ? p.packs.map((x) => x.name + (x.name === "base.pack" && preview.base ? " (this page's, release " + basePack.release + ")" : "")).join(", ") : "none";
+    const base = preview.base;
+    const baseNote = !base ? "" : base.state === "replaced" ? " The folder's packs held another base.pack: it is kept as " + base.kept + ", and this page's takes its place." :
+      base.state === "same" ? " The folder's packs holds this page's base.pack already." : " This page's base.pack goes into the folder's packs.";
+    $("pPlace").textContent = "The write lands with this disk: " + p.counts.files + " files, " + p.counts.folders + " folders, " + p.counts.nodeBatches +
+      " and " + p.counts.recordBatches + " batches. " + (p.wayBack ? "Nothing is built and no pack file is copied: the original firmware does not read them." : "Built with the loader " + (preview.report?.loader?.version ?? "?") + "." + baseNote);
+    show("planBox");
+    $("go").disabled = !($("kept").checked && gate);
+    if (!gate) $("planError").textContent = "Step 1 has not passed in this browser tab: go back to the bootloader's menu (press 2 to close the drive) and press Find.";
+  }
+  $("kept").addEventListener("change", () => { $("go").disabled = !($("kept").checked && gate && preview); });
+  for (const radio of document.querySelectorAll("input[name=what]")) radio.addEventListener("change", async () => {
+    $("go").disabled = true; preview = null;
+    const h = await readHelper(folder);
+    if (h && h.state === "listed") await showPlan(h);
+  });
+  $("lookAgain").addEventListener("click", async () => { offered = null; const h = await readHelper(folder); if (h && h.state === "listed") await offerPlan(h); });
+  $("chooseKept").addEventListener("click", () => $("keptFile").click());
+  $("keptFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    $("keptStatus").textContent = "reading " + f.name + "…";
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      e.target.value = "";
+      if ((await sha256(bytes)) !== manifest.stock.sha256) { $("keptStatus").innerHTML = "<span class='warn'>That is not the original OS 1.7.0 file either.</span>"; return; }
+      keptStock = bytes;
+      $("keptStatus").innerHTML = "<span class='ok'>the original OS 1.7.0 file ✔</span>";
+      if (!(await folder.readBytes(NAMES.stock))) { await folder.writeBytes(NAMES.stock, bytes); log("your original file is now also in the folder as " + NAMES.stock); }
+      show("notOriginal", false);
+      offered = null;
+    } catch (err) {
+      $("keptStatus").innerHTML = "<span class='warn'>Could not read that file: " + (err.message || err) + "</span>";
+    }
+  });
+  $("go").addEventListener("click", async () => {
+    if (!$("kept").checked || !gate) return;
+    $("go").disabled = true;
+    try {
+      const h = await readHelper(folder);
+      if (!h || h.state !== "listed") throw new Error("the helper is not waiting any more");
+      const done = await prepare(folder, { build: (s) => buildImage(s, manifest, loader), stock: keptStock, wayBack: wayBack(), base: basePack });
+      planned = done.plan;
+      if (done.base?.kept) log("the base.pack that was in the folder's packs is kept as " + done.base.kept);
+      log("plan written for the helper's run " + planned.run + (planned.wayBack ? " (the way back: your own original file)" : "") +
+        (planned.pad ? ", with the pad file " + planned.pad.name : ", no pad file") + (done.base ? ", with this page's base.pack" : ""), "ok");
+      $("putStatus").innerHTML = "<span class='wait'>Plan written. The helper takes it from here…</span>";
+      helperNow = "planned"; refresh();
+    } catch (e) { $("planError").textContent = "No plan written: " + e.message; $("go").disabled = false; }
+  });
+
+  restoreGate();
+  loadLoader();
+</script>
+</body>
+</html>

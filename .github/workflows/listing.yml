@@ -1,0 +1,36 @@
+# A pull request that changes the listing of packs, catalog/packs.json (docs/catalog.md): the listing held to the one
+# before the change, and every entry that changed held to its file, downloaded from its author's repository at the
+# entry's commit. The review still reads the pack's source and tries the file on a unit: a green run says neither.
+name: listing
+
+on:
+  pull_request:
+    paths: ["catalog/packs.json"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  listing:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: The listing before the change
+        env:
+          BEFORE: ${{ github.event.pull_request.base.sha }}
+        run: git show "$BEFORE:catalog/packs.json" > "$RUNNER_TEMP/before.json"
+
+      - name: The listing, held to the one before and to the files that changed
+        run: python -I tools/catalog_check.py --before "$RUNNER_TEMP/before.json" --fetch

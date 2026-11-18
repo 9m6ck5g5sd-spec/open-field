@@ -1,0 +1,31 @@
+{
+  "about": "The example of level 1 (docs/first-pack.md): a card with a call each frame and one picture, the unit's own tempo screen with a red dot of ours in front of its last tag. The frame function blinks the dot every half second while the tempo screen shows. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "wink",
+  "version": 1,
+  "interface": 1,
+  "build": "build_m1_wink",
+  "sources": [
+    "examples/wink/wink.cpp",
+    "examples/wink/wink_card.s",
+    "examples/wink/wink_pictures.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [
+    {
+      "name": "tempo.svg",
+      "file": "examples/wink/tempo.svg.make"
+    }
+  ],
+  "card": {
+    "level": 1,
+    "frame": "wink_frame",
+    "pick": null,
+    "pictures": true
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

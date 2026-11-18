@@ -1,0 +1,24 @@
+# Firmware never goes into this repository, in any form: not the original file, not a built one, not an update
+# package, not a copy of a unit's storage. The check before a commit refuses them too (docs/checking.md).
+*.ldr
+*.tfw
+/firmware/
+/stock/
+
+# What a build makes, and what it needs from elsewhere (docs/build.md).
+/build/
+/out/
+/out-*/
+/open-xy/
+__pycache__/
+*.pyc
+
+# Finished feature files are not kept in this repository (README.md). A build writes them into out/. The one pack
+# file kept here is base.pack beside the install page, which puts it on every unit it installs; the build holds it to
+# packs/built.json.
+*.pack
+!/builder/base.pack
+
+# A listing of your own unit's disk, made for the placement step, and the files the installer hands you.
+listing.json
+/downloads/
