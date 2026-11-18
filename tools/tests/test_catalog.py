@@ -310,6 +310,51 @@ class TheListingAsAWhole(unittest.TestCase):
                 self.assertFalse(in_order, said)
 
 
+class OurOwnPacks(unittest.TestCase):
+    """The listing's `ours`: the repositories of open-field's own packs, on which the install page shows no warning."""
+
+    OURS = "https://github.com/open-field-test/packs"
+
+    def with_ours(self, *entries, ours=None):
+        return dict(listing(*entries), ours=[self.OURS] if ours is None else ours)
+
+    def test_an_entry_of_ours_in_one_of_ours_is_in_order(self):
+        said, in_order = run(self.with_ours(entry_for(pack(), author="open-field", repository=self.OURS)))
+        self.assertTrue(in_order, said)
+
+    def test_an_entry_of_ours_lies_in_one_of_ours(self):
+        said, in_order = run(self.with_ours(entry_for(pack(), author="open-field")))
+        self.assertFalse(in_order)
+        self.assertIn("its author is open-field, and its repository is not one of the listing's ours", said)
+
+    def test_an_entry_in_one_of_ours_is_ours(self):
+        said, in_order = run(self.with_ours(entry_for(pack(), repository=self.OURS)))
+        self.assertFalse(in_order)
+        self.assertIn("its repository is one of the listing's ours, and its author is not open-field", said)
+
+    def test_the_form_of_ours(self):
+        for bad in ("https://github.com/a/b", ["https://gitlab.com/a/b"], [self.OURS, self.OURS], [1]):
+            with self.subTest(ours=bad):
+                said, in_order = run(self.with_ours(ours=bad))
+                self.assertFalse(in_order)
+                self.assertIn("its ours is not a list of repositories", said)
+
+    def test_ours_never_changes_in_a_change(self):
+        said, in_order = run(self.with_ours(), before=listing())
+        self.assertFalse(in_order)
+        self.assertIn("its ours changed", said)
+        said, in_order = run(self.with_ours(), before=self.with_ours())
+        self.assertTrue(in_order, said)
+
+    def test_the_tree_s_own_packs_lie_in_its_ours(self):
+        with open(check.CATALOG, encoding="utf-8") as f:
+            the_listing = json.load(f)
+        self.assertTrue(the_listing["ours"])
+        for entry in the_listing["packs"]:
+            if "repository" in entry:
+                self.assertEqual(entry["author"] == "open-field", entry["repository"] in the_listing["ours"], entry["id"])
+
+
 class AChangeHeldToTheListingBefore(unittest.TestCase):
     def test_an_entry_is_never_taken_out(self):
         old = listing(entry_for(pack()))

@@ -25,8 +25,13 @@ its size and its SHA-256, and that what the file says of itself is what the entr
 firmware it is for, how many places of the firmware it changes, the packs it needs, the level of the base it needs
 or offers, the folders its card asks for. The file is read by tools/pack_build.py, as `check` reads it.
 
+The listing's `ours` names the repositories of open-field's own packs: an entry whose author is `open-field` and
+that names a repository names one of them, and an entry in one of them has `open-field` as its author. The install
+page shows the warning on a pack that is not ours on every other entry.
+
 With `--before`, the listing before the change: no entry is taken out, no status moves back, an id is never changed,
-and a new file comes with a higher version. With `--fetch`, only the entries that changed are downloaded then.
+a new file comes with a higher version, and `ours` stays as it was. With `--fetch`, only the entries that changed are
+downloaded then.
 
 What it does not hold, and the review does: that the source at the commit is what the author says, and that the
 pack does what its description says on a unit. It answers 0 when every entry is in order, 1 otherwise.
@@ -64,6 +69,8 @@ FILE_FACTS = ("sha256", "bytes", "version", "firmware", "places", "needs", "fold
 OPTIONAL = ("level", "offers_level")                            # a pack with a card needs a level; the base offers them
 KEYS = set(ALWAYS + LOCATION + FILE_FACTS + OPTIONAL)
 TOP_KEYS = {"about", "categories", "packs"}
+TOP_OPTIONAL = {"ours"}                                         # the repositories of open-field's own packs
+OURS = "open-field"                                             # the author of open-field's own packs
 
 NOT_IN_A_NAME = set('/\\:*?"<>|')                              # what no file name on the unit or on a computer holds
 AUTHOR_FORM = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")             # a GitHub user or organisation
@@ -196,10 +203,16 @@ def entry_faults(entry, categories, known_firmwares):
 def listing_faults(listing, known_firmwares):
     """What is not in order with the listing: (faults of the whole, {index of an entry: its faults})."""
     whole, each = [], {}
-    if not isinstance(listing, dict) or set(listing) != TOP_KEYS:
-        return ["the listing is not an object with %s and nothing else" % ", ".join(sorted(TOP_KEYS))], each
+    if not isinstance(listing, dict) or not TOP_KEYS <= set(listing) <= TOP_KEYS | TOP_OPTIONAL:
+        return ["the listing is not an object with %s, %s if it likes, and nothing else"
+                % (", ".join(sorted(TOP_KEYS)), ", ".join(sorted(TOP_OPTIONAL)))], each
     if not plain(listing["about"], 2000):
         whole.append("its about is not one line of plain characters")
+    ours = listing.get("ours", [])
+    if (not isinstance(ours, list) or len(set(map(str, ours))) != len(ours)
+            or not all(isinstance(r, str) and REPOSITORY_FORM.fullmatch(r) for r in ours)):
+        whole.append("its ours is not a list of repositories, https://github.com/<owner>/<name>, each once")
+        ours = []
     categories = listing["categories"]
     if (not isinstance(categories, dict) or not categories
             or not all(CATEGORY_FORM.fullmatch(key) and plain(label, 30) for key, label in categories.items())):
@@ -212,6 +225,10 @@ def listing_faults(listing, known_firmwares):
         faults = entry_faults(entry, categories, known_firmwares)
         if faults:
             each[number] = faults
+        elif entry["author"] == OURS and "repository" in entry and entry["repository"] not in ours:
+            each[number] = ["its author is %s, and its repository is not one of the listing's ours" % OURS]
+        elif entry["author"] != OURS and entry.get("repository") in ours:
+            each[number] = ["its repository is one of the listing's ours, and its author is not %s" % OURS]
     held_ids, held_folders = {}, {}
     taken = {name.casefold(): whose for name, whose in pack_build.FOLDER_NAMES_TAKEN.items()}
     for number, entry in enumerate(packs):
@@ -362,7 +379,10 @@ def check(listing, known_firmwares, before=None, folders=(), download=False, get
     for gone, faults in earlier.items():                        # an entry taken out has no place among today's
         if not any(isinstance(e, dict) and e.get("id") == gone for e in packs):
             lines += ["REFUSED: %s: %s" % (gone, fault) for fault in faults]
-    refused = bool(whole) or bool(earlier)
+    moved = before is not None and isinstance(listing, dict) and listing.get("ours", []) != before.get("ours", [])
+    if moved:                                                   # the maintainer changes it on main, never a pull request
+        lines.append("REFUSED: the listing: its ours changed: the repositories of open-field's own packs are the maintainer's change")
+    refused = bool(whole) or bool(earlier) or moved
     for number, entry in enumerate(packs):
         label = entry.get("id", "entry %d" % (number + 1)) if isinstance(entry, dict) else "entry %d" % (number + 1)
         faults = list(each.get(number, [])) + (earlier.get(label, []) if isinstance(label, str) else [])

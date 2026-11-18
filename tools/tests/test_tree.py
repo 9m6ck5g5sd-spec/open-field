@@ -533,7 +533,7 @@ class ThePagesOnAHost(unittest.TestCase):
 
     def test_every_module_the_page_imports_is_beside_it(self):
         files = self.page_files()
-        self.assertEqual(sorted(files), ["ferret.mjs", "index.html", "install.mjs", "ldr.mjs", "patch.mjs", "placement.mjs"])
+        self.assertEqual(sorted(files), ["catalog.mjs", "ferret.mjs", "index.html", "install.mjs", "ldr.mjs", "patch.mjs", "placement.mjs"])
 
     def test_the_page_names_no_absolute_path_and_loads_nothing_from_another_site(self):
         for name, content in self.page_files().items():
@@ -552,14 +552,44 @@ class ThePagesOnAHost(unittest.TestCase):
                 self.assertNotRegex(value, r"^(/|[a-z][a-z0-9+.-]*:)", "%s: url(%s)" % (name, value))
             self.assertNotRegex(content, r"<link\b[^>]*\brel\s*=\s*[\"']?(stylesheet|preload|modulepreload|import)", name)
 
+    def test_the_one_load_from_another_site_is_a_listed_pack_at_its_commit(self):
+        """The page downloads a pack the owner ticks from its author's repository, at the commit the listing names
+        (raw.githubusercontent.com, which answers any page), and holds it to the entry's size and SHA-256 before it is
+        used (docs/catalog.md). That is its only load from another site: one fetch of a built address, in
+        catalog.mjs's download, of rawLink's address, which begins with the one absolute address the page's code
+        holds."""
+        built, addresses = [], []
+        for name, content in self.page_files().items():
+            code = "\n".join(self.SCRIPT.findall(content)) if name.endswith(".html") else content
+            code = re.sub(r"(?m)^\s*//.*$", "", code)
+            for found in re.finditer(r"\bfetch\s*\(\s*(\S)", code):
+                if found.group(1) not in "\"'`":                                      # a literal is held to ./ above
+                    built.append((name, code[found.start():found.start() + 19]))
+            addresses += [(name, value) for value in re.findall(r"[\"'`]((?:https?:)?//[^\"'`]*)", code)]
+        self.assertEqual(built, [("catalog.mjs", "fetch(url, options)")])
+        self.assertEqual(addresses, [("catalog.mjs", "https://raw.githubusercontent.com/")])
+        catalog = text(self.served, "catalog.mjs")
+        for said in ('export const RAW = "https://raw.githubusercontent.com/"',
+                     'return RAW + found[1] + "/" + found[2] + "/" + entry.commit + "/"',
+                     "const url = rawLink(entry);",
+                     'credentials: "omit", redirect: "error"',
+                     "if (bytes.length !== entry.bytes) throw",
+                     "if (digest !== entry.sha256) throw"):
+            self.assertIn(said, catalog)
+
     def test_every_file_the_page_fetches_by_name_is_beside_it(self):
         manifest = load(self.served, "loader.json")
         named = load(self.served, "base-pack.json")
         for name in ("loader.json", "base-pack.json", manifest["loader"]["file"], named["file"], "open-field-helper.ps1"):
             self.assertTrue(os.path.isfile(os.path.join(self.folder, name)), name)
         page = text(self.served, "index.html")
-        for said in ('get("loader.json")', 'get("base-pack.json")', 'new URL("./open-field-helper.ps1", location.href)'):
+        for said in ('get("loader.json")', 'get("base-pack.json")', 'new URL("./open-field-helper.ps1", location.href)', 'fetch("./" + LISTING_FILE)'):
             self.assertIn(said, page)
+        # the listing of packs, packs.json, is put beside the page by the pages workflow, from catalog/packs.json
+        self.assertIn('export const LISTING_FILE = "packs.json"', text(self.served, "catalog.mjs"))
+        self.assertRegex(text(".github", "workflows", "pages.yml"), r"(?m)^\s*run: cp catalog/packs\.json %s/packs\.json\s*$" % re.escape(self.served))
+        self.assertTrue(os.path.isfile(os.path.join(ROOT, "catalog", "packs.json")))
+        self.assertFalse(os.path.isfile(os.path.join(self.folder, "packs.json")), "a copy kept beside the page would go stale: the workflow makes it")
 
     def test_the_helper_s_line_is_made_from_the_page_s_own_address(self):
         page = text(self.served, "index.html")

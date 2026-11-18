@@ -35,6 +35,11 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
+      # The page reads the listing of packs beside it (builder/catalog.mjs): a copy of catalog/packs.json as it stands
+      # on main, so that a pull request that adds a pack changes that one file only.
+      - name: The listing of packs beside the page
+        run: cp catalog/packs.json builder/packs.json
+
       - name: The folder served
         uses: actions/upload-pages-artifact@v3
         with:

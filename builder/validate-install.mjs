@@ -22,6 +22,7 @@ import {
   prepare, readHelper, checkFolder, sha256,
 } from "./install.mjs";
 import { analyzeListing, fileTnodes } from "./placement.mjs";
+import { RAW, NOTICE, readListing, rawLink, isOurs, fileName, withNeeds, neededBy, download } from "./catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const IMAGE_BYTES = 2096140;      // the size of the firmware file the page builds today (loader.json's output, image M4; image L5's was 2217628 until 2026-11-18)
@@ -256,6 +257,77 @@ async function selfChecks() {
   const own = pageOwnBase();
   check("the base.pack beside this file is the one base-pack.json names", own.problem === null, own.problem);
   if (own.problem === null) check("base-pack.json names a version and a release", Number.isInteger(own.version) && own.version >= 1 && /^[0-9A-Za-z.]{1,15}$/.test(own.release));
+
+  // packs ticked in the listing (PLAN.md piece 3, steps 2 and 3): put into the folder's packs by the page, counted in
+  // the placement, copied before base.pack; one of the same bytes left as it is, one of other bytes kept in replaced
+  const lfoBytes = new Uint8Array(375422).fill(11), winkBytes = new Uint8Array(2130).fill(12);
+  const lfo = { name: "lfo.pack", bytes: lfoBytes, sha256: await sha256(lfoBytes), from: RAW + "x/y/" + "0".repeat(40) + "/lfo.pack" };
+  const wink = { name: "wink.pack", bytes: winkBytes, sha256: await sha256(winkBytes), from: null };
+  const oldLfo = new Uint8Array(375418).fill(13), oldLfoSha = await sha256(oldLfo);
+  const withTicks = listed("tick-1", { [NAMES.packs + "/lfo.pack"]: oldLfo, [NAMES.packs + "/wink.pack"]: winkBytes, [NAMES.packs + "/8 tracks.pack"]: new Uint8Array(99476).fill(8) });
+  const t1 = await prepare(withTicks, { build: stand, base, chosen: [lfo, wink] });
+  check("ticked packs are in the plan with the folder's own, base.pack last", t1.plan.packs.map((p) => p.name).join("|") === "8 tracks.pack|lfo.pack|wink.pack|base.pack",
+    t1.plan.packs.map((p) => p.name).join("|"));
+  check("a ticked pack is counted in the placement with its own size", t1.plan.expected.some((r) => r.path === "user/pk/lfo.pack" && r.size === 375422) &&
+    analyzeListing(t1.plan.expected).current.pass);
+  check("a ticked pack of other bytes than the folder's is put in its place, the old one kept in replaced first",
+    (await sha256(withTicks.store.get(NAMES.packs + "/lfo.pack"))) === lfo.sha256 &&
+    (await sha256(withTicks.store.get(NAMES.replaced + "/lfo-" + oldLfoSha.slice(0, 12) + ".pack"))) === oldLfoSha &&
+    withTicks.writes.indexOf(NAMES.replaced + "/lfo-" + oldLfoSha.slice(0, 12) + ".pack") < withTicks.writes.indexOf(NAMES.packs + "/lfo.pack"), withTicks.writes.join(", "));
+  check("a ticked pack of the same bytes as the folder's is left as it is", !withTicks.writes.includes(NAMES.packs + "/wink.pack") &&
+    t1.chosen.find((c) => c.name === "wink.pack")?.state === "same");
+  check("the ticked packs are written before base.pack, and the plan last", withTicks.writes.indexOf(NAMES.packs + "/lfo.pack") < withTicks.writes.indexOf(NAMES.packs + "/base.pack") &&
+    withTicks.writes[withTicks.writes.length - 1] === NAMES.plan, withTicks.writes.join(", "));
+  check("the plan says where each ticked pack came from", t1.plan.chosen?.length === 2 && t1.plan.chosen[0].from === lfo.from && t1.plan.chosen[0].in_folder === "replaced");
+  const tickBack = listed("tick-2");
+  const t2 = await prepare(tickBack, { build: stand, base, chosen: [lfo], wayBack: true });
+  check("the way back puts no ticked pack on", t2.plan.packs.length === 0 && !t2.plan.chosen && !tickBack.writes.some((w) => w.startsWith(NAMES.packs + "/")));
+  for (const [what, chosen, words] of [
+    ["a ticked pack that is not its file is refused", [{ ...lfo, sha256: "0".repeat(64) }], /not the file the listing names/],
+    ["base.pack is never ticked", [{ ...lfo, name: "base.pack" }], /never ticked/],
+    ["two ticked packs of one name are refused", [lfo, { ...lfo }], /two ticked packs/],
+    ["a ticked pack with a name the unit cannot hold is refused", [{ ...lfo, name: "a/b.pack" }], /cannot be copied/],
+  ]) await prepare(listed("tick-x"), { build: stand, base, chosen }).then(() => check(what, false), (e) => check(what, words.test(e.message), e.message));
+
+  // the listing as the page reads it (catalog.mjs), and the download of a ticked pack held to its entry
+  const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+  const entry = (id, more = {}) => ({ id, author: "someone", status: "listed", categories: ["tools"], description: "A pack.", repository: "https://github.com/someone/packs",
+    commit: COMMIT, path: "build/" + id + ".pack", sha256: "a".repeat(64), bytes: 100, version: 1, firmware: "1.7.0", places: 0, needs: ["base"], folders: [], ...more });
+  const data = {
+    about: "test", categories: { tools: "tools", examples: "examples" }, ours: ["https://github.com/open-field-test/packs"],
+    packs: [
+      { id: "base", author: "open-field", status: "bundled", categories: ["tools"], description: "The base.", path: "builder/base.pack" },
+      entry("one"), entry("two", { needs: ["base", "one"], categories: ["examples", "tools"] }), entry("old", { firmware: "1.7.3" }),
+      entry("held", { status: "reserved" }), entry("ours", { author: "open-field", repository: "https://github.com/open-field-test/packs" }),
+      entry("bad/id"), entry("One"), entry("needy", { needs: ["nowhere"] }),
+    ],
+  };
+  const seen = readListing(data, "1.7.0");
+  check("the listing offers only listed packs for the unit's firmware, each once", [...seen.offered.keys()].join("|") === "one|two|ours|needy", [...seen.offered.keys()].join("|"));
+  check("the bundled base is shown apart", seen.base?.id === "base");
+  check("a pack for another firmware is counted, not shown", seen.otherFirmware === 1);
+  check("an entry out of form and a name held twice are left out and named", seen.problems.length === 2 && seen.problems.some((p) => /bad\/id/.test(p)) && seen.problems.some((p) => /One: named twice/.test(p)), seen.problems.join("; "));
+  check("each pack is shown once, under its first category", seen.categories.map((c) => c.key + ":" + c.entries.map((e) => e.id).join(",")).join(" ") === "tools:one,ours,needy examples:two");
+  check("open-field's own packs are those by open-field in the listing's own repositories", isOurs(seen, seen.offered.get("ours")) && !isOurs(seen, seen.offered.get("one")) &&
+    !isOurs({ ours: new Set() }, seen.offered.get("ours")) && !isOurs(seen, { ...seen.offered.get("one"), author: "open-field" }));
+  check("the notice is the owner's line", NOTICE === "A pack is a program that can read and write the files on your unit: take packs only from people you trust.");
+  check("a ticked pack brings what it needs, base.pack aside", [...withNeeds(seen, ["two"]).ids].sort().join("|") === "one|two" && withNeeds(seen, ["needy"]).missing.has("nowhere"));
+  check("a pack another ticked one needs is named", neededBy(seen, new Set(["two", "one"]), "one").join() === "two" && neededBy(seen, new Set(["one"]), "one").length === 0);
+  check("the download link is the repository's file at the entry's commit", rawLink(entry("a b", { path: "packs/a b.pack" })) === RAW + "someone/packs/" + COMMIT + "/packs/a%20b.pack" &&
+    RAW === "https://raw.githubusercontent.com/");
+  check("a pack's file takes its id as its name", fileName(entry("fx train")) === "fx train.pack");
+  throws("a malformed listing is refused", () => readListing({ packs: {} }, "1.7.0"), /not in form/);
+  const fileBytes = new Uint8Array(100).fill(21), good = entry("one", { sha256: await sha256(fileBytes) });
+  const answer = (bytes, status = 200) => async (url, options) => { answer.asked = { url, options }; return { ok: status === 200, status, arrayBuffer: async () => bytes.buffer.slice(0) }; };
+  const got = await download(good, answer(fileBytes));
+  check("a download that is the entry's file is taken, under the pack's name", got.name === "one.pack" && got.sha256 === good.sha256 && got.from === rawLink(good));
+  check("the download sends no cookie and follows no redirect", answer.asked?.options?.credentials === "omit" && answer.asked?.options?.redirect === "error");
+  for (const [what, get, words] of [
+    ["a download of other bytes is refused", answer(new Uint8Array(100).fill(22)), /SHA-256 differs/],
+    ["a download of another size is refused", answer(new Uint8Array(99).fill(21)), /99 bytes, the listing says 100/],
+    ["a download that is not answered is refused", answer(fileBytes, 404), /answered 404/],
+    ["a download that fails is refused", async () => { throw new Error("offline"); }, /could not be downloaded \(offline\)/],
+  ]) await download(good, get).then(() => check(what, false), (e) => check(what, words.test(e.message) && e.message.startsWith("one: "), e.message));
 
   const helperGone = memoryFolder({});
   await prepare(helperGone, { build: async () => ({ image: fakeImage }) }).then(() => check("no helper, no plan", false), (e) => check("no helper, no plan", /written nothing/.test(e.message), e.message));

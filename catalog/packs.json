@@ -1,5 +1,5 @@
 {
-  "about": "The listing of packs: every pack an owner can pick on the install page. Each entry names its pack file in its author's own repository, at one commit, with the file's SHA-256: nothing of a pack is copied into this repository, but base.pack, which lies beside the install page (builder/base.pack) and goes onto every unit the page installs. A pack gets in by a pull request that changes only this file; tools/catalog_check.py checks it, and the maintainer reviews it. docs/catalog.md says how.",
+  "about": "The listing of packs: every pack an owner can pick on the install page. Each entry names its pack file in its author's own repository, at one commit, with the file's SHA-256: nothing of a pack is copied into this repository, but base.pack, which lies beside the install page (builder/base.pack) and goes onto every unit the page installs. ours names the repositories of open-field's own packs: the install page shows its warning on every pack that is not in one of them. A pack gets in by a pull request that changes only this file; tools/catalog_check.py checks it, and the maintainer reviews it. docs/catalog.md says how.",
   "categories": {
     "tape": "tape",
     "effects": "effects",
@@ -11,6 +11,7 @@
     "examples": "examples",
     "library": "library"
   },
+  "ours": ["https://github.com/LaP0573/open-field-packs"],
   "packs": [
     {
       "id": "base",
@@ -31,9 +32,11 @@
     {
       "id": "8 tracks",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["tape"],
       "description": "Eight tape tracks instead of four, on the tape and in the mixer.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "8 tracks.pack",
       "sha256": "c80be48f3623e551fb6a65d518c59966212a35b955dbbf923c271b8ec8df346e",
       "bytes": 99476,
@@ -46,9 +49,11 @@
     {
       "id": "fx train",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["effects"],
       "description": "A chain of effects on every sound, with its presets kept as files.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "fx train.pack",
       "sha256": "dd8666939dd3e939fa0065d9988ac07284676af09202010f349f36b3d8846429",
       "bytes": 426790,
@@ -61,9 +66,11 @@
     {
       "id": "lfo",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["modulation"],
       "description": "Four LFOs on every sound, with their page and their presets.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "lfo.pack",
       "sha256": "6df6301e9e2e222bdb4dc331d71b6982e0b2529067ea686a9c3eada1f5e68b6c",
       "bytes": 375422,
@@ -76,9 +83,11 @@
     {
       "id": "sidechain",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["mixer"],
       "description": "One tape track ducks another, set on a page under shift and the mixer key.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "sidechain.pack",
       "sha256": "217125222686ebb9d0aeaf2f0e8e5eb5fa3baf3bbbbe710febc6d4a1cd196a00",
       "bytes": 104062,
@@ -91,9 +100,11 @@
     {
       "id": "wink",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["examples"],
       "description": "The example of level 1: a red dot that blinks on the tempo screen.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "wink.pack",
       "sha256": "b8b685f2b13cf058c000382a643db2a2c270f1604bdee59df24f082e003784a0",
       "bytes": 2130,
@@ -107,9 +118,11 @@
     {
       "id": "yoyo",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["examples"],
       "description": "The example of level 2: shift and the metronome key open a page where the blue knob moves a yoyo.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "yoyo.pack",
       "sha256": "053ca1c45125c494e1679b284119099c86a106fd7256a701d79082e5dabd9f27",
       "bytes": 4381,
@@ -123,9 +136,11 @@
     {
       "id": "list",
       "author": "open-field",
-      "status": "reserved",
+      "status": "listed",
       "categories": ["examples"],
       "description": "The example of level 3: shift and the help key open a page that lists the files of its own folder.",
+      "repository": "https://github.com/LaP0573/open-field-packs",
+      "commit": "2e1b6822225df0d198868d87c55715d5243d24e9",
       "path": "list.pack",
       "sha256": "973413192503526b0f3e7d8b8201de84a512a1b716f8341598ce1c2478b071f8",
       "bytes": 7281,

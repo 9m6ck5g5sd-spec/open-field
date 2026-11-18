@@ -1,6 +1,6 @@
 # The listing: offering your pack to every owner
 
-The install page offers owners the packs of one listing, [`catalog/packs.json`](../catalog/packs.json), sorted by category. A pack gets into it by a pull request that changes only that file. Nothing of a pack is copied into this repository, but `base.pack`, which comes with the install page: your pack file stays in your own repository, and the listing names it there, at one commit, with the file's SHA-256. The page downloads the file from there and holds it to that SHA-256 before it goes anywhere near a unit.
+The install page offers owners the packs of one listing, [`catalog/packs.json`](../catalog/packs.json), sorted by category, each with a tick. A pack gets into it by a pull request that changes only that file. Nothing of a pack is copied into this repository, but `base.pack`, which comes with the install page: your pack file stays in your own repository, and the listing names it there, at one commit, with the file's SHA-256. The page downloads the file from there and holds it to that SHA-256 before it goes anywhere near a unit ([on the install page](#on-the-install-page)).
 
 If you have not built a pack yet, start with [a first pack](first-pack.md).
 
@@ -72,6 +72,22 @@ The list is the maintainer's to change. To ask for a word it lacks, say so in yo
 
 An entry only moves that way, and is never taken out.
 
+## This project's own packs
+
+The listing's `ours` names the repositories that hold this project's own packs: the four features and the three examples lie in a repository of their own, beside this one, and are listed like anyone's. An entry whose `author` is `open-field` lies in one of those repositories, and an entry in one of them has `open-field` as its author; the check refuses anything else. A pull request never changes `ours`: the check refuses that too, so that no entry can take the place of this project's own.
+
+## On the install page
+
+The install page reads the listing beside it, as `packs.json`: the workflow that publishes the page (`.github/workflows/pages.yml`) copies `catalog/packs.json` there from `main`. In its step 5 it shows:
+
+- `base.pack`, which goes on every unit and has no tick;
+- every `listed` entry for the unit's firmware, under its first category, with its description, author, version, what it needs and its size, and a tick;
+- on every entry that is not this project's own, the warning: **a pack is a program that can read and write the files on your unit: take packs only from people you trust**.
+
+When an owner ticks a pack, the page downloads its file from `https://raw.githubusercontent.com/<owner>/<name>/<commit>/<path>`, the entry's repository at the entry's commit, and holds it to the entry's size and SHA-256. A file that differs is refused, named, and its tick taken off. This download is the only thing the page loads from another site, and the tree's own test holds that (`tools/tests/test_tree.py`, `ThePagesOnAHost`). A pack the ticked one needs is ticked with it.
+
+A ticked file goes into the folder `packs` that the page and the Windows helper share, under the name `<id>.pack`, and the plan of the install counts it; the helper copies it onto the unit with the rest, `base.pack` last, and reads every copy back. A file of the same name with other bytes already in `packs` is kept in the folder `replaced` first. One with the same bytes is shown ticked and goes on as it is. The way back to the original firmware puts no pack on.
+
 ## Getting your pack listed
 
 1. **Build it and try it on your unit.** The listing's check cannot run a pack; the review asks what you tried and what the unit did.
@@ -79,7 +95,7 @@ An entry only moves that way, and is never taken out.
 3. **Write the entry** into `catalog/packs.json`, behind the others, with the full id of the commit that holds the file.
 4. **Run the check**, with your file in a folder of its own: `python -I tools/catalog_check.py --files <that folder>`. It holds every entry's form, and yours to your file. Where the file's size or SHA-256 differs from the entry, it prints the file's own. The next section shows it on this repository's own packs.
 5. **Open a pull request that changes only `catalog/packs.json`.** Say what the pack does, how you tried it, and where its source is. The checks on the pull request (`.github/workflows/listing.yml`) hold the listing to the one before your change, download your file from the commit and hold your entry to it, as step 4 did.
-6. **The review.** The maintainer reads your source at that commit, tries the file on a unit, and merges or says what stands in the way. Once merged, the pack is on the install page.
+6. **The review.** The maintainer reads your source at that commit, tries the file on a unit, and merges or says what stands in the way. Once merged, the pack is on the install page: the next publication of the page carries the listing with your entry.
 
 A new version is the same pull request again: a new commit, the file's new SHA-256 and size, and a higher `version`. The check refuses a new file whose version did not grow.
 
@@ -91,10 +107,16 @@ The listing's form, and every name held once:
 python -I tools/catalog_check.py
 ```
 
-After a build ([docs/build.md](build.md)), every entry of this repository's own packs held to the file the build gave, in `out/packs/` and `out/examples/`:
+After a build ([docs/build.md](build.md)), every entry of this project's own packs held to the file the build gave, in `out/packs/` and `out/examples/`:
 
 ```bash
 python -I tools/catalog_check.py --files out/packs --files out/examples
+```
+
+Every listed entry held to its file downloaded from its repository at its commit, as the install page downloads it:
+
+```bash
+python -I tools/catalog_check.py --fetch
 ```
 
 Each line says `ok` or `REFUSED` with the reason, and the last line sums it up. It answers 0 when every entry is in order.
@@ -107,4 +129,4 @@ It does not hold keys. When two packs pick the same keys for their pages, their 
 
 ## A pack is code
 
-A pack runs inside the firmware with nothing walled off from it. The install page says so on every pack that is not this repository's own, and an owner chooses. Review is a person reading your source and trying your file; it is no promise that a pack is safe.
+A pack runs inside the firmware with nothing walled off from it. The install page says so on every pack that is not this project's own, and an owner chooses. Review is a person reading your source and trying your file; it is no promise that a pack is safe.

@@ -22,3 +22,7 @@ __pycache__/
 # A listing of your own unit's disk, made for the placement step, and the files the installer hands you.
 listing.json
 /downloads/
+
+# The listing of packs beside the install page: the pages workflow copies catalog/packs.json there when it publishes,
+# and a copy made to serve the page on your own computer would go stale (builder/README.md).
+/builder/packs.json

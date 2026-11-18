@@ -48,6 +48,12 @@
   label.gate { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; }
   .hidden { display: none; }
   .big { font-size: 17px; font-weight: 700; }
+  .packs { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 12px 0; padding: 4px 0 8px; }
+  .cat { margin: 10px 0 2px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  label.pack { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; }
+  label.pack input { margin-top: 4px; }
+  .pack .what { display: block; }
+  .pack .state:empty, .pack .notice:empty { display: none; }
 </style>
 </head>
 <body>
@@ -128,9 +134,10 @@
     <p class="note"><b>Pack files.</b> <code>base.pack</code>, the shared pack every feature needs, comes with this
       page: step 5 puts it into the folder <code>packs</code> inside <code>open-field</code>, and the helper copies it
       onto the unit with the new firmware file. If <code>packs</code> holds a <code>base.pack</code> already, this
-      page's takes its place; one with other bytes is first kept in the folder <code>replaced</code>. Other pack files
-      (features, from whoever shares them) can go into <code>packs</code> too before step 5's button, or onto the
-      unit later in its disk mode.</p>
+      page's takes its place; one with other bytes is first kept in the folder <code>replaced</code>. Other packs can
+      be ticked from the listing in step 5, and the page puts them into <code>packs</code> the same way. Pack files you
+      have from elsewhere can go into <code>packs</code> too before step 5's button, or onto the unit later in its disk
+      mode.</p>
     <p class="note"><b>A pack is a program that can read and write the files on your unit: take packs only from people
       you trust.</b> Holding the <b>help</b> key while you switch the unit on starts it with no packs.</p>
   </div>
@@ -153,6 +160,13 @@
       <p><b>What to write:</b><br>
         <label><input type="radio" name="what" value="new" checked> the new open-field firmware file</label><br>
         <label><input type="radio" name="what" value="back"> my own original file: the way back to the original firmware</label></p>
+      <div class="packs" id="packsBox">
+        <p><b>Packs</b> <span class="note">Tick the packs to put on the unit with the rest. The page downloads each one
+          from its author's repository, at the version the listing names, and refuses a file that is not that one.</span></p>
+        <p class="note" id="baseLine"></p>
+        <div id="packList"></div>
+        <p class="note" id="packNote"></p>
+      </div>
       <div class="row">
         <div><div class="k">your own file</div><div class="v" id="pStock"></div></div>
         <div><div class="k">written as os.ldr</div><div class="v" id="pImage"></div></div>
@@ -165,8 +179,8 @@
         <span>I have put a copy of <code id="stockName">os-1.7.0-yours.ldr</code> from the folder somewhere other than
           this computer.</span></label>
       <p><button type="button" id="go" disabled>Put the files on the unit</button></p>
-      <p class="note">This writes the new file, <code>base.pack</code> and the plan into the folder. The helper then puts
-        them on the unit and checks every copy.</p>
+      <p class="note">This writes the new file, <code>base.pack</code>, the packs you ticked and the plan into the folder.
+        The helper then puts them on the unit and checks every copy.</p>
     </div>
     <p class="warn" id="planError"></p>
   </div>
@@ -222,6 +236,7 @@
   import { Session } from "./ferret.mjs";
   import { buildImage, ours } from "./patch.mjs";
   import { NAMES, prepare, readHelper, readPacks, checkFolder, sha256 } from "./install.mjs";
+  import { LISTING_FILE, NOTICE, readListing, isOurs, fileName, withNeeds, neededBy, download } from "./catalog.mjs";
 
   const $ = (id) => document.getElementById(id);
   const SUPPORTED_BL = ["1000.1.1", "1000.1.1+0"];   // te-boot answers "1000.1.1" (2026-11-15); its screen says "+0"
@@ -232,6 +247,13 @@
   let polling = false;
   let helperNow = null;     // the state of the helper run that follows this page (its mark), or null
   let ready = false;        // the helper said ready and this page's own check agrees
+  let listing = null;       // the listing of packs beside the page (packs.json), as catalog.mjs reads it, or null
+  const ticked = new Set(); // the ids the owner ticked (the packs they need are ticked with them)
+  const fetched = new Map(); // id -> the pack's file, downloaded and held to its entry
+  const packErrors = new Map(); // id -> why it cannot go on
+  let folderPacks = new Map(); // a pack file's name in the folder's packs, in small letters -> its SHA-256
+  let downloading = null;   // the id being downloaded, or null
+  const rows = new Map();   // id -> {input, state} of its line in the list
 
   // This page's mark: written into the folder it chose (page.json) and named in the helper's line, so that the helper
   // checks it works in the folder this page reads. Kept for the browser tab, so that a reload follows the same helper.
@@ -305,6 +327,124 @@
       manifest = null; basePack = null;
       $("loadError").textContent = "Could not load the builder's files (" + e.message + ")." + (location.protocol === "file:" ? " Open this page from a web address, not from a file." : "");
       show("loadError");
+      return;
+    }
+    // the listing of packs, beside the page: without it the page offers no pack, and the install goes on all the same
+    try {
+      const data = await fetch("./" + LISTING_FILE).then((r) => (r.ok ? r.json() : null));
+      if (!data) throw new Error(LISTING_FILE + " is not beside this page");
+      listing = readListing(data, manifest.os);
+      for (const problem of listing.problems) log("the listing: " + problem, "warn");
+    } catch (e) {
+      listing = null;
+      log("no listing of packs: " + e.message);
+    }
+    renderListing();
+  }
+
+  // ---- step 5's packs: the listing by category, with a tick for each pack ----
+  function renderListing() {
+    $("packList").textContent = ""; rows.clear();
+    if (!listing) {
+      $("packNote").textContent = "The listing of packs is not beside this page, so none is offered here. Pack files you put into the folder's packs yourself still go on.";
+      renderStates();
+      return;
+    }
+    if (!listing.offered.size) $("packNote").textContent = "The listing offers no pack for OS " + manifest.os + " yet.";
+    for (const category of listing.categories) {
+      const head = document.createElement("div");
+      head.className = "cat"; head.textContent = category.label;
+      $("packList").appendChild(head);
+      for (const entry of category.entries) {
+        const label = document.createElement("label"); label.className = "pack";
+        const input = document.createElement("input"); input.type = "checkbox";
+        input.addEventListener("change", () => onTick(entry, input.checked));
+        const text = document.createElement("span");
+        const name = document.createElement("b"); name.textContent = entry.id;
+        const facts = document.createElement("span"); facts.className = "note";
+        const others = entry.categories.slice(1).map((c) => listing.categories.find((x) => x.key === c)?.label ?? c);
+        const needs = (entry.needs ?? []).filter((n) => n !== "base");
+        facts.textContent = " · version " + entry.version + " · by " + entry.author + (others.length ? " · also " + others.join(", ") : "") +
+          " · needs base.pack" + (needs.length ? ", " + needs.map((n) => n + ".pack").join(", ") : "") + " · " + Math.ceil(entry.bytes / 1024) + " KB";
+        const what = document.createElement("span"); what.className = "what"; what.textContent = entry.description;
+        const notice = document.createElement("span"); notice.className = "what warn notice"; notice.textContent = isOurs(listing, entry) ? "" : NOTICE;
+        const state = document.createElement("span"); state.className = "what note state";
+        text.append(name, facts, what, notice, state);
+        label.append(input, text);
+        $("packList").appendChild(label);
+        rows.set(entry.id, { input, state });
+      }
+    }
+    if (listing.otherFirmware) $("packNote").textContent = listing.otherFirmware + " pack(s) of the listing are for another OS version and are not shown.";
+    renderStates();
+  }
+
+  // The ticks and the words beside each, from what is ticked, downloaded, and already in the folder's packs.
+  function renderStates() {
+    const back = !!document.querySelector("input[name=what][value=back]")?.checked;
+    if (basePack) $("baseLine").textContent = back ? "The way back puts no pack on, not even base.pack: the original firmware does not read them." :
+      "✔ base.pack " + basePack.version + " (release " + basePack.release + "): the shared pack every other pack needs. It goes on every time.";
+    if (!listing) return;
+    const wanted = withNeeds(listing, ticked).ids;
+    for (const [id, { input, state }] of rows) {
+      const entry = listing.offered.get(id);
+      const there = folderPacks.get(fileName(entry).toLowerCase());
+      const needers = neededBy(listing, ticked, id);
+      const missing = (entry.needs ?? []).filter((n) => n !== "base" && !listing.offered.has(n));
+      state.classList.remove("warn", "ok");
+      if (back) {
+        input.checked = false; input.disabled = true; state.textContent = "The way back puts no pack on.";
+      } else if (there === entry.sha256) {
+        input.checked = true; input.disabled = true;
+        state.textContent = "Already in the folder's packs, so it goes on the unit. To leave it out, take " + fileName(entry) + " out of packs and press Look at the packs folder again.";
+      } else {
+        input.checked = wanted.has(id);
+        input.disabled = !!downloading || needers.length > 0 || missing.length > 0;
+        if (packErrors.has(id)) { state.textContent = packErrors.get(id); state.classList.add("warn"); }
+        else if (downloading === id) state.textContent = "Downloading…";
+        else if (missing.length) state.textContent = "It needs " + missing.join(", ") + ", which the listing does not offer.";
+        else if (needers.length) state.textContent = "Ticked because " + needers.join(", ") + " needs it.";
+        else if (wanted.has(id) && fetched.has(id)) { state.textContent = "Downloaded, and it is the file the listing names ✔" + (there ? " The " + fileName(entry) + " in the folder's packs is kept in replaced." : ""); state.classList.add("ok"); }
+        else if (there) state.textContent = "The folder's packs holds another " + fileName(entry) + ", which goes on as it is. Tick this one to put the listing's in its place (the other is kept in replaced).";
+        else state.textContent = "";
+      }
+    }
+  }
+
+  // The packs ticked, downloaded and held, that are not in the folder's packs with the same bytes already.
+  function chosenPacks() {
+    if (!listing) return [];
+    return [...withNeeds(listing, ticked).ids].filter((id) => fetched.has(id) && folderPacks.get(fileName(listing.offered.get(id)).toLowerCase()) !== fetched.get(id).sha256)
+      .map((id) => fetched.get(id));
+  }
+
+  async function onTick(entry, on) {
+    packErrors.delete(entry.id);
+    if (on) ticked.add(entry.id); else ticked.delete(entry.id);
+    const { ids } = withNeeds(listing, ticked);
+    const brought = [...ids].filter((id) => !ticked.has(id) && id !== entry.id);
+    if (on && brought.length) log("ticked with " + entry.id + ", which needs it: " + brought.join(", "));
+    $("go").disabled = true;
+    for (const id of ids) {
+      const wanted = listing.offered.get(id);
+      if (fetched.has(id) || folderPacks.get(fileName(wanted).toLowerCase()) === wanted.sha256) continue;
+      downloading = id; renderStates();
+      try {
+        const got = await download(wanted);
+        fetched.set(id, got);
+        log("downloaded " + got.name + " from " + got.from + ": its size and SHA-256 are the listing's", "ok");
+      } catch (e) {
+        packErrors.set(id, e.message);
+        log(e.message, "warn");
+        for (const other of [...ticked]) {                  // nothing that needs it can go on without it
+          if (withNeeds(listing, [other]).ids.has(id)) { ticked.delete(other); if (other !== id) packErrors.set(other, "It needs " + id + ", which could not be downloaded."); }
+        }
+      }
+    }
+    downloading = null; renderStates();
+    if (!$("planBox").classList.contains("hidden") && folder) {
+      const h = await readHelper(folder).catch(() => null);
+      if (h && h.state === "listed" && h.page === PAGE_ID) await showPlan(h);
     }
   }
 
@@ -542,15 +682,20 @@
   async function showPlan(h) {
     // a dry run of prepare() on a folder that keeps its writes in memory: what the plan will be, before the owner's word
     const memory = { ...folder, writes: {}, async writeBytes(n, b) { this.writes[n] = b; }, async writeText(n, t) { this.writes[n] = t; } };
+    $("planError").textContent = "";
     try {
-      preview = await prepare(memory, { build: (s) => buildImage(s, manifest, loader), stock: keptStock, wayBack: wayBack(), base: basePack });
+      folderPacks = new Map((await readPacks(folder)).map((p) => [p.name.toLowerCase(), p.sha256]));
+      renderStates();
+      preview = await prepare(memory, { build: (s) => buildImage(s, manifest, loader), stock: keptStock, wayBack: wayBack(), base: basePack, chosen: chosenPacks() });
     } catch (e) { $("planError").textContent = "No plan: " + e.message + ". Run the helper's line again to start over."; return; }
     const p = preview.plan;
+    const fromListing = new Set((p.chosen ?? []).map((c) => c.name.toLowerCase()));
     $("pStock").textContent = keptStock ? NAMES.stock + " (the original)" : h.stock.file;
     $("stockName").textContent = keptStock ? "os-1.7.0-yours.ldr" : h.stock.file;
     $("pImage").textContent = (p.wayBack ? p.image.file + " (your own original file)" : NAMES.image) + " · " + p.image.bytes.toLocaleString() + " bytes";
     $("pPad").textContent = p.pad ? p.pad.name + " · " + p.pad.bytes.toLocaleString() + " bytes" : "none needed";
-    $("pPacks").textContent = p.packs.length ? p.packs.map((x) => x.name + (x.name === "base.pack" && preview.base ? " (this page's, release " + basePack.release + ")" : "")).join(", ") : "none";
+    $("pPacks").textContent = p.packs.length ? p.packs.map((x) => x.name + (x.name === "base.pack" && preview.base ? " (this page's, release " + basePack.release + ")" :
+      fromListing.has(x.name.toLowerCase()) ? " (from the listing)" : "")).join(", ") : "none";
     const base = preview.base;
     const baseNote = !base ? "" : base.state === "replaced" ? " The folder's packs held another base.pack: it is kept as " + base.kept + ", and this page's takes its place." :
       base.state === "same" ? " The folder's packs holds this page's base.pack already." : " This page's base.pack goes into the folder's packs.";
@@ -560,9 +705,9 @@
     $("go").disabled = !($("kept").checked && gate);
     if (!gate) $("planError").textContent = "Step 1 has not passed in this browser tab: go back to the bootloader's menu (press 2 to close the drive) and press Find.";
   }
-  $("kept").addEventListener("change", () => { $("go").disabled = !($("kept").checked && gate && preview); });
+  $("kept").addEventListener("change", () => { $("go").disabled = !($("kept").checked && gate && preview && !downloading); });
   for (const radio of document.querySelectorAll("input[name=what]")) radio.addEventListener("change", async () => {
-    $("go").disabled = true; preview = null;
+    $("go").disabled = true; preview = null; renderStates();
     const h = await readHelper(folder);
     if (h && h.state === "listed") await showPlan(h);
   });
@@ -591,8 +736,12 @@
     try {
       const h = await readHelper(folder);
       if (!h || h.state !== "listed") throw new Error("the helper is not waiting any more");
-      const done = await prepare(folder, { build: (s) => buildImage(s, manifest, loader), stock: keptStock, wayBack: wayBack(), base: basePack });
+      if (downloading) throw new Error("a pack is still downloading");
+      const done = await prepare(folder, { build: (s) => buildImage(s, manifest, loader), stock: keptStock, wayBack: wayBack(), base: basePack, chosen: chosenPacks() });
       planned = done.plan;
+      for (const c of done.chosen) {
+        log(c.name + (c.state === "same" ? " from the listing is in the folder's packs already" : " from the listing put into the folder's packs") + (c.kept ? "; the one there before is kept as " + c.kept : ""));
+      }
       if (done.base?.kept) log("the base.pack that was in the folder's packs is kept as " + done.base.kept);
       log("plan written for the helper's run " + planned.run + (planned.wayBack ? " (the way back: your own original file)" : "") +
         (planned.pad ? ", with the pad file " + planned.pad.name : ", no pad file") + (done.base ? ", with this page's base.pack" : ""), "ok");

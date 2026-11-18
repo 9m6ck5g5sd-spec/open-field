@@ -29,7 +29,7 @@ export const NAMES = Object.freeze({
   after: "listing-after.json",      // the disk once the helper has put the files on
   plan: "plan.json",                // written by the page, last: the helper waits for it
   packs: "packs",                   // a sub folder for pack files; the helper copies them to user/pk. The page puts base.pack there
-  replaced: "replaced",             // where the page keeps a base.pack of other bytes that it found in packs, before it puts its own
+  replaced: "replaced",             // where the page keeps a pack file of other bytes that it found in packs, before it puts its own there
   page: "page.json",                // the page's mark, written when the folder is chosen; the helper's line names it, and the helper checks it
 });
 
@@ -243,16 +243,22 @@ export async function readPacks(folder) {
 // base.pack of the same bytes there already is left as it is. One of other bytes (an earlier release, or one the
 // owner put there) is kept in the folder's `replaced` sub folder under its SHA-256's first twelve digits, and the
 // page's takes its place. The way back adds no pack, so `base` is passed over there.
-export async function baseStep(folder, base) {
-  const there = (await folder.list(NAMES.packs)).filter((e) => e.kind === "file" && isBase(e.name));
+// `chosen`: the packs the owner ticked in the listing, each downloaded and held to its entry by catalog.mjs,
+// [{name, bytes, sha256, from}]. Each is written into the folder's packs under its name the same way: left as it is
+// when the same bytes are there, the other bytes kept in `replaced` first. The way back passes them over too.
+// What a pack file the page puts into the folder's packs finds there under its name, in small letters or capitals.
+export async function packStep(folder, name, digestWanted) {
+  const there = (await folder.list(NAMES.packs)).filter((e) => e.kind === "file" && e.name.toLowerCase() === name.toLowerCase());
   if (!there.length) return { state: "added", found: null, kept: null };
   const bytes = await folder.readBytes(NAMES.packs + "/" + there[0].name);
   const digest = await sha256(bytes);
-  if (digest === base.sha256) return { state: "same", found: there[0].name, kept: null };
-  return { state: "replaced", found: there[0].name, kept: NAMES.replaced + "/base-" + digest.slice(0, 12) + ".pack", bytes };
+  if (digest === digestWanted) return { state: "same", found: there[0].name, kept: null };
+  return { state: "replaced", found: there[0].name, kept: NAMES.replaced + "/" + name.replace(/\.pack$/i, "") + "-" + digest.slice(0, 12) + ".pack", bytes };
 }
 
-export async function prepare(folder, { build, stock = null, made, wayBack = false, base = null } = {}) {
+export async function baseStep(folder, base) { return packStep(folder, BASE_PACK, base.sha256); }
+
+export async function prepare(folder, { build, stock = null, made, wayBack = false, base = null, chosen = [] } = {}) {
   const helper = await readHelper(folder);
   if (!helper) throw new Error("the helper has written nothing into this folder yet");
   if (helper.state !== "listed") throw new Error("the helper is not waiting for a plan (it says: " + helper.state + ")");
@@ -275,6 +281,20 @@ export async function prepare(folder, { build, stock = null, made, wayBack = fal
   } else ({ image, report } = await build(stockBytes));
   const imageSha = await sha256(image);
   let packs = wayBack ? [] : await readPacks(folder);
+  const ticked = [];
+  if (!wayBack) {
+    const names = new Set();
+    for (const pack of chosen) {
+      if (isBase(pack.name)) throw new Error("base.pack comes with the page and is never ticked");
+      const problem = packNameProblem(pack.name);
+      if (problem) throw new Error("the pack file " + pack.name + " cannot be copied: " + problem);
+      if (names.has(pack.name.toLowerCase())) throw new Error("two ticked packs are named " + pack.name);
+      names.add(pack.name.toLowerCase());
+      if ((await sha256(pack.bytes)) !== pack.sha256) throw new Error("the pack " + pack.name + " is not the file the listing names");
+      ticked.push({ pack, step: await packStep(folder, pack.name, pack.sha256) });
+    }
+    packs = packs.filter((p) => !names.has(p.name.toLowerCase())).concat(chosen.map((p) => ({ name: p.name, bytes: p.bytes.length, sha256: p.sha256 })));
+  }
   let step = null;
   if (!wayBack && base) {
     if ((await sha256(base.bytes)) !== base.sha256) throw new Error("the page's base.pack is not the file it names");
@@ -287,18 +307,27 @@ export async function prepare(folder, { build, stock = null, made, wayBack = fal
   plan.before = { file: NAMES.before, sha256: await sha256(new TextEncoder().encode(listingText)) };
   plan.build = { loader: report?.loader?.version ?? null, output_sha256: report?.output_sha256 ?? imageSha };
   if (step) plan.base = { from: "the page", sha256: base.sha256, in_folder: step.state, kept: step.kept };
+  if (ticked.length) plan.chosen = ticked.map(({ pack, step: s }) => ({ name: pack.name, sha256: pack.sha256, from: pack.from ?? null, in_folder: s.state, kept: s.kept }));
   if (!wayBack) await folder.writeBytes(NAMES.image, image);
   if (plan.pad) {
     const bytes = padBytes(plan.pad.bytes);
     plan.pad.sha256 = await sha256(bytes);
     await folder.writeBytes(plan.pad.file, bytes);
   }
+  for (const { pack, step: s } of ticked) {           // the ticked packs, then base.pack, then the plan
+    if (s.state === "same") continue;
+    if (s.kept) await folder.writeBytes(s.kept, s.bytes);
+    await folder.writeBytes(NAMES.packs + "/" + pack.name, pack.bytes);
+  }
   if (step && step.state !== "same") {
     if (step.kept) await folder.writeBytes(step.kept, step.bytes);
     await folder.writeBytes(NAMES.packs + "/" + BASE_PACK, base.bytes);
   }
   await folder.writeText(NAMES.plan, JSON.stringify(plan, null, 1));
-  return { plan, image, report, base: step && { state: step.state, found: step.found, kept: step.kept } };
+  return {
+    plan, image, report, base: step && { state: step.state, found: step.found, kept: step.kept },
+    chosen: ticked.map(({ pack, step: s }) => ({ name: pack.name, state: s.state, found: s.found, kept: s.kept })),
+  };
 }
 
 // Once the helper says it is ready: its listing of the disk held against the plan, by the page as well.
