@@ -44,11 +44,25 @@ part's stretch. The pack holds numbers and text of ours; the stretches are read 
 tag, and refuses any other picture. `check` holds that what a set of instructions carries is ours: no tag and no
 shape of any stock picture (tools/stock_search.py's measure), and that it makes a picture.
 
+Since R1 a fourth command, `census`: from every picture of `--display`, the unit's own, it collects the element names,
+the attribute names by element, the values of every attribute that is not a number, a colour, an id (or a reference
+to one, or a label naming the element as an id does), a path's `d` or a `points` list, the letters of the path
+commands in use and the kinds of markup that are no element (the head `<?`, a comment). The census is made at every
+run from the folder handed in, never kept in a file: it is the unit's own vocabulary. Then it reads what the
+instructions' own bytes use (what an `a` or `add end` adds, read where it stands in the picture that is made). A path
+command outside COMMANDS_DRAWN is refused, `<path>: uses the path command '<x>', which the unit's reader of pictures
+does not know: it can stop the unit at its start`, and the answer is 1. Any other element, attribute, such a value or
+markup the census has not is listed, `<path>: uses <what> '<value>', which no picture of the unit has: not proven on a
+unit`; the answer stays 0, and is 1 with `--strict`. A folder with no picture in it is an error, never a census that
+lets everything through. `check` is as it was.
+
 Reads its inputs; `compile` and `make --out` write one file each and refuse to overwrite it.
 """
 
 import argparse
+import bisect
 import os
+import re
 import sys
 import zlib
 
@@ -158,9 +172,10 @@ def _stretch(sources, words):
     return sources[number], offset, length
 
 
-def make2(data, read_stock, blocks=None, most=SOURCES):
+def make2(data, read_stock, blocks=None, most=SOURCES, spans=None):
     """The picture a set of instructions of the second kind makes, by the unit's steps in the unit's order. `most` is
     the count of stock pictures the kit holds for one set: four in the kit of P2, eight from the kit of P3 on."""
+    # since R1: `spans`, a list, is given where each block of ours stands in the picture made, (first byte, end)
     import picture_map
     lines = _Lines(data, MARK2)
     size = lines.size()
@@ -202,6 +217,8 @@ def make2(data, read_stock, blocks=None, most=SOURCES):
             if len(out) + count > size:
                 raise Refused("its instructions make more than the size they name")
             block = data[lines.at:lines.at + count]
+            if spans is not None:
+                spans.append((len(out), len(out) + count))
             out += block
             if blocks is not None:
                 blocks.append(block)
@@ -213,12 +230,13 @@ def make2(data, read_stock, blocks=None, most=SOURCES):
     return bytes(out)
 
 
-def make(data, read_stock, blocks=None, most=SOURCES):
+def make(data, read_stock, blocks=None, most=SOURCES, spans=None):
     """The picture a set of instructions makes, by the unit's own steps in the unit's own order, so that a set the
     unit refuses is refused here for the same reason. `read_stock(name)` answers a stock picture's bytes, or None
     when the unit has none of that name. `blocks`, a list, is given what the instructions add of their own."""
+    # since R1: `spans`, a list, is given where each block of ours stands in the picture made, (first byte, end)
     if data[:len(MARK2)] == MARK2:
-        return make2(data, read_stock, blocks, most)
+        return make2(data, read_stock, blocks, most, spans)
     lines = _Lines(data)
     size = lines.size()
     work = None
@@ -252,6 +270,8 @@ def make(data, read_stock, blocks=None, most=SOURCES):
             if len(work) + count > size:
                 raise Refused("its instructions make more than the size they name")
             block = data[lines.at:lines.at + count]
+            if spans is not None:                               # since R1: a block put in moves what stands behind it
+                spans[:] = [(s + count, e + count) if s >= at else (s, e) for s, e in spans] + [(at, at + count)]
             work[at:at] = block
             if blocks is not None:
                 blocks.append(block)
@@ -278,6 +298,93 @@ def stock_reader(folder):
         with open(path, "rb") as f:
             return f.read()
     return read_stock
+
+
+# ---------------------------------------------------------------- since R1: the census of the unit's own pictures
+
+_NUMBER = rb"[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?"
+_MARKUP = re.compile(rb"<\?.*?\?>|<!--.*?-->|<!\[CDATA\[.*?\]\]>|<![^>]*>"
+                     rb"|<(/?)([A-Za-z_][\w:.-]*)((?:\s+[\w:.-]+\s*=\s*(?:\"[^\"<]*\"|'[^'<]*'))*)\s*/?>", re.S)
+_ATTRIBUTE = re.compile(rb"([\w:.-]+)\s*=\s*(?:\"([^\"]*)\"|'([^']*)')")
+_FREE = (b"id", b"d", b"points", b"inkscape:label")       # an id, a path's d, a points list, a label naming the element
+_NUMBERS = re.compile(rb"\s*(?:" + _NUMBER + rb"(?:px|pt|pc|em|ex|mm|cm|in|%)?[\s,]*)+")
+_COLOUR = re.compile(rb"#[0-9A-Fa-f]{3}|#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|rgba?\(\s*[0-9.%\s,]+\)")
+_REFERENCE = re.compile(rb"url\(\s*#[\w:.-]+\s*\)|#[\w:.-]+")                  # a reference to an id
+_FUNCTIONS = re.compile(rb"\s*(?:[A-Za-z]+\(\s*(?:" + _NUMBER + rb"[\s,]*)*\)[\s,]*)+")   # a transform: numbers only
+_COMMAND = re.compile(_NUMBER + rb"|([A-Za-z])")
+
+
+def _free_value(name, value):
+    """Whether an attribute's value is outside the census: a number or numbers, a colour, an id or a reference to
+    one, a path's d, a points list or a transform of numbers."""
+    return (name in _FREE or _NUMBERS.fullmatch(value) is not None or _COLOUR.fullmatch(value) is not None
+            or _REFERENCE.fullmatch(value) is not None or _FUNCTIONS.fullmatch(value) is not None)
+
+
+def _words_of(picture):
+    """What a picture uses, each as (what, value, first byte, end): what is "the element", "the attribute of
+    <element>", "the value of <attribute>", "the path command" or "the markup"; the bytes are where it stands. A `<`
+    that begins nothing the census reads is markup of its own, its first bytes the value."""
+    found = []
+    at = picture.find(b"<")
+    while at >= 0:
+        token = _MARKUP.match(picture, at)
+        if token is None:
+            found.append(("the markup", picture[at:at + 12].split(b"\n")[0].decode("latin-1"), at, at + 1))
+            at = picture.find(b"<", at + 1)
+            continue
+        if token.group(2) is None:
+            text = token.group(0)
+            kind = b"<?" if text.startswith(b"<?") else b"<!--" if text.startswith(b"<!--") else b"<![CDATA[" if text.startswith(b"<![CDATA[") \
+                else b"<!" + re.match(rb"<!([A-Za-z]*)", text).group(1)
+            found.append(("the markup", kind.decode("latin-1"), at, at + len(kind)))
+        else:
+            element = token.group(2).decode("latin-1")
+            found.append(("the element", element, token.start(2), token.end(2)))
+            for attribute in _ATTRIBUTE.finditer(picture, token.start(3), token.end(3)):
+                name = attribute.group(1)
+                value_group = 2 if attribute.group(2) is not None else 3
+                value, first = attribute.group(value_group), attribute.start(value_group)
+                found.append(("the attribute of " + element, name.decode("latin-1"), attribute.start(1), attribute.end(1)))
+                if name == b"d":
+                    for command in _COMMAND.finditer(value):
+                        if command.group(1) is not None:
+                            found.append(("the path command", command.group(1).decode("latin-1"), first + command.start(1), first + command.end(1)))
+                elif not _free_value(name, value):
+                    found.append(("the value of " + name.decode("latin-1"), value.decode("latin-1"), first, first + len(value)))
+        at = picture.find(b"<", token.end())
+    return found
+
+
+def census(folder):
+    """The unit's vocabulary, from every picture of its own in `folder`: the set of (what, value) its pictures use.
+    Made at every run, never kept. A folder with no picture is an error: an empty census would let everything by."""
+    if not os.path.isdir(folder):
+        raise ValueError("%s is no folder: the census is made from the unit's own pictures" % folder)
+    names = sorted(name for name in os.listdir(folder) if name.lower().endswith(".svg") and os.path.isfile(os.path.join(folder, name)))
+    if not names:
+        raise ValueError("%s holds no picture: the census is made from the unit's own pictures, and none is no census" % folder)
+    held = set()
+    for name in names:
+        with open(os.path.join(folder, name), "rb") as f:
+            held.update((what, value) for what, value, _first, _end in _words_of(f.read()))
+    return held
+
+
+def not_in_census(picture, spans, held):
+    """What the bytes of ours in a picture use that the census has not, each (what, value) once, in the order met.
+    `spans` are where the bytes of ours stand, as `make` gives them."""
+    spans = sorted(spans)
+    starts = [first for first, _end in spans]
+    out, said = [], set()
+    for what, value, first, end in _words_of(picture):
+        place = bisect.bisect_right(starts, end - 1) - 1         # the last block that begins before this ends
+        if place < 0 or spans[place][1] <= first:
+            continue                                            # none of its bytes is ours
+        if (what, value) not in held and (what, value) not in said:
+            said.add((what, value))
+            out.append((what, value))
+    return out
 
 
 def write_new(path, data):
@@ -332,6 +439,34 @@ def cmd_check(args):
     return 1 if bad else 0
 
 
+# The path commands the unit's reader of pictures is known to draw: those the unit's own pictures use (M L H V C S, their
+# small letters and z) and Z, which pictures of ours have drawn on a unit for days. A command outside them (an arc, once)
+# can stop the unit at its start.
+COMMANDS_DRAWN = frozenset("MmLlHhVvCcSsZz")
+
+
+def cmd_census(args):
+    """Since R1: what the instructions' own bytes use, against the census of the unit's own pictures. A path command
+    outside COMMANDS_DRAWN is refused; anything else no picture of the unit has is listed as not proven on a unit,
+    and refused too with --strict."""
+    held = census(args.display)                                 # the unit's vocabulary, made now from its own pictures
+    refused = not_proven = 0
+    for path in args.instructions:
+        with open(path, "rb") as f:
+            data = f.read()
+        spans = []
+        picture = make(data, stock_reader(args.display), None, args.sources, spans)
+        unknown = not_in_census(picture, spans, held)
+        for what, value in unknown:
+            if what == "the path command" and value not in COMMANDS_DRAWN:
+                refused += 1
+                print("%s: uses the path command '%s', which the unit's reader of pictures does not know: it can stop the unit at its start" % (path, value))
+            elif what != "the path command":
+                not_proven += 1
+                print("%s: uses %s '%s', which no picture of the unit has: not proven on a unit" % (path, what, value))
+    return 1 if refused or (args.strict and not_proven) else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="command", required=True)
@@ -350,6 +485,12 @@ def main(argv=None):
     three.add_argument("--display", required=True)
     three.add_argument("--sources", type=int, default=SOURCES, help="the stock pictures the kit holds for one set: 4 (the kit of P2), 8 (from P3 on)")
     three.set_defaults(run=cmd_check)
+    four = sub.add_parser("census", help="hold what the instructions use against the unit's own pictures (since R1)")
+    four.add_argument("--instructions", required=True, nargs="+")
+    four.add_argument("--display", required=True, help="the unit's own pictures: the census is made from them at every run")
+    four.add_argument("--sources", type=int, default=8, help="the stock pictures the kit holds for one set: 8 from P3 on")
+    four.add_argument("--strict", action="store_true", help="what no picture of the unit has counts as refused too")
+    four.set_defaults(run=cmd_census)
     args = ap.parse_args(argv)
     try:
         return args.run(args)

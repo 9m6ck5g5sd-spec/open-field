@@ -105,7 +105,7 @@ Send one change at a time, as a pull request. In its description, say:
 ## What happens then
 
 1. The change is read, and the whole check is run on it against the maintainer's own copy of the firmware.
-2. It is built and tried on a unit. There is one unit, so a change that cannot be tried on it may wait.
+2. It is built and tried on the maintainer's unit, so a change that cannot be tried there may wait.
 3. It goes in, comes back with questions, or is declined with the reason.
 
 This is one person's spare time, so an answer can take a while.

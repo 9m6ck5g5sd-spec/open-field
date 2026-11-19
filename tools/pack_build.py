@@ -120,6 +120,14 @@ _folders, 36 bytes a folder; the word in front of the card names op1f_level_3. `
 as it holds the card's other fields; `check` prints the folders. Cards of levels 1 and 2 and every pack built before
 come out as they did.
 
+Since R1 a card may be of level 4: what a page needs (pages that lie one over the other, text set with an alignment,
+painting on the frame's picture, a file removed, a key watched). Its recipe may carry `asks`, the list of
+what the pack asks of the base: {"level": 4, ..., "asks": []}. Level 4 defines no kind of ask yet, so any ask in a
+recipe is refused. `card` writes the card of 64 bytes, the list of asks' address and count behind level 3's two words
+(0 and 0: no ask), and the word in front of the card names the mark op1f_level_4. `build3` holds the two words as it
+holds the card's other fields; `check` prints the asks, `asks: none` for a card of level 4 without any. A card of
+level 1, 2 or 3 and every earlier pack file are written as they were, to the last byte.
+
 The readers are module/build_j_pack.cpp (format 1) and the bases (module/build_j5c_base.cpp for formats 2 and 3).
 A pack file holds the module's own code and whatever the module carries. Whether one holds anything of the firmware
 is what tools/publish_check.py says: a pack of format 3 whose table holds checksums and whose pictures are
@@ -195,6 +203,14 @@ FOLDERS_MOST = 8
 FOLDER_FORM = re.compile(r"[A-Za-z0-9_](?:[A-Za-z0-9 _.-]{0,13}[A-Za-z0-9_-])?")    # one to fifteen characters, as the base takes them
 FOLDER_NAMES_TAKEN = {"synth": "the firmware's", "drum": "the firmware's", "tapes": "the firmware's", "mixdown": "the firmware's",
                       "packs": "the loader's", "fx": "the base's", "lfo": "the base's"}
+# since R1: a card of level 4 has the address of its list of asks and their count behind
+# level 3's two words; an ask is its kind, its bytes and the address of what it points at. Level 4 defines no kind.
+CARD_4 = struct.Struct("<4I16s4I2I2I")
+CARD_4_BYTES = CARD_4.size                      # 64: a card of level 4
+CARD_LEVELS = CARD_LEVELS + (4,)
+ASK = struct.Struct("<3I")                      # 12 bytes an ask
+ASKS_MOST, ASK_BYTES_MOST = 16, 4096
+ASK_KINDS = {}                                  # the kinds of ask this tool knows, by number: none at level 4
 SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")  # a name as a source defines it
 RELEASE_NAME, RELEASE_BYTES = "op1f_release", 16                # the text a base pack carries for the start screen, zeros behind it
 RELEASE_FORM = re.compile(r"[0-9A-Za-z._-]{1,8}")               # what the tool takes for one
@@ -923,7 +939,7 @@ def card_of(recipe):
     if card is None:
         return None
     carried = bool(recipe.get("pictures"))
-    if (not isinstance(card, dict) or "level" not in card or set(card) - {"level", "frame", "pick", "pictures", "input", "folders"}
+    if (not isinstance(card, dict) or "level" not in card or set(card) - {"level", "frame", "pick", "pictures", "input", "folders", "asks"}
             or not isinstance(card.get("pictures", carried), bool)):
         raise ValueError('A recipe\'s card is {"level": 1, "frame": a function\'s symbol or null, "pick": the same, "pictures": true or false}')
     level = card["level"]
@@ -935,6 +951,10 @@ def card_of(recipe):
         raise ValueError("Only a card of level 3 or later lists folders: it is level 3's")
     if "folders" in card:
         folders_of_card(recipe["name"], card["folders"])
+    if "asks" in card and level < 4:                        # since R1
+        raise ValueError("Only a card of level 4 or later lists asks: it is level 4's")
+    if "asks" in card:
+        asks_of_card(card["asks"])
     for key in ("frame", "pick", "input"):
         if card.get(key) is not None and not (isinstance(card[key], str) and SYMBOL.fullmatch(card[key])):
             raise ValueError("A card's %s is the symbol of a function of the pack, or null: %r" % (key, card[key]))
@@ -952,7 +972,28 @@ def card_input(recipe):
 
 def card_size(level):
     """Since M2: the bytes of a card of a level: 44 at level 1, 48 from level 2 on."""
+    if level >= 4:                                          # since R1: 64 at level 4 (level 3's 56 is set where its card is written)
+        return CARD_4_BYTES
     return CARD_2_BYTES if level >= 2 else CARD_BYTES
+
+
+def asks_of_card(asks):
+    """Since R1: a card's list of asks from its recipe, held to what this tool knows. Level 4 defines no kind of ask
+    yet, so the list is empty: any ask is refused, in the words of what is wrong."""
+    if not isinstance(asks, list) or len(asks) > ASKS_MOST:
+        raise ValueError("A card's asks are a list of none to %d asks" % ASKS_MOST)
+    for number, ask in enumerate(asks, 1):
+        kind = ask.get("kind") if isinstance(ask, dict) else None
+        if kind not in ASK_KINDS:
+            raise ValueError("Ask %d of the card, of the kind %r: level 4 defines no kind of ask yet, so a card's asks are an empty list" % (number, kind))
+    return []
+
+
+def card_asks(recipe):
+    """Since R1: the asks a recipe's card lists; none for a card without asks and for a recipe without a card.
+    card_of has held them."""
+    card = card_of(recipe)
+    return [] if card is None else asks_of_card(recipe["card"].get("asks", []))
 
 
 def folders_of_card(pack_name, folders):
@@ -1045,6 +1086,12 @@ def render_card(recipe, recipe_name):
         table = (".global " + table_label + "\n.type " + table_label + ", STT_OBJECT\n" + table_label + ":\n" + rows + ".size " + table_label + ", .-" + table_label + "\n") if folders else ""
         text = text.replace(end, "    .long " + (card_input(recipe) or "0") + "\n    .long " + (table_label if folders else "0") + "\n    .long " + str(len(folders)) + "\n"
                             + size_line + table, 1)
+    if level >= 4:                                          # since R1: the list of asks and its count behind level 3's two; level 4 knows no kind, so none
+        card_asks(recipe)
+        count_line = "    .long " + str(len(folders)) + "\n" + size_line                # level 3's last word and the card's last line
+        text = text.replace(" */\n.section", " * Level 4: behind them, the pack's list of asks and how many it holds; level 4 defines no kind of ask yet, so both are 0.\n */\n.section", 1)
+        text = text.replace("0x%08x, %d, " % (CARD_MARK, CARD_3_BYTES), "0x%08x, %d, " % (CARD_MARK, CARD_4_BYTES), 1)    # the card's bytes: 64
+        text = text.replace(count_line, "    .long " + str(len(folders)) + "\n    .long 0\n    .long 0\n" + size_line, 1)
     return text
 
 
@@ -1084,7 +1131,22 @@ def card_in(data):
         card["input"] = input_function
     if size >= CARD_3_BYTES and level >= 3:                 # since M3: a card of level 3, of level 3's size, has its list of folders
         card["folders"], card["folder_count"] = struct.unpack_from("<2I", body, at + CARD_2_BYTES)
+    if size >= CARD_4_BYTES and level >= 4:                 # since R1: a card of level 4, of level 4's size, has its list of asks
+        card["asks"], card["ask_count"] = struct.unpack_from("<2I", body, at + CARD_3_BYTES)
     return card
+
+
+def asks_in(data):
+    """Since R1: the asks a pack file's card lists, each (kind, bytes, what) as the bytes have them, read from the
+    list's place as linked; none for a card without asks or with a list that does not lie whole in the body."""
+    fields, body, _extra = parse3(data)
+    card = card_in(data)
+    if card is None or not card.get("ask_count") or not card.get("asks") or card["ask_count"] > ASKS_MOST:
+        return []
+    at = card["asks"] - linked_at(fields, 0)
+    if at < 0 or at % 4 or at + ASK.size * card["ask_count"] > len(body):
+        return []
+    return [ASK.unpack_from(body, at + ASK.size * number) for number in range(card["ask_count"])]
 
 
 def linked_at(fields, offset):
@@ -1137,6 +1199,15 @@ def card_faults(data):
                 folders_of_card(card["name"], [{"name": n, "place": p, "shown": s} for n, p, s in folders_in(data)])
             except ValueError as problem:
                 faults.append("its list of folders is not one the base takes: %s" % problem)
+    if card.get("ask_count") or card.get("asks"):           # since R1: the list of asks moves with the pack and lies in it, as the base holds it
+        listed = asks_in(data)
+        if card["ask_count"] > ASKS_MOST or not card["asks"] or not card["ask_count"]:
+            faults.append("its list of asks is not in order")
+        elif (card["place"] + CARD_3_BYTES, KIND_WORD, None, card["asks"]) not in lists["places"]:
+            faults.append("its list of asks is no address of the pack's own, which would move with the pack")
+        elif len(listed) != card["ask_count"] or any(size > ASK_BYTES_MOST or (what and (what % 4 or not linked_at(fields, 0) <= what <= linked_at(fields, len(_body)) - size))
+                                                     for _kind, size, what in listed):
+            faults.append("its list of asks does not lie in its pack on a word")
     return faults
 
 
@@ -1170,6 +1241,10 @@ def card_lines(data):
         if "folder_count" in card:                          # since M3: a card of level 3's size, with its folders
             listed = folders_in(data) if 0 < card["folder_count"] <= FOLDERS_MOST and card["folders"] else []
             lines.append("card: %d folder(s)%s" % (card["folder_count"], "".join("; '%s' at user/pf/%s/, %s" % (n, p, "shown" if s else "not shown") for n, p, s in listed)))
+        if "ask_count" in card:                             # since R1: a card of level 4's size, with its asks
+            asked = asks_in(data)
+            lines.append("card: asks: none" if not card["ask_count"] else "card: %d ask(s)%s; level 4 defines no kind of ask, so the base leaves them aside"
+                         % (card["ask_count"], "".join("; kind %d, %d bytes at 0x%08x" % ask for ask in asked)))
         faults = card_faults(data)
         if faults:
             lines.append("card: NOT in order: %s" % "; ".join(faults))
@@ -1292,6 +1367,10 @@ def build3(recipe, target_os, out_dir=None, objects=None, log=print, serve=None)
             if folders and (bytes(body[table_at - origin:table_at - origin + FOLDER.size * len(folders)]) != folder_table(folders)
                             or (card_place + CARD_2_BYTES, KIND_WORD, None, table_at) not in places):
                 raise ValueError("The card's list of folders in the sources is not the recipe's: write it again with `card`")
+        if level >= 4:                                      # since R1: 64 bytes, the list of asks and its count behind; level 4 knows no kind, so none
+            if card_asks(recipe) or has(label + "_asks"):
+                raise ValueError("The card's list of asks in the sources is not the recipe's: write it again with `card`")
+            linked = linked[:4] + struct.pack("<I", CARD_4_BYTES) + linked[8:] + struct.pack("<2I", 0, 0)
         if bytes(body[card_place:card_place + len(linked)]) != linked or level_place not in places:
             raise ValueError("The card in the sources is not the recipe's: write it again with `card`")
         if not card_place:
@@ -1506,6 +1585,8 @@ def cmd_card(args):
         print("  and level 2's input function: %s" % (card_input(recipe) or "none"))
     if level >= 3:                                          # since M3
         print("  and level 3's folders: %s" % ("; ".join("'%s' at user/pf/%s/, %s" % (n, p, "shown" if s else "not shown") for n, p, s in card_folders(recipe)) or "none"))
+    if level >= 4:                                          # since R1
+        print("  and level 4's asks: %s" % ("none" if not card_asks(recipe) else "%d" % len(card_asks(recipe))))
     return 0
 
 

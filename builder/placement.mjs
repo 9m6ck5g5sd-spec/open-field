@@ -2,7 +2,7 @@
 // file listing of the unit's volume. No memory reading. Runs in the browser (plain ES module, no Node
 // APIs in this file) and in Node.
 //
-// The model was worked out for te-boot 1000.1.1 and held against what one unit did: its constants are that
+// The model was worked out for te-boot 1000.1.1 and held against real writes: its constants are that
 // one bootloader's. A unit with another bootloader must not be given a verdict by it; the dev-mode step
 // reads the bootloader's version and refuses any other.
 //

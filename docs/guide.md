@@ -4,7 +4,7 @@ How to put open-field on your own OP-1 Field, how to add and take away a feature
 
 open-field has three parts. **The loader** is a small piece of our code that goes, once, into the firmware file of your unit: at every start it reads the pack files on the unit. **The base**, the file `base.pack`, is the shared pack every feature needs. **The features** are one file each, `8 tracks.pack` say. The install puts the loader in and `base.pack` on the unit; the features are files you copy.
 
-Read the whole page before you begin. The install changes the firmware of your unit. It has been made on one unit only, and a write that goes wrong can leave a unit unable to start, for good. Installing this will void the warranty of your device. open-field is unofficial: it is not made or supported by Teenage Engineering, and it is not affiliated with them. Whether to install it is your decision, and you do it at your own risk ([NOTICE.md](../NOTICE.md)).
+Read the whole page before you begin. The install changes the firmware of your unit. A write that goes wrong can leave a unit unable to start, for good. Installing this will void the warranty of your device. open-field is unofficial: it is not made or supported by Teenage Engineering, and it is not affiliated with them. Whether to install it is your decision, and you do it at your own risk ([NOTICE.md](../NOTICE.md)).
 
 ## What you need
 

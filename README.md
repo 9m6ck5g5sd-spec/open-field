@@ -6,7 +6,7 @@ Extra features for the OP-1 Field, added to the firmware that is already on your
 
 **At your own risk.** Installing it changes the firmware of your unit. That is a risky process: a unit can end up unable to start for good ("bricked"), and installing it will void the warranty of your device. Whether to do it is your decision alone. Read [NOTICE.md](NOTICE.md) first.
 
-**Status: a first assembly, not published.** This repository was put together for review. The install has been made on one unit only. Read "What is proven and what is not" below before you rely on anything here.
+**Status: open-field 0.3, for OS 1.7.3.** Read "What is proven and what is not" below before you rely on anything here.
 
 ## What it is
 
@@ -65,9 +65,9 @@ A check that runs before every commit refuses a file that holds bytes of the fir
 
 ## What is proven and what is not
 
-- The install without any key has been made on **one unit**, from a Windows computer. It has not been tried on another unit, on another bootloader version, or from a Mac or Linux computer.
+- The install without any key has been made on several units, by their owners, from Windows computers. It has not been tried on another bootloader version, or from a Mac or Linux computer.
 - A write that is interrupted can leave the unit unable to start. The guide says how to keep that risk small and what the way back is. The way back from a unit that does not start has **not** been rehearsed.
-- The features have been used on that one unit, for weeks, not on any other. The three example packs `wink`, `yoyo` and `list` have run on it too.
+- The features have been used on several units, on the maintainer's for weeks. The three example packs `wink`, `yoyo` and `list` have run on the maintainer's unit.
 
 ## What is in this repository
 
