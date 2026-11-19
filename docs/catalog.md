@@ -74,7 +74,9 @@ An entry only moves that way, and is never taken out.
 
 ## This project's own packs
 
-The listing's `ours` names the repositories that hold this project's own packs: the four features and the three examples lie in a repository of their own, beside this one, and are listed like anyone's. An entry whose `author` is `open-field` lies in one of those repositories, and an entry in one of them has `open-field` as its author; the check refuses anything else. A pull request never changes `ours`: the check refuses that too, so that no entry can take the place of this project's own.
+The listing's `ours` names the repositories that hold this project's own packs: the four features lie in a repository of their own, beside this one, and are listed like anyone's.
+
+The three examples, `wink`, `yoyo` and `list`, are for people who write packs, not for owners: their sources lie in this repository under `examples/`, and the build makes their files. Their entries stay `reserved`, so that their names and the folder `list` stay held, and the install page never offers them. An entry whose `author` is `open-field` lies in one of those repositories, and an entry in one of them has `open-field` as its author; the check refuses anything else. A pull request never changes `ours`: the check refuses that too, so that no entry can take the place of this project's own.
 
 ## On the install page
 

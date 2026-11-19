@@ -78,7 +78,7 @@ The pad file may stay on the unit; it served only this write. The next install t
 
 **A pack is a program that can read and write the files on your unit: take packs only from people you trust.** Holding the help key while you switch on starts the unit with no packs ([the safe start](#the-safe-start)).
 
-1. Get the feature file, `8 tracks.pack` say. The feature files are not kept in this repository: the packs of the listing are offered by the install page ([above](#pack-files-in-the-same-visit)), and this project's own four features and three examples lie in the repository [open-field-packs](https://github.com/LaP0573/open-field-packs), beside this one. A pack that is not listed comes from wherever its author shares it. You can also build this project's own from this repository with one command ([build.md](build.md)).
+1. Get the feature file, `8 tracks.pack` say. The feature files are not kept in this repository: the packs of the listing are offered by the install page ([above](#pack-files-in-the-same-visit)), and this project's own four features lie in the repository [open-field-packs](https://github.com/LaP0573/open-field-packs), beside this one. A pack that is not listed comes from wherever its author shares it. You can also build this project's own from this repository with one command ([build.md](build.md)).
 2. Put the unit into its disk mode, as you do to copy samples. It shows a folder `packs`.
 3. Copy the file into `packs`.
 4. Leave the disk mode and switch the unit off and on.

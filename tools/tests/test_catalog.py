@@ -84,6 +84,18 @@ class TheTreesListing(unittest.TestCase):
             self.assertTrue(set(entry["categories"]) <= set(the_listing["categories"]), entry["id"])
             self.assertIn(entry.get("firmware", "1.7.0"), FIRMWARES.values(), entry["id"])
 
+    def test_the_examples_are_held_and_never_offered_to_owners(self):
+        """The example packs are for people who write packs: their sources lie in examples/, the build makes their
+        files, and the install page offers only listed entries. Their entries stay reserved, so that their names and
+        their folders stay held."""
+        with open(check.CATALOG, encoding="utf-8") as f:
+            the_listing = json.load(f)
+        examples = [entry for entry in the_listing["packs"] if "examples" in entry["categories"]]
+        self.assertTrue(examples)
+        for entry in examples:
+            self.assertEqual(entry["status"], "reserved", entry["id"])
+            self.assertTrue(os.path.isdir(os.path.join(ROOT, "examples", entry["id"])), entry["id"])
+
     def test_the_firmware_word_is_read_from_the_profile(self):
         self.assertEqual(FIRMWARES[OS_170], "1.7.0")
         with open(os.path.join(ROOT, "profiles", "op1f-1.7.0.json"), encoding="utf-8") as f:
