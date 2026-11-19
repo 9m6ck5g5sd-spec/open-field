@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build H images H1 to H3: the chain's engine, the train's knobs and keys and the persistence
 // (analysis/fx_chain_study.md, sections 3, 6, 9 to 15, 17 and 18). H1 to H1g painted a provisional train page as text and
 // boxes over the finished frame; since H2 the page is a screen of the GUI's own, drawn from the chain's view by
@@ -34,9 +35,9 @@
 // H4 lifts the one-wagon-per-type rule (section 20): every module-built instance gets a private state region (512 KB
 // of C heap 0, eight regions for the eight wagon slots of the two hosts) and the fixed state the H0 census found is
 // redirected to it around the instance's process call on the audio thread: the delay's and cwo's pointer-table
-// entries (0x84ad02b8[0], 0x84ad02b0[0], read inside their process), the spring's and mother's region bases through
+// entries (0x84ad0700[0], 0x84ad06f8[0], read inside their process), the spring's and mother's region bases through
 // the module words op1f_spring_base / op1f_mother_base that the three CALL.a stubs of build_h_regions.s load in place
-// of stock's immediates, and nitro's three static words at 0x080266c8 copied in and out; the L1 buffers 0x11904004 and
+// of stock's immediates, and nitro's three static words at 0x080266e8 copied in and out; the L1 buffers 0x11904004 and
 // 0x11904604 are scratch filled and consumed within one call and need nothing, and grid's and phone's "addresses" of
 // the census were fixed-point constants. Stock's own instances (the mirrored wagon's producer, the master effect's at
 // index 1) keep stock's regions. Without the pool (the allocation refused) the H1 rule stands as before.
@@ -46,11 +47,11 @@
 // runs in position order after the engine, inside the instrument's second stage, where stock ran its one effect.
 //
 // What stock does, as read for H1 (study sections 6 and 9):
-//   * Both sound controllers (synth, vtable 0x8401364c; drum, 0x8400e88c) share the key-down handler 0x8c0cf4cc and
-//     the key-up 0x8c0ce984; their shifted key-down (0x8c0cef50 / 0x8c0b64e6) and encoder (0x8c0d50a8 / 0x8c0b6cfc)
+//   * Both sound controllers (synth, vtable 0x8401364c; drum, 0x8400e88c) share the key-down handler 0x8c0cfe7c and
+//     the key-up 0x8c0cf364; their shifted key-down (0x8c0cf904 / 0x8c0b6e1e) and encoder (0x8c0d5c10 / 0x8c0b7634)
 //     handlers differ. The host is the word at this + 0xc (0 synth, else drum), the page at this + 0x28 (0 engine,
-//     1 envelope, 2 effect, 3 lfo). The dispatchers 0x8c0b1320 (key-down), 0x8c0b1390 (shifted key-down) and
-//     0x8c0b13c4 (key-up) call the current controller's virtual with (this, event*) or (this, key), the key the
+//     1 envelope, 2 effect, 3 lfo). The dispatchers 0x8c0b1ae8 (key-down), 0x8c0b1b58 (shifted key-down) and
+//     0x8c0b1b8c (key-up) call the current controller's virtual with (this, event*) or (this, key), the key the
 //     first word of the event (the handlers read nothing else of it), and run a fallback when the handler returns
 //     0. The keys: T1..T4 = 6..9 (T3 = 8 sets page 2, and on page 2 toggles fx_active through the controller's
 //     virtual at vtable + 0x50); the encoder handler gets (this, index + 4 while shift is held, delta). A knob's
@@ -61,23 +62,23 @@
 //     (this, slot): the effect browser.
 //   * Stock's effect is one slot per host: the type word 0x11904794[slot] (synth) / 0x119047b4[slot] (drum), the
 //     eight parameter words at 0x119036e0 + 0x20 slot / 0x119039e0 + 0x20 slot (copied every block into the ctx
-//     0x11904754 the effect reads), the fx_active byte at 0x84a0110c + slot / 0x84a0111c + slot, the producer
-//     object in the slot 0x84a03844, shared by the synth and the drum: 0x8d5041d0(0, type) nulls the slot pointer,
+//     0x11904754 the effect reads), the fx_active byte at 0x84a0154c + slot / 0x84a0155c + slot, the producer
+//     object in the slot 0x84a03c84, shared by the synth and the drum: 0x8d505390(0, type) nulls the slot pointer,
 //     builds the type's object through the factory 0x8f00f598 into the fixed storage 0x11906918, calls its init
 //     (vtable + 0xc)(this, 0) and publishes the pointer; the second stages test the pointer for null, then the
 //     fx_active byte, then call process (vtable + 8)(this, L bus 0x11902ba0, R bus 0x11902ca0, ctx). The GUI's pick
 //     path 0x8f007bf8(index, type) is that build and nothing else.
 //   * A sound slot's settings are a document the firmware keeps in memory: a record of 52 bytes for each slot
-//     (0x080235d0 + 52 slot for the synth, 0x08023770 + 52 slot for the drum) with the slot's number in its second
+//     (0x080235dc + 52 slot for the synth, 0x0802377c + 52 slot for the drum) with the slot's number in its second
 //     word and the JSON object in its third. The firmware's setters write a key of the document and see to it that
-//     the slot's file is written: 0x8d4f2a7c(record, eight words) for the effect's parameters, each stored as the
-//     word shifted right by sixteen, and 0x8d4f2b04(record, value) for the effect's on-off. A record's document is
-//     put onto the sound by the fifth function of the record's table (0x8d4f523c for the synth and 0x8d4f3d0c for
-//     the drum, in the words 0x8401f62c and 0x8401f608, at which this unit's two wrappers stand): the effect's type
+//     the slot's file is written: 0x8d4f3b9c(record, eight words) for the effect's parameters, each stored as the
+//     word shifted right by sixteen, and 0x8d4f3c24(record, value) for the effect's on-off. A record's document is
+//     put onto the sound by the fifth function of the record's table (0x8d4f635c for the synth and 0x8d4f4e2c for
+//     the drum, in the words 0x8401f894 and 0x8401f870, at which this unit's two wrappers stand): the effect's type
 //     from its name, the parameter words, the on-off byte and, for the slot that is played, the effect's object
 //     built anew. The effect browser and the loading of a preset go the same way. A key the firmware does not know
 //     is not kept in such a document from one start to the next, which is why the chain has a file of its own
-//     (below). The effects' names come from the firmware's table at 0x8490de4c, in the order 0 delay, 1 grid,
+//     (below). The effects' names come from the firmware's table at 0x8490e288, in the order 0 delay, 1 grid,
 //     2 punch, 3 phone, 4 spring, 5 mother, 6 nitro, 7 cwo, 8 vocoder, 9 terminal, 10 fazer.
 //
 // H1's design:
@@ -144,51 +145,51 @@ typedef void (*ArrayCtorFn)(void* storage, int count, int size, void* ctor, void
 typedef void (*BuildProducerFn)(int index, int type);
 typedef void (*SetActiveDocFn)(void* record, int value);
 typedef void (*SetParamsDocFn)(void* record, const u32* words);
-typedef int (*RandomParamFn)(int type, int index, int bias);     // 0x8d51117c: stock's random value for an effect parameter, the JSON integer in the low half
-typedef void (*JsonToStringFn)(void* out_string, void* json);     // 0x8c084752: the json's text into a std::string (the data pointer at +0)
-typedef int (*FxTypeOfNameFn)(void* string);                       // 0x8fca5ce8: the effect type of a name, as the apply uses it
-typedef int (*JsonBoolFn)(void* json);                              // 0x8c084b64
-typedef int (*JsonSizeFn)(void* json);                              // 0x8c084bf2
-typedef void* (*JsonLookupFn)(void* json, const char* key);          // 0x8c085e54: the member, inserted when missing
-typedef int (*JsonHasFn)(void* json, const char* key);               // 0x8c085038
-typedef void* (*JsonGetFn)(void* json, const char* key);             // 0x8c084f44
-typedef void* (*JsonAtFn)(void* json, int index);                   // 0x8c084eb0
-typedef int (*JsonIntFn)(void* json);                                // 0x8c084810
-typedef void (*JsonCtorFn)(void* json, int kind);                    // 0x8c085b78(json, kind): a fresh value of that kind; 0 is null, which the first push turns into an array
-typedef void (*JsonFromIntFn)(void* json, int value);                // 0x8c083aec
-typedef void (*JsonPushFn)(void* array, void* value);                // 0x8c085d24
-typedef void (*JsonAssignFn)(void* target, void* value);             // 0x8c084588
-typedef void (*JsonDtorFn)(void* json);                              // 0x8c0844b0
-typedef int (*JsonReadFileFn)(const char* path, void* json);         // 0x8c0534a0: the file parsed into the json, non-zero on success
-typedef int (*JsonWriteFileFn)(void* path_string, void* json);       // 0x8c053138: the json written to the path, a stock string object
-typedef void (*StringCtorFn)(void* out, const char* text);           // 0x8c03e40c: a stock string object from text
+typedef int (*RandomParamFn)(int type, int index, int bias);     // 0x8d51233c: stock's random value for an effect parameter, the JSON integer in the low half
+typedef void (*JsonToStringFn)(void* out_string, void* json);     // 0x8c084782: the json's text into a std::string (the data pointer at +0)
+typedef int (*FxTypeOfNameFn)(void* string);                       // 0x8fca7b08: the effect type of a name, as the apply uses it
+typedef int (*JsonBoolFn)(void* json);                              // 0x8c084b94
+typedef int (*JsonSizeFn)(void* json);                              // 0x8c084c22
+typedef void* (*JsonLookupFn)(void* json, const char* key);          // 0x8c085e84: the member, inserted when missing
+typedef int (*JsonHasFn)(void* json, const char* key);               // 0x8c085068
+typedef void* (*JsonGetFn)(void* json, const char* key);             // 0x8c084f74
+typedef void* (*JsonAtFn)(void* json, int index);                   // 0x8c084ee0
+typedef int (*JsonIntFn)(void* json);                                // 0x8c084840
+typedef void (*JsonCtorFn)(void* json, int kind);                    // 0x8c085ba8(json, kind): a fresh value of that kind; 0 is null, which the first push turns into an array
+typedef void (*JsonFromIntFn)(void* json, int value);                // 0x8c083b1c
+typedef void (*JsonPushFn)(void* array, void* value);                // 0x8c085d54
+typedef void (*JsonAssignFn)(void* target, void* value);             // 0x8c0845b8
+typedef void (*JsonDtorFn)(void* json);                              // 0x8c0844e0
+typedef int (*JsonReadFileFn)(const char* path, void* json);         // 0x8c0534d0: the file parsed into the json, non-zero on success
+typedef int (*JsonWriteFileFn)(void* path_string, void* json);       // 0x8c053168: the json written to the path, a stock string object
+typedef void (*StringCtorFn)(void* out, const char* text);           // 0x8c03e434: a stock string object from text
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_BUILD_PRODUCER ((BuildProducerFn)0x8d5041d0u)
-#define STOCK_SET_ACTIVE_DOC ((SetActiveDocFn)0x8d4f2b04u)
-#define STOCK_SET_PARAMS_DOC ((SetParamsDocFn)0x8d4f2a7cu)
-#define STOCK_RANDOM_PARAM ((RandomParamFn)0x8d51117cu)
-#define STOCK_ARRAY_CTOR ((ArrayCtorFn)0x8fcc58a0u)
-#define STOCK_PATCH_APPLY ((ApplyFn)0x8d4e8bbcu)
-#define STOCK_APPLY_SYNTH ((ApplyFn)0x8d4f523cu)
-#define STOCK_APPLY_DRUM ((ApplyFn)0x8d4f3d0cu)
-#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e54u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c084588u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_TO_STRING ((JsonToStringFn)0x8c084752u)
-#define STOCK_FX_TYPE_OF ((FxTypeOfNameFn)0x8fca5ce8u)
-#define STOCK_JSON_BOOL ((JsonBoolFn)0x8c084b64u)
-#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084bf2u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_BUILD_PRODUCER ((BuildProducerFn)0x8d505390u)
+#define STOCK_SET_ACTIVE_DOC ((SetActiveDocFn)0x8d4f3c24u)
+#define STOCK_SET_PARAMS_DOC ((SetParamsDocFn)0x8d4f3b9cu)
+#define STOCK_RANDOM_PARAM ((RandomParamFn)0x8d51233cu)
+#define STOCK_ARRAY_CTOR ((ArrayCtorFn)0x8fcc76bcu)
+#define STOCK_PATCH_APPLY ((ApplyFn)0x8d4e9724u)
+#define STOCK_APPLY_SYNTH ((ApplyFn)0x8d4f635cu)
+#define STOCK_APPLY_DRUM ((ApplyFn)0x8d4f4e2cu)
+#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e84u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_TO_STRING ((JsonToStringFn)0x8c084782u)
+#define STOCK_FX_TYPE_OF ((FxTypeOfNameFn)0x8fca7b08u)
+#define STOCK_JSON_BOOL ((JsonBoolFn)0x8c084b94u)
+#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084c22u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
 #define RD32(a) (*(volatile u32*)(a))
 #define RD8(a) (*(volatile u8*)(a))
 #define WR32(a, v) (*(volatile u32*)(a) = (u32)(v))
@@ -211,14 +212,14 @@ enum { KEY_T1 = 6, KEY_T3 = 8, KEY_CLICK0 = 54, KEY_PRESS0 = 61, PAGE_FX = 2, PA
 // is logged with the entry and the word before and after (H6h: the first twenty-four lines; H6i: a budget per knob and
 // a range line when the knob rests, see stock_knob_turn).
 static const u32 LFO_TYPE_ARRAY[HOSTS] = { 0x119035a0u, 0x119035c0u }, LFO_BLOCK[HOSTS] = { 0x119037e0u, 0x11903ae0u };
-static const u32 FX_DESCRIPTORS = 0x840afbf4u, LFO_DESCRIPTORS = 0x840af6d4u;
+static const u32 FX_DESCRIPTORS = 0x840afe60u, LFO_DESCRIPTORS = 0x840af940u;
 // The six LFO kinds' names are stock's own and are read where stock keeps them (packs L3; until then this unit carried
-// them, in stock's order): six entries of eight bytes at 0x84d251fc, the name's address and the kind. That table is not in the image: one of the
+// them, in stock's order): six entries of eight bytes at 0x84d256c4, the name's address and the kind. That table is not in the image: one of the
 // constructors the start code runs before main fills it (0x8fca6224, the word at 0x08002424 of the constructors' table;
 // the walk is 0x8fcc4dd0, called at 0x11a00152 right before main). Stock's own lookup of a kind by its name, 0x8fca618c,
 // walks the same six entries. This
-// table says where each name's address stands. The effects' names come from stock's table 0x8490de4c (fx_name).
-#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d251fcu + 8u * (kind)))
+// table says where each name's address stands. The effects' names come from stock's table 0x8490e288 (fx_name).
+#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d256c4u + 8u * (kind)))
 static const char* const* const LFO_NAMES[6] = { LFO_NAME_ENTRY(0), LFO_NAME_ENTRY(1), LFO_NAME_ENTRY(2), LFO_NAME_ENTRY(3), LFO_NAME_ENTRY(4), LFO_NAME_ENTRY(5) };
 #define RD16(a) (*(volatile u16*)(a))
 enum { CEILING_CYCLES = 200000, BLOCK_CYCLES = 580500, REST_FRAMES = 9, SAVE_DELAY_FRAMES = 30, FLASH_FRAMES = 60, PRINT_FRAMES = 232 };
@@ -230,19 +231,19 @@ enum { SAVE_SHOW_MS = 200, SAVE_HOLD_MS = 700, SAVED_MS = 1000 };               
 enum { SAVE_NONE = OP1F_SAVE_NONE, SAVE_SAVING = OP1F_SAVE_SAVING, SAVE_SAVED = OP1F_SAVE_SAVED };   // the save screen's states (the header's, for the presets unit)
 // H6 (section 22): the presets as files, one per slot, in the module's folder (the path user/fx/NN.json has 15 characters: inside a stock string's own buffer, nothing to free).
 enum { PRESET_FORMAT = 1, JSON_OBJECT_KIND = 7, JSON_STRING_KIND = 4, JSON_BOOL_KIND = 5 };
-static const char FX_FOLDER[] = "user/fx/";                                       // with the trailing slash: createFolderRecursive (0x8c05203c) makes a component when a slash ends it (H6 passed user/fx and only user was made)
+static const char FX_FOLDER[] = "user/fx/";                                       // with the trailing slash: createFolderRecursive (0x8c05206c) makes a component when a slash ends it (H6 passed user/fx and only user was made)
 static const char FX_PATH_PREFIX[] = "user/fx/";
 static const char KEY_FORMAT[] = "op1f_fx_preset", KEY_NAME[] = "name", KEY_ORDER[] = "order", KEY_WAGONS[] = "wagons", KEY_FX[] = "fx", KEY_ON[] = "on", KEY_PARAMS[] = "params";
-typedef int (*MakeFoldersFn)(const char* path);                                   // 0x8c05203c: createFolderRecursive (FileManager.cpp), every component made when missing
-typedef int (*FileSizeFn)(const char* path);                                      // 0x8c051f6c: the file's size, -1 when it is not there
-typedef u32 (*FileMtimeFn)(const char* path);                                     // 0x8fcba530: the file's modification time, 0 when it is not there
-typedef void (*JsonFromCstrFn)(void* json, const char* text);                     // 0x8c084400: the value becomes a string copied from the text (the kind 4)
-typedef void (*JsonFromBoolFn)(void* json, int value);                            // 0x8c083abc: the value becomes a bool (the kind 5)
-#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05203cu)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_FILE_MTIME ((FileMtimeFn)0x8fcba530u)
-#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084400u)
-#define STOCK_JSON_FROM_BOOL ((JsonFromBoolFn)0x8c083abcu)
+typedef int (*MakeFoldersFn)(const char* path);                                   // 0x8c05206c: createFolderRecursive (FileManager.cpp), every component made when missing
+typedef int (*FileSizeFn)(const char* path);                                      // 0x8c051f9c: the file's size, -1 when it is not there
+typedef u32 (*FileMtimeFn)(const char* path);                                     // 0x8fcbc350: the file's modification time, 0 when it is not there
+typedef void (*JsonFromCstrFn)(void* json, const char* text);                     // 0x8c084430: the value becomes a string copied from the text (the kind 4)
+typedef void (*JsonFromBoolFn)(void* json, int value);                            // 0x8c083aec: the value becomes a bool (the kind 5)
+#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05206cu)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_FILE_MTIME ((FileMtimeFn)0x8fcbc350u)
+#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084430u)
+#define STOCK_JSON_FROM_BOOL ((JsonFromBoolFn)0x8c083aecu)
 extern "C" u32 __attribute__((weak)) op1f_disk_folders asm("op1f_disk_folders");      // build_h_disk.cpp (H6): the disk mode's fx folder and files
 extern "C" u32 __attribute__((weak)) op1f_disk_files asm("op1f_disk_files");
 extern "C" u32 __attribute__((weak)) op1f_disk_lookups asm("op1f_disk_lookups");
@@ -250,8 +251,8 @@ extern "C" u32 __attribute__((weak)) op1f_disk_refused asm("op1f_disk_refused");
 enum { KNOB_BLUE = 0, KNOB_OCHRE = 1, KNOB_GREY = 2, KNOB_RED = 3 };
 static const char ALPHABET[] = " abcdefghijklmnopqrstuvwxyz0123456789-.";          // the rename editor's letters, in the font's lowercase (the OS font keeps the capitals' shapes at the lowercase codes; the uppercase codes are icons: H5b)
 enum { ALPHABET_COUNT = 39 };
-typedef void (*RequestScreenFn)();                                                   // 0x8c0b1d8c: the GUI asks the current controller's screen-id virtual and queues the screen (it runs after key events; the module calls it after a change at a key release)
-#define STOCK_REQUEST_SCREEN ((RequestScreenFn)0x8c0b1d8cu)
+typedef void (*RequestScreenFn)();                                                   // 0x8c0b2554: the GUI asks the current controller's screen-id virtual and queues the screen (it runs after key events; the module calls it after a change at a key release)
+#define STOCK_REQUEST_SCREEN ((RequestScreenFn)0x8c0b2554u)
 // J5i: stock makes the request on the thread that handles key events, and the request's queue takes one writer at a
 // time: its push (0x8fc232b4) stops the OS with "already pushing" when a second one enters (docs/07, "The screen
 // request's queue"). A request from a frame function, which runs on the display thread, is made with interrupts
@@ -269,37 +270,37 @@ enum { REGION_BYTES = 512 * 1024, REGION_COUNT = HOSTS * WAGONS, REGION_ALIGN = 
 enum { STATE_NONE = 0, STATE_TABLE_DELAY = 1, STATE_TABLE_CWO = 2, STATE_BASE_SPRING = 3, STATE_BASE_MOTHER = 4, STATE_STATIC_NITRO = 5 };
 static const u8 STATE_KIND[TYPES] = { STATE_TABLE_DELAY, STATE_NONE, STATE_NONE, STATE_NONE, STATE_BASE_SPRING, STATE_BASE_MOTHER, STATE_STATIC_NITRO, STATE_TABLE_CWO, STATE_NONE, STATE_NONE, STATE_NONE };
 static const u32 REGION_USED[TYPES] = { 176400, 0, 0, 0, 58272, 0x42318, 0, 262144, 0, 0, 0 };   // the bytes of its region a type writes, cleared at the build: the delay's 44,100-word line, the spring's 58,272, the mother's 0x42318, cwo's 128K halfwords
-static const u32 DELAY_TABLE = 0x84ad02b8u, CWO_TABLE = 0x84ad02b0u;             // the pointer tables the two read inside process (entry 0; stock's entries point at its two 512 KB regions 0x84ad02c4 / 0x84b502c4)
-static const u32 NITRO_STATIC = 0x080266c8u;                                      // the static struct nitro's inner process keeps in L2: the words 0..2 move (the envelope follower), 4 and 5 are constants set once
-static const u32 MOTHER_REGION_CTOR = 0x8d506178u;                                // constructs a mother region as the boot constructs stock's two (two sub-blocks: the positions and a 32 KB clear each)
-static const u32 SPRING_BASE_STOCK = 0x84ab3b68u, MOTHER_BASE_STOCK = 0x840293a0u;
+static const u32 DELAY_TABLE = 0x84ad0700u, CWO_TABLE = 0x84ad06f8u;             // the pointer tables the two read inside process (entry 0; stock's entries point at its two 512 KB regions 0x84ad02c4 / 0x84b502c4)
+static const u32 NITRO_STATIC = 0x080266e8u;                                      // the static struct nitro's inner process keeps in L2: the words 0..2 move (the envelope follower), 4 and 5 are constants set once
+static const u32 MOTHER_REGION_CTOR = 0x8d507338u;                                // constructs a mother region as the boot constructs stock's two (two sub-blocks: the positions and a 32 KB clear each)
+static const u32 SPRING_BASE_STOCK = 0x84ab3fb0u, MOTHER_BASE_STOCK = 0x8402960cu;
 enum { NITRO_STATIC_WORDS = 3 };
-typedef void* (*HeapMallocFn)(int heap_index, u32 size);                          // 0x8fcc3c48 (build_b_cache.cpp)
+typedef void* (*HeapMallocFn)(int heap_index, u32 size);                          // 0x8fcc5a68 (build_b_cache.cpp)
 typedef void (*RegionCtorFn)(void* region);
-#define STOCK_HEAP_MALLOC ((HeapMallocFn)0x8fcc3c48u)
-typedef void (*FreeFn)(void* block);                                               // 0x8d4e5864: the match of 0x8d4e5854, the allocator stock's strings use
-#define STOCK_FREE ((FreeFn)0x8d4e5864u)
+#define STOCK_HEAP_MALLOC ((HeapMallocFn)0x8fcc5a68u)
+typedef void (*FreeFn)(void* block);                                               // 0x8d4e63cc: the match of 0x8d4e63bc, the allocator stock's strings use
+#define STOCK_FREE ((FreeFn)0x8d4e63ccu)
 extern "C" volatile u32 op1f_spring_base asm("op1f_spring_base");                  // read by the stubs of build_h_regions.s in place of stock's immediates
 extern "C" volatile u32 op1f_mother_base asm("op1f_mother_base");
 volatile u32 op1f_spring_base = SPRING_BASE_STOCK;
 volatile u32 op1f_mother_base = MOTHER_BASE_STOCK;
-static const u32 MODE_GUI = 0x84d20bc4u, MODE_AUDIO = 0x11902da4u, FX_PRODUCER = 0x84a03844u, STOCK_CTX = 0x11904754u;
-static const u32 L_BUS = 0x11902ba0u, R_BUS = 0x11902ca0u, FX_NAME_TABLE = 0x8490de4cu;
-static const u32 POWER_POPUP_SHOWN = 0x84c9af40u;             // the power popup's byte: 1 while the countdown popup is on the screen (set by 0x8fc6144c, cleared by 0x8fc61438)
+static const u32 MODE_GUI = 0x84d21088u, MODE_AUDIO = 0x11902da4u, FX_PRODUCER = 0x84a03c84u, STOCK_CTX = 0x11904754u;
+static const u32 L_BUS = 0x11902ba0u, R_BUS = 0x11902ca0u, FX_NAME_TABLE = 0x8490e288u;
+static const u32 POWER_POPUP_SHOWN = 0x84c9b3e4u;             // the power popup's byte: 1 while the countdown popup is on the screen (set by 0x8fc6144c, cleared by 0x8fc61438)
 
 struct HostAddr {
     u32 slot_word, built_slot, type_array, param_block, fx_active, patch_table;
     u32 key_down, key_shift, key_up, encoder;                 // stock's handlers, called for what the module leaves alone
 };
 static const HostAddr HOST[HOSTS] = {
-    { 0x11904704u, 0x84a010e4u, 0x11904794u, 0x119036e0u, 0x84a0110cu, 0x080235d0u, 0x8c0cf4ccu, 0x8c0cef50u, 0x8c0ce984u, 0x8c0d50a8u },
-    { 0x11904708u, 0x84a010e8u, 0x119047b4u, 0x119039e0u, 0x84a0111cu, 0x08023770u, 0x8c0cf4ccu, 0x8c0b64e6u, 0x8c0ce984u, 0x8c0b6cfcu },
+    { 0x11904704u, 0x84a01524u, 0x11904794u, 0x119036e0u, 0x84a0154cu, 0x080235dcu, 0x8c0cfe7cu, 0x8c0cf904u, 0x8c0cf364u, 0x8c0d5c10u },
+    { 0x11904708u, 0x84a01528u, 0x119047b4u, 0x119039e0u, 0x84a0155cu, 0x0802377cu, 0x8c0cfe7cu, 0x8c0b6e1eu, 0x8c0cf364u, 0x8c0b7634u },
 };
 
 // The knob walks the browser's order; the vocoder is not offered.
 static const signed char KNOB_ORDER[] = { NONE, 1, 2, 0, 3, 4, 7, 6, 5, 9, 10 };
 enum { KNOB_ORDER_COUNT = 11, TYPE_DELAY = 0, TYPE_NITRO = 6, TYPE_TERMINAL = 9 };
-static const u32 CTOR[TYPES] = { 0x8d50503cu, 0x8d5077c4u, 0x8d50e730u, 0x8d510908u, 0x8d516ac4u, 0x11a0718au, 0x8d50706cu, 0x8d5013acu, 0, 0, 0x8d50f456u };
+static const u32 CTOR[TYPES] = { 0x8d5061fcu, 0x8d508984u, 0x8d50f8f0u, 0x8d511ac8u, 0x8d517c84u, 0x11a071bau, 0x8d50822cu, 0x8d50256cu, 0, 0, 0x8d510616u };
 static const u32 COST_MAX[TYPES] = { 22400, 53000, 83100, 47400, 49600, 44300, 40800, 44500, 0, 36300, 16800 };   // H1a, cycles per block
 static const short DEFAULTS[TYPES][PARAMS] = {                                                                     // content/op1_factory.json, fx_types[].default_params
     { 8000, 8000, 8000, 8000, 0, 0, 0, 0 }, { 8000, 8000, 18000, 18000, 8000, 8000, 8000, 8000 }, { 6000, 15000, 20000, 28000, 8000, 8000, 8000, 8000 },
@@ -487,12 +488,12 @@ static int conflicts(int a, int b) {                            // the H1 rule: 
 static void construct(void* storage, int type) {
     if (type == TYPE_TERMINAL) {                               // the factory's own sequence (producer_factory.cpp)
         u8* b = (u8*)storage;
-        *(u32*)b = 0x840ae418u;
-        STOCK_ARRAY_CTOR(b + 0x0c, 4, 8, (void*)0x8f00f582u, 0);
-        STOCK_ARRAY_CTOR(b + 0x2c, 4, 8, (void*)0x8f00f582u, 0);
-        STOCK_ARRAY_CTOR(b + 0x4c, 2, 8, (void*)0x8f00f582u, 0);
-        STOCK_ARRAY_CTOR(b + 0x64, 2, 16, (void*)0x8f00f568u, 0);
-        STOCK_ARRAY_CTOR(b + 0x84, 2, 16, (void*)0x8f00f568u, 0);
+        *(u32*)b = 0x840ae684u;
+        STOCK_ARRAY_CTOR(b + 0x0c, 4, 8, (void*)0x8f011052u, 0);
+        STOCK_ARRAY_CTOR(b + 0x2c, 4, 8, (void*)0x8f011052u, 0);
+        STOCK_ARRAY_CTOR(b + 0x4c, 2, 8, (void*)0x8f011052u, 0);
+        STOCK_ARRAY_CTOR(b + 0x64, 2, 16, (void*)0x8f011038u, 0);
+        STOCK_ARRAY_CTOR(b + 0x84, 2, 16, (void*)0x8f011038u, 0);
         return;
     }
     ((CtorFn)CTOR[type])(storage);
@@ -619,7 +620,7 @@ static void run_live(int host, int knob, void* obj, void* ctx) {         // I2: 
 // 4 x slot), then the effect runs on the scratch.
 //
 // What the module does, with stock's own code doing every part of the LFO: a stub in place of the 8-byte load
-// before that call (0x11a054d0 for the synth, 0x11a0401e for the drum; build_i_lfofx.s) hands stock a table whose
+// before that call (0x11a05500 for the synth, 0x11a0404e for the drum; build_i_lfofx.s) hands stock a table whose
 // third word is the wrapper below, so stock calls the wrapper with its own arguments. For a wagon other than the
 // lamp's, the wrapper puts that wagon's eight words into the scratch and its effect type into the slot's type word,
 // calls stock's apply, keeps what the scratch holds after it for the wagon's run of this block, and puts the lamp's
@@ -636,13 +637,13 @@ static void run_live(int host, int knob, void* obj, void* ctx) {         // I2: 
 // (the slot from 0x8d503078 / 0x8d503064, the effect type from the slot's type word, that type's flag byte and
 // descriptor row, the scratch), told by the class of the fx-side object, and only while the type's destination is
 // the effect as its own apply decodes the destination word. I2: the value LFO (the apply 0x8d50c308, the vtable
-// 0x840ae150, the word's top four bits 2). I3: the random, element and velocity LFOs (the applies 0x8d50bbc0,
-// 0x8d50a8b0, 0x8d50cf14, the vtables 0x840adfec, 0x840ade44, 0x840ae2e4, the word's top five bits 2 through the
+// 0x840ae3bc, the word's top four bits 2). I3: the random, element and velocity LFOs (the applies 0x8d50bbc0,
+// 0x8d50a8b0, 0x8d50cf14, the vtables 0x840ae258, 0x840ae0b0, 0x840ae550, the word's top five bits 2 through the
 // decoders 0x8d50b8a6, 0x8d50a44c, 0x8d50cc2e; what else they read is their own: the random's generator and seed,
 // the element's and the velocity's source buffers at 0x080268a4 and 0x08026aa8, none of it the scratch or the
 // type word). Every other class and destination passes to stock's apply untouched.
 //
-// I4: the midi LFO (the apply 0x8d50a23c, the vtable 0x840adce0) has four destinations of its own, the block's words
+// I4: the midi LFO (the apply 0x8d50a23c, the vtable 0x840adf4c) has four destinations of its own, the block's words
 // 4 to 7 (the same four classes as the three above), each with its parameter in the word four before it and its
 // value in the four words at 0x0802e3c4; the apply walks the four in one call and keeps nothing between calls. Each
 // destination has a choice of wagon of its own, so the wrapper calls stock's apply once for the lamp's effect with
@@ -661,10 +662,10 @@ enum { LFO_FX_LO = 8192, LFO_FX_SHARED = 10240, LFO_FX_HI = 11264, LFO_FX_PARK =
 // the value's top five bits, four classes of 2048 (0 the engine, 1 the envelope, 2 the effect, 3 the three direct
 // ones), no shared form; the knob runs from 1024 to 7168 (the I2 read-out's rows). The parked values are the middles.
 enum { LFO4_FX_LO = 4096, LFO4_FX_HI = 6144, LFO4_FX_PARK = 5120, LFO4_UNDER_FX = 3072, LFO4_OVER_FX = 6656 };
-static const u32 VALUE_LFO_FX_VTABLE = 0x840ae150u;           // the value LFO's fx-side class (one object at 0x11906ef8 for both hosts)
-static const u32 RANDOM_LFO_FX_VTABLE = 0x840adfecu, ELEMENT_LFO_FX_VTABLE = 0x840ade44u, VELOCITY_LFO_FX_VTABLE = 0x840ae2e4u;   // I3: the three's fx-side classes (the same object, built again by the type's init)
-static const u32 MIDI_LFO_FX_VTABLE = 0x840adce0u;            // I4: the midi LFO's
-static const u32 LFO_FX_OBJECT[HOSTS] = { 0x84a01130u, 0x84a01134u };   // the hosts' fx-side LFO object pointers (the stages read them at 0x11a051be and 0x11a03d6e), for the log
+static const u32 VALUE_LFO_FX_VTABLE = 0x840ae3bcu;           // the value LFO's fx-side class (one object at 0x11906ef8 for both hosts)
+static const u32 RANDOM_LFO_FX_VTABLE = 0x840ae258u, ELEMENT_LFO_FX_VTABLE = 0x840ae0b0u, VELOCITY_LFO_FX_VTABLE = 0x840ae550u;   // I3: the three's fx-side classes (the same object, built again by the type's init)
+static const u32 MIDI_LFO_FX_VTABLE = 0x840adf4cu;            // I4: the midi LFO's
+static const u32 LFO_FX_OBJECT[HOSTS] = { 0x84a01570u, 0x84a01574u };   // the hosts' fx-side LFO object pointers (the stages read them at 0x11a051be and 0x11a03d6e), for the log
 typedef int (*LfoApplyFn)(void* object, u32* block, int cls);
 
 static u8 lfo_fx_pick[HOSTS][SLOTS];                           // 0 the wagon under the lamp; 1..4 the wagon of knob 0..3
@@ -808,7 +809,7 @@ static int lfofx_apply(int host, void* object, u32* block, int cls) {
     m->obj = obj;
     m->valid = 1;
     lfofx_turned[host] = lfofx_turned[host] + 1;
-    return 0;                                                  // the lamp's effect did not move: no copy for its page (0x8d503694)
+    return 0;                                                  // the lamp's effect did not move: no copy for its page (0x8d504854)
 }
 
 extern "C" int op1f_lfofx_apply_synth(void* object, u32* block, int cls) asm("op1f_lfofx_apply_synth");
@@ -1177,9 +1178,9 @@ static void apply_params(int host, int knob) {
     mark_dirty(host);
 }
 
-// Shift + tap: the four knob parameters from stock's own random-preset value function 0x8d51117c(type, index, bias),
-// the one its "random preset" job (0x8d4e8bbc, at 0x8d4e9076) calls for each effect parameter with the descriptor table
-// 0x840afbf4 behind it, so every value is one stock would write itself (H1b drew 8 to 85 percent of a fixed 0..32767
+// Shift + tap: the four knob parameters from stock's own random-preset value function 0x8d51233c(type, index, bias),
+// the one its "random preset" job (0x8d4e9724, at 0x8d4e9076) calls for each effect parameter with the descriptor table
+// 0x840afe60 behind it, so every value is one stock would write itself (H1b drew 8 to 85 percent of a fixed 0..32767
 // scale, which is outside the delay's own ranges: the delay crashed on it); the other four stay at the defaults.
 static void randomize(int host, int knob) {
     u32 slot = gui_slot(host);
@@ -1483,8 +1484,8 @@ static void probes_frame() {
 //
 // Stock's handler is still called for every turn the module takes, with a turn of nothing (a delta of 0 moves no
 // value: the converter adds (speed x delta) >> 15): it writes the slot's LFO block into the record's document
-// (0x8d4f2b64, which queues the record's write job) and does what stock does after any turn on this page (the
-// controller's encoder handler 0x8c0d50a8 / 0x8c0b6cfc: its hint when the LFO is off, its own bookkeeping).
+// (0x8d4f3c84, which queues the record's write job) and does what stock does after any turn on this page (the
+// controller's encoder handler 0x8c0d5c10 / 0x8c0b7634: its hint when the LFO is off, its own bookkeeping).
 static u32 lfo_type_word(int host, u32 slot) { return RD32(LFO_TYPE_ARRAY[host] + 4u * slot); }
 static u32* lfo_block_of(int host, u32 slot) { return (u32*)(LFO_BLOCK[host] + 0x20u * slot); }
 
@@ -1667,9 +1668,9 @@ extern "C" int op1f_fx_encoder(void* self, int index, int delta) {
 // integers, word >>> 16) or an empty array for a slot the module has not seen. Written by stock's json file writer
 // as the slots files are, read by its reader at the first reconcile (the boot's first apply, 1.8 s in, on the main
 // thread); a missing or damaged file leaves every slot to its document. A value's kind is its byte at +4: 0 null (what
-// 0x8c085b78(json, 0) makes; the first push turns it into an array), 1 an integer as 0x8c083aec makes it, 2 unsigned,
+// 0x8c085ba8(json, 0) makes; the first push turns it into an array), 1 an integer as 0x8c083b1c makes it, 2 unsigned,
 // 3 float, 6 an array, 7 an object. An array is checked for by its kind before the size read (the size getter's
-// table walks the list for 6 and returns the kind byte for the rest); the integer getter 0x8c084810 needs no check:
+// table walks the list for 6 and returns the kind byte for the rest); the integer getter 0x8c084840 needs no check:
 // it converts the kinds 1, 2 and 3 (a parsed number is a 2 or a 3, so H1e's check against a fresh integer's kind lost
 // every number read) and returns 0 with a log line for anything else. H1f had taken the array's kind from a fresh
 // value, which is the null 0, so no parsed array passed and the file loaded nothing.
@@ -1974,7 +1975,7 @@ static int row_of_slot(int slot) {                                          // t
 }
 
 // a json string's characters: a stock string object has its data inline at +4 up to fifteen characters, else a
-// pointer there; the length at +0x14 (0x8c03e40c)
+// pointer there; the length at +0x14 (0x8c03e434)
 static void json_text(void* entry, char* out, int max) {
     u32 str[8];
     for (int i = 0; i < 8; ++i) str[i] = 0;
@@ -1992,7 +1993,7 @@ static int text_equal(const char* a, const char* b) {
     return *a == *b;
 }
 
-// "delay" .. "fazer" by stock's own names; "none" and anything else none. H6 to H6i asked stock's lookup 0x8fca5ce8,
+// "delay" .. "fazer" by stock's own names; "none" and anything else none. H6 to H6i asked stock's lookup 0x8fca7b08,
 // which answers a name it does not know with type 0, the delay, and an error line (`unknown fx name: 'none'`): every
 // empty wagon of a file came back as an uncoupled delay with zero parameters (the H6i read-out: the fifteen library
 // files' twenty-one empty wagons). The name is compared here, and stock's lookup is left to stock's own documents.
@@ -2680,7 +2681,7 @@ static void reconcile(int host, u32 slot, const char* why) {
     }
 }
 
-// The vtable word 0x8401e730 (H1): a preset job's apply (load a preset by step); it changes the record and applies
+// The vtable word 0x8401e90c (H1): a preset job's apply (load a preset by step); it changes the record and applies
 // it through the record's own virtual below, so this wrapper only reconciles once more. Kept as H1 left it.
 extern "C" void op1f_fx_patch_apply(void* descriptor) asm("op1f_fx_patch_apply");
 extern "C" void op1f_fx_patch_apply(void* descriptor) {
@@ -2690,7 +2691,7 @@ extern "C" void op1f_fx_patch_apply(void* descriptor) {
     reconcile(host, slot, "job");
 }
 
-// The records' apply virtual (vtable + 0x10; the words 0x8401f62c and 0x8401f608, H1b): every application of a
+// The records' apply virtual (vtable + 0x10; the words 0x8401f894 and 0x8401f870, H1b): every application of a
 // record's document to its slot passes here: the boot's applies of all sixteen records (1.8 s in, after the slots
 // files are loaded and the documents rebuilt), the slot switch, the browser's pick, the preset jobs.
 static void record_applied(int host, void* record) {

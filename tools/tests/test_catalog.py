@@ -32,12 +32,12 @@ def tool(name):
 check = tool("catalog_check")
 pb = check.pack_build
 FIRMWARES = check.firmwares()
-OS_170 = next(word for word, version in FIRMWARES.items() if version == "1.7.0")
+OS_173 = next(word for word, version in FIRMWARES.items() if version == "1.7.3")
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 REPOSITORY = "https://github.com/someone/some-pack"
 
 
-def pack(name="tester", version=2, target_os=OS_170, works=(), imports=(), exports=()):
+def pack(name="tester", version=2, target_os=OS_173, works=(), imports=(), exports=()):
     """A pack file as the loader reads one: a body of zeros that changes no place of the firmware."""
     link = pb.ROOM_START
     return pb.make3(bytes(64), link, 64, 0, name, target_os, (link, link), version=version, works=works, imports=imports,
@@ -49,7 +49,7 @@ def entry_for(data, **change):
     fields, _body = pb.parse(data)
     entry = {"id": fields["name"], "author": "someone", "status": "listed", "categories": ["tools"],
              "description": "A pack made for the tests.", "repository": REPOSITORY, "commit": COMMIT, "path": "build/%s.pack" % fields["name"],
-             "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data), "version": fields["version"], "firmware": "1.7.0",
+             "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data), "version": fields["version"], "firmware": "1.7.3",
              "places": 0, "needs": [], "folders": []}
     entry.update(change)
     return entry
@@ -82,7 +82,7 @@ class TheTreesListing(unittest.TestCase):
             the_listing = json.load(f)
         for entry in the_listing["packs"]:
             self.assertTrue(set(entry["categories"]) <= set(the_listing["categories"]), entry["id"])
-            self.assertIn(entry.get("firmware", "1.7.0"), FIRMWARES.values(), entry["id"])
+            self.assertIn(entry.get("firmware", "1.7.3"), FIRMWARES.values(), entry["id"])
 
     def test_the_examples_are_held_and_never_offered_to_owners(self):
         """The example packs are for people who write packs: their sources lie in examples/, the build makes their
@@ -97,9 +97,9 @@ class TheTreesListing(unittest.TestCase):
             self.assertTrue(os.path.isdir(os.path.join(ROOT, "examples", entry["id"])), entry["id"])
 
     def test_the_firmware_word_is_read_from_the_profile(self):
-        self.assertEqual(FIRMWARES[OS_170], "1.7.0")
-        with open(os.path.join(ROOT, "profiles", "op1f-1.7.0.json"), encoding="utf-8") as f:
-            self.assertEqual(pb.os_id(json.load(f)["stock_sha256"]), OS_170)
+        self.assertEqual(FIRMWARES[OS_173], "1.7.3")
+        with open(os.path.join(ROOT, "profiles", "op1f-1.7.3.json"), encoding="utf-8") as f:
+            self.assertEqual(pb.os_id(json.load(f)["stock_sha256"]), OS_173)
 
 
 class AnEntryHeldToItsFile(unittest.TestCase):
@@ -261,7 +261,7 @@ class TheFormOfAnEntry(unittest.TestCase):
                               ({"bytes": True}, "its size is not"),
                               ({"bytes": 50}, "its size is not"),
                               ({"version": 0}, "its version is not"),
-                              ({"firmware": "1.7.3"}, "its firmware is not one this repository has a profile for"),
+                              ({"firmware": "9.9.9"}, "its firmware is not one this repository has a profile for"),
                               ({"places": -1}, "its count of places is not"),
                               ({"needs": ["base", "base"]}, "what it needs is not"),
                               ({"level": 0}, "its level is not"),
@@ -295,7 +295,7 @@ class TheListingAsAWhole(unittest.TestCase):
 
     def test_a_retired_entry_keeps_its_id_and_its_folders_held(self):
         retired = {"id": "old", "author": "someone", "status": "retired", "categories": ["tools"], "description": "No longer offered.",
-                   "sha256": "0" * 64, "bytes": 1000, "version": 1, "firmware": "1.7.0", "places": 0, "needs": [],
+                   "sha256": "0" * 64, "bytes": 1000, "version": 1, "firmware": "1.7.3", "places": 0, "needs": [],
                    "folders": [{"name": "old", "place": "old"}]}
         said, in_order = run(listing(retired, entry_for(pack(), folders=[{"name": "old", "place": "new"}])))
         self.assertFalse(in_order)
@@ -398,6 +398,40 @@ class AChangeHeldToTheListingBefore(unittest.TestCase):
         self.assertIn("its file changed and its version did not grow past 2", said)
         said, in_order = run(listing(dict(same_version, version=3)), before=listing(old))
         self.assertTrue(in_order, said)
+
+    def test_the_same_version_for_another_firmware_this_repository_has_a_profile_for(self):
+        """A move of the project to another firmware: the same pack, built again for it, keeps its version; its
+        entry names the new firmware, and the old file stays at its old commit."""
+        old = entry_for(pack(version=2), firmware="1.7.0")
+        moved = dict(entry_for(pack(version=2, works=[("base", 1, False)])), commit="f" * 40)
+        self.assertNotEqual(moved["sha256"], old["sha256"])
+        known = dict(FIRMWARES)
+        known[0x12345678] = "1.7.0"                                     # the old firmware need not have a profile here
+
+        def held(new, before, firmwares=known):
+            lines, in_order = check.check(listing(new), firmwares, before=listing(before))
+            return "\n".join(lines), in_order
+        said, in_order = held(moved, old)
+        self.assertTrue(in_order, said)
+        said, in_order = held(moved, old, FIRMWARES)                    # 1.7.0 has no profile: the old entry is still the old one
+        self.assertTrue(in_order, said)
+        said, in_order = held(dict(moved, version=1), old)              # the version never goes down
+        self.assertFalse(in_order)
+        self.assertIn("its version did not grow past 2", said)
+        within = dict(entry_for(pack(version=2), firmware="1.7.3"))
+        said, in_order = held(dict(moved), within)                      # within one firmware the version must grow
+        self.assertFalse(in_order)
+        self.assertIn("its file changed and its version did not grow past 2", said)
+        said, in_order = held(dict(moved, version=3), within)
+        self.assertTrue(in_order, said)
+
+    def test_a_move_to_a_firmware_with_no_profile_here_keeps_no_version(self):
+        old = entry_for(pack(version=2))
+        moved = dict(old, sha256="1" * 64, commit="f" * 40, firmware="9.9.9")
+        self.assertEqual(check.before_faults(listing(moved), listing(old), FIRMWARES)["tester"][0][:52],
+                         "its file changed and its version did not grow past 2")
+        self.assertIn("tester", check.before_faults(listing(dict(moved, firmware="1.7.3")), listing(dict(old, firmware="1.7.0"))))   # no firmwares known
+        self.assertNotIn("tester", check.before_faults(listing(dict(moved, firmware="1.7.3")), listing(dict(old, firmware="1.7.0")), FIRMWARES))
 
 
 class TheCommand(unittest.TestCase):

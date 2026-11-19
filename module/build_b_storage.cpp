@@ -1,19 +1,20 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B0b: storage plumbing for tape tracks 5 and 6 (track indices 4 and 5).
 //
 // Replaces four stock functions of tape_snapshots.cpp / tape_chunks.cpp (OS 1.7.0+0) through a JUMP.a at each
 // entry (profile group "build-b0b"), and supersedes module/build_a_loader.cpp's op1f_load_block_map (group
 // "build-a") with a version that also fills the two extension maps:
 //
-//   chunks_service    0x8fc1fca0  -> op1f_chunks_service    reload and write back six tracks per cache slot
-//   snapshots_reset   0x8fc20a0c  -> op1f_snapshots_reset   stock work, plus clearing the extension maps
-//   save_block_map    0x8fc21280  -> op1f_save_block_map    version 1 as stock; version 2 when tracks 5-6 hold chunks
+//   chunks_service    0x8fc217a0  -> op1f_chunks_service    reload and write back six tracks per cache slot
+//   snapshots_reset   0x8fc224fc  -> op1f_snapshots_reset   stock work, plus clearing the extension maps
+//   save_block_map    0x8fc22d70  -> op1f_save_block_map    version 1 as stock; version 2 when tracks 5-6 hold chunks
 //                                                            (until K1; since K1 always stock's version 1, the tables of
 //                                                            tracks 5-8 in user/tapeNN_ext.bin: build_k_maps.cpp)
-//   take_snapshot_ex  0x8fc21638  -> op1f_take_snapshot_ex  stock's take with the extension records carried along (Build C;
+//   take_snapshot_ex  0x8fc23128  -> op1f_take_snapshot_ex  stock's take with the extension records carried along (Build C;
 //                                                            a no-op from B0b to B3f, undo off)
-//   diff_range        0x8fc21194  -> op1f_diff_range        the changed range over six tracks (Build C), so undo_ex and
+//   diff_range        0x8fc22c84  -> op1f_diff_range        the changed range over six tracks (Build C), so undo_ex and
 //                                                            redo_ex reload the cache for extension-track changes too
-//   load_block_map    0x8fc213c0  -> op1f_load_block_map    Build A's loader; tracks 5-6 of a version-2 file fill the extension maps
+//   load_block_map    0x8fc22eb0  -> op1f_load_block_map    Build A's loader; tracks 5-6 of a version-2 file fill the extension maps
 //
 // Tracks 0-3 keep stock's four-track record, stock's tape_io_read/tape_io_write and stock's allocator, untouched.
 // Tracks 4-5 live in op1f_ext_records (2 x 969 physical chunk numbers per snapshot record, 0xFFFF = unallocated;
@@ -48,35 +49,35 @@ typedef void (*SetSnapshotFn)(i32 index);
 typedef i32 (*SnapshotStepFn)();
 typedef void* (*MemmoveFn)(void* destination, const void* source, u32 count);
 
-#define STOCK_FOPEN ((FopenFn)0x8fc20690u)                        // disk_io.h fopen(path, "rb"/"w+b"/...)
-#define STOCK_FREAD ((FreadFn)0x8fc2065cu)                        // returns the item count
-#define STOCK_FWRITE ((FwriteFn)0x8fc205c8u)                      // logs "write error" itself
-#define STOCK_FCLOSE ((FcloseFn)0x8fc205b4u)
-#define STOCK_RENAME ((RenameFn)0x8fc20804u)
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
+#define STOCK_FOPEN ((FopenFn)0x8fc22180u)                        // disk_io.h fopen(path, "rb"/"w+b"/...)
+#define STOCK_FREAD ((FreadFn)0x8fc2214cu)                        // returns the item count
+#define STOCK_FWRITE ((FwriteFn)0x8fc220b8u)                      // logs "write error" itself
+#define STOCK_FCLOSE ((FcloseFn)0x8fc220a0u)
+#define STOCK_RENAME ((RenameFn)0x8fc222f4u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
 #define STOCK_MEMSET ((MemsetFn)0x04022ea8u)                      // ROM memset, as stock's tape_io_read uses
-#define STOCK_TAPE_INDEX ((IntFn)0x8fc1fea8u)                     // get_current_tape_index(), -1 = none
-#define STOCK_TAPE_HANDLE ((IntFn)0x8fc1fe94u)                    // get_tape_file_handle(), -1 = none
-#define STOCK_PARTITION_READ ((PartitionIoFn)0x8d4ff528u)         // as called at 0x8fc2018e
-#define STOCK_PARTITION_WRITE ((PartitionIoFn)0x8d4ffa28u)        // as called at 0x8fc204d4
-#define STOCK_TAPE_IO_READ ((TapeIoFn)0x8fc200acu)                // tracks 0-3, unchanged stock
-#define STOCK_TAPE_IO_WRITE ((TapeIoFn)0x8fc2021cu)
-#define STOCK_ALLOC_CHUNK ((AllocChunkFn)0x8fc20d48u)             // next-fit over the reference bytes, sets the live bit; tracks 5 to 8 took their chunks here until K5 (now op1f_sums_alloc, from the top)
-#define STOCK_MARK_MAP_DIRTY ((VoidFn)0x8fc20578u)
-#define STOCK_SET_CURRENT_SNAPSHOT ((SetSnapshotFn)0x8fc209a8u)
-#define STOCK_TAKE_SNAPSHOT ((SnapshotStepFn)0x8fc21000u)           // Build C: stock's take over its own records and all reference bytes
-#define STOCK_DROP_OLDEST ((SnapshotStepFn)0x8fc20f24u)             // 0 when the live record is record 0
-#define STOCK_COUNT_FREE ((SnapshotStepFn)0x8fc20d14u)              // reference bytes at zero
+#define STOCK_TAPE_INDEX ((IntFn)0x8fc219a8u)                     // get_current_tape_index(), -1 = none
+#define STOCK_TAPE_HANDLE ((IntFn)0x8fc21994u)                    // get_tape_file_handle(), -1 = none
+#define STOCK_PARTITION_READ ((PartitionIoFn)0x8d500688u)         // as called at 0x8fc2018e
+#define STOCK_PARTITION_WRITE ((PartitionIoFn)0x8d500b88u)        // as called at 0x8fc204d4
+#define STOCK_TAPE_IO_READ ((TapeIoFn)0x8fc21bacu)                // tracks 0-3, unchanged stock
+#define STOCK_TAPE_IO_WRITE ((TapeIoFn)0x8fc21d1cu)
+#define STOCK_ALLOC_CHUNK ((AllocChunkFn)0x8fc22838u)             // next-fit over the reference bytes, sets the live bit; tracks 5 to 8 took their chunks here until K5 (now op1f_sums_alloc, from the top)
+#define STOCK_MARK_MAP_DIRTY ((VoidFn)0x8fc22064u)
+#define STOCK_SET_CURRENT_SNAPSHOT ((SetSnapshotFn)0x8fc22498u)
+#define STOCK_TAKE_SNAPSHOT ((SnapshotStepFn)0x8fc22af0u)           // Build C: stock's take over its own records and all reference bytes
+#define STOCK_DROP_OLDEST ((SnapshotStepFn)0x8fc22a14u)             // 0 when the live record is record 0
+#define STOCK_COUNT_FREE ((SnapshotStepFn)0x8fc22804u)              // reference bytes at zero
 #define STOCK_MEMMOVE ((MemmoveFn)0x04020218u)                       // ROM, as drop_oldest_snapshot shifts its records
 
-#define CURRENT_SNAPSHOT (*(volatile i32*)0x848cfb84u)
-#define SNAPSHOT_COUNT (*(volatile i32*)0x848cfb88u)
-#define ALLOC_CURSOR (*(volatile i32*)0x848cfb8cu)
-#define MAP_DIRTY (*(volatile unsigned char*)0x848cfb90u)
-#define RECORDING (*(volatile unsigned char*)0x848ce12cu)           // the L1 record function's "recording" byte
-#define RECORDS ((unsigned char*)0x84c688fcu)                      // 8 records x 22,160 bytes
-#define REFERENCES ((volatile unsigned char*)0x84c93d7cu)           // one byte per physical chunk
-#define LRU_HEAD (*(Slot* volatile*)0x848ce94cu)
+#define CURRENT_SNAPSHOT (*(volatile i32*)0x848cff90u)
+#define SNAPSHOT_COUNT (*(volatile i32*)0x848cff94u)
+#define ALLOC_CURSOR (*(volatile i32*)0x848cff98u)
+#define MAP_DIRTY (*(volatile unsigned char*)0x848cff9cu)
+#define RECORDING (*(volatile unsigned char*)0x848ce538u)           // the L1 record function's "recording" byte
+#define RECORDS ((unsigned char*)0x84c68d88u)                      // 8 records x 22,160 bytes
+#define REFERENCES ((volatile unsigned char*)0x84c94208u)           // one byte per physical chunk
+#define LRU_HEAD (*(Slot* volatile*)0x848ced58u)
 
 struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (analysis/tape_snapshots_report.md)
     unsigned char valid;
@@ -121,7 +122,7 @@ static const char STORE_LOG_FILE[] = "../src/dsp/op1f_tape_store.cpp";
 // From module/build_b_cache.cpp (step B0a): 6 with the heap-1 cache, 4 after its fallback. A slot then has no
 // room for tracks 4-5, so the service loop must not touch them.
 extern "C" u32 op1f_cache_tracks asm("op1f_cache_tracks");
-extern "C" void op1f_xfade_mark_loaded_range(i32 start, i32 end, i32 loop_a, i32 loop_b, u32 track_mask) asm("op1f_xfade_mark_loaded_range");   // B3b (build_b_xfade.cpp): six-track version of 0x8fc2188c
+extern "C" void op1f_xfade_mark_loaded_range(i32 start, i32 end, i32 loop_a, i32 loop_b, u32 track_mask) asm("op1f_xfade_mark_loaded_range");   // B3b (build_b_xfade.cpp): six-track version of 0x8fc2337c
 
 // The extension maps, one per snapshot record as stock keeps its own (Build C; B0b to B3f had one live map and
 // took no snapshots). The record at CURRENT_SNAPSHOT is live; stock's undo and redo move that index, so the
@@ -159,7 +160,7 @@ u32 op1f_tape_free_chunks;
 static u32 service_calls;
 
 // A stock track's entry in the live record's map, as map_lookup 0x8fc20acc computes it (0x8fc20afa..0x8fc20b22:
-// 0x84c688fc + current x 22,160 + track x 1,938 + logical x 2, a 16-bit read). Read here directly: the first F1
+// 0x84c68d88 + current x 22,160 + track x 1,938 + logical x 2, a 16-bit read). Read here directly: the first F1
 // image called 0x8fc20b08, an instruction inside that function, and froze at its first slot reload
 // (analysis/build_f1_device_result.md).
 static inline u32 live_map_entry(u32 track, u32 logical) {
@@ -284,7 +285,7 @@ static void ext_write(u32 track, i32 logical, const unsigned char* source) {
 }
 
 // B3c (build_b_edit.cpp): the lift and the range clear of tracks 4-5 release whole chunks the way stock's
-// unmap_chunk 0x8fc20c60 releases its own: the live bit of the physical chunk is cleared, the map entry becomes
+// unmap_chunk 0x8fc22750 releases its own: the live bit of the physical chunk is cleared, the map entry becomes
 // unallocated and the map is marked dirty (the version-2 saver then writes it). op1f_ext_chunk_mapped tells the
 // zeroing of a partial chunk whether there is anything to zero.
 extern "C" int op1f_ext_chunk_mapped(u32 track, u32 logical) asm("op1f_ext_chunk_mapped");
@@ -310,10 +311,10 @@ extern "C" void op1f_ext_unmap_chunk(u32 track, u32 logical) {
 // ---------------------------------------------------------------------------------------------------------
 // tape_io_read / tape_io_write for tracks 4-5 (B2, after the first B2 image aborted in tape_io.cpp:89 at
 // record stop: stock reads 512 frames at each edge of a new clip as its "padding" through tape_io_read with
-// the record track). The stock functions 0x8fc200ac / 0x8fc2021c keep serving tracks 0-3 through the entry
+// the record track). The stock functions 0x8fc21bac / 0x8fc21d1c keep serving tracks 0-3 through the entry
 // trampolines in build_b_record.s; a track of 4 or 5 arrives here with the same arguments (byte offset within
 // the track, length, buffer) and the same contract (bytes done, or -1). Semantics as stock, read from
-// 0x8fc200ac..0x8fc2021b and 0x8fc2021c..0x8fc2055f: a range may cross chunks and stops at logical chunk 969;
+// 0x8fc21bac..0x8fc2021b and 0x8fc21d1c..0x8fc2055f: a range may cross chunks and stops at logical chunk 969;
 // an unallocated chunk reads as zeros; a write to an unallocated chunk allocates one and zero-fills the part
 // the range does not cover; a chunk shared with a snapshot is copied first (live since Build C, when the
 // snapshots came back); a failed allocation or partition call ends the call with -1. These maps are the extension
@@ -451,7 +452,7 @@ extern "C" i32 op1f_tape_io_write_ext(u32 track, u32 byte_offset, u32 length, co
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// chunks_service(flush_only, loop_a, loop_b), stock 0x8fc1fca0..0x8fc1fdf7, with the track loops widened.
+// chunks_service(flush_only, loop_a, loop_b), stock 0x8fc217a0..0x8fc1fdf7, with the track loops widened.
 //
 // One unit of work per call, walking the LRU list from its head. A slot with write_pending: clear the flag and,
 // if a tape is open, write every dirty track (clearing its bit first); return 1. Otherwise, unless flush_only,
@@ -526,7 +527,7 @@ extern "C" int op1f_chunks_service(int flush_only, int loop_a, int loop_b) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// snapshots_reset(), stock 0x8fc20a0c..0x8fc20a6b: clear the reference bytes, set all eight records' maps to
+// snapshots_reset(), stock 0x8fc224fc..0x8fc20a6b: clear the reference bytes, set all eight records' maps to
 // unallocated, make record 0 live, cursor 0, count 1. Called by the tape engine init, by tape_open before the
 // map is loaded, and by the erase-tape path before an empty map is saved. Plus: the extension maps are cleared.
 
@@ -545,8 +546,8 @@ extern "C" void op1f_snapshots_reset() {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// take_snapshot_ex(min_free, tag), stock 0x8fc21638..0x8fc216b3, with the extension records carried along
-// (Build C). Stock's take_snapshot 0x8fc21000 drops the oldest record while the array is full, clears every
+// take_snapshot_ex(min_free, tag), stock 0x8fc23128..0x8fc216b3, with the extension records carried along
+// (Build C). Stock's take_snapshot 0x8fc22af0 drops the oldest record while the array is full, clears every
 // reference bit at or above the new index (the redo tail dies there), copies the live 22,160-byte record into
 // the next slot, gives every chunk the live record references the new record's bit as well, and makes the
 // new record live; the bit operations run over the whole reference array, so they cover the chunks of the
@@ -557,7 +558,7 @@ extern "C" void op1f_snapshots_reset() {
 // oldest records until min_free chunks are free (stock's message when it cannot), and marks the map dirty.
 // B0b to B3f took no snapshot here, so undo did nothing on any tape.
 
-static int drop_oldest_six() {                  // stock drop_oldest_snapshot 0x8fc20f24, plus the extension records
+static int drop_oldest_six() {                  // stock drop_oldest_snapshot 0x8fc22a14, plus the extension records
     if (!STOCK_DROP_OLDEST()) return 0;         // refused at record 0: nothing changed
     STOCK_MEMMOVE(op1f_ext_records[0], op1f_ext_records[1], (MAX_SNAPSHOTS - 1) * sizeof(op1f_ext_records[0]));
     ++op1f_snapshots_dropped;
@@ -594,7 +595,7 @@ extern "C" void op1f_take_snapshot_ex(int min_free, int tag) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// diff_range(other, min, max), stock 0x8fc21194..0x8fc2127f, over six tracks (Build C): the frame range in
+// diff_range(other, min, max), stock 0x8fc22c84..0x8fc2127f, over six tracks (Build C): the frame range in
 // which record `other` and the live record differ, from stock's four maps and the two extension maps, so an
 // undo or redo of a change on track 5 or 6 reloads the cache for that range (undo_ex 0x8fc216b4 and redo_ex
 // 0x8fc2175c hand the result to chunks_mark_range when no tag was stored). As stock: *min starts at the tape's
@@ -631,7 +632,7 @@ extern "C" int op1f_diff_range(i32 other, i32* minimum, i32* maximum) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// save_block_map(tape), stock 0x8fc21280..0x8fc213bf: write magic, version and the live record's four track
+// save_block_map(tape), stock 0x8fc22d70..0x8fc213bf: write magic, version and the live record's four track
 // maps to user/tapeNN_map.tmp, close, rename to user/tapeNN_map.bin, clear the dirty byte. Since K1 that file is
 // always stock's own, version 1, and the tables of tracks 5 to 8 go into user/tapeNN_ext.bin beside it
 // (build_k_maps.cpp: the extension file first, then stock's), so that stock firmware reads every tape. From B0b

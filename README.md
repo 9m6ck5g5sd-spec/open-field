@@ -21,7 +21,7 @@ Extra features for the OP-1 Field, added to the firmware that is already on your
 | `lfo.pack` | Four LFOs on a synth sound, with presets. |
 | `sidechain.pack` | One tape track turned down by another, or by the beat. |
 
-Each works by itself or together with the others, beside `base.pack`. With them on the unit, the start screen reads `1.7.0 - open-field 0.3`: the main version, then open-field and the release of the base.
+Each works by itself or together with the others, beside `base.pack`. With them on the unit, the start screen reads `1.7.3 - open-field 0.3`: the main version, then open-field and the release of the base.
 
 `base.pack` comes with the install: the install page puts it on the unit with the new firmware file, from `builder/base.pack` beside the page. The feature files are not kept in this repository. Their authors share them, and you copy them onto the unit in its disk mode ([the guide](docs/guide.md#adding-a-feature)), or you build them from the sources here with one command ([docs/build.md](docs/build.md)). **A pack is a program that can read and write the files on your unit: take packs only from people you trust.** Holding the help key while you switch on starts the unit with no packs.
 
@@ -54,10 +54,12 @@ A check that runs before every commit refuses a file that holds bytes of the fir
 
 ## What you need
 
-- An OP-1 Field with **OS 1.7.0** and bootloader **1000.1.1**. Other versions are refused: every address in this project belongs to that one firmware file.
+- An OP-1 Field with the original **OS 1.7.3** and bootloader **1000.1.1**. Other versions are refused: every address in this project belongs to that one firmware file. The original firmware's start screen shows `1.7.3`; a build of 1.7.3 with another number behind it, such as `1.7.3+1`, is another file, and the install page refuses it.
 - A desktop computer with Chrome or Edge, and a USB cable.
 
-**A unit on a later OS version cannot use this yet.** The builder takes only the OS 1.7.0 file, which such a unit does not hold, and whether such a unit can be brought back to OS 1.7.0 is not known. Do not update a unit in the hope of going back. Support for a later version is work that has not been done ([methods](docs/methods.md), "Moving the work to another firmware version").
+**A unit still on OS 1.7.0** has two ways. Update it to OS 1.7.3 with Teenage Engineering's own official update, one that gives OS 1.7.3 itself and not a later build such as `1.7.3+1`, and then use the install page. Or use the page for OS 1.7.0, which the install page links to: the release of before, kept as it was, only for a unit that was never updated to 1.7.3 ([the guide](docs/guide.md), "A unit on OS 1.7.0").
+
+**A unit on a later OS version than 1.7.3 cannot use this yet.** The builder takes only the OS 1.7.3 file, which such a unit does not hold, and whether such a unit can be brought back to OS 1.7.3 is not known. Do not update a unit in the hope of going back. Support for a later version is work that has not been done ([methods](docs/methods.md), "Moving the work to another firmware version").
 
 **An official update of the device replaces open-field.** It writes the maker's firmware over the one with our loader in it. The unit is then on the original firmware of the new version, and open-field is gone from it. Pack files that are still on the disk do nothing without the loader. If you want to keep open-field, do not update.
 

@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M3, the base pack: M1's picture loader (base.pack 13 to 15's, which this tree does not hold) with one call
 // added, in op1f_picture: a document made for a pack's own picture is told to the cards unit (op1f_cards_made,
 // module/build_m3_cards.cpp), which keeps the documents each card made, so that a page is opened and a text is
@@ -79,7 +80,7 @@
 // Anything else is refused: a later kit knows more, and a pack that needs it names that kit's mark (below).
 //
 // The stock picture is opened as stock's own loader opens it: the path is the folder of stock's own format text
-// (0x848dab20, "content/display/%s") and the name, relative, with stock's open, read and close. Nothing is written.
+// (0x848daf5c, "content/display/%s") and the name, relative, with stock's open, read and close. Nothing is written.
 // A failure answers 0 with one line that says why, as for a picture that cannot be read: stock then loads the
 // device's own file for a stock screen's name, so the page shows without what the pack adds.
 //
@@ -109,12 +110,12 @@
 // every start and never looked at again once each screen had made its document. Since J5e they stand in the pack's
 // file behind the lists, a part the base does not load, and this unit reads one when a screen asks for it.
 //
-// What stock does, read whole for this unit (svg_loader.cpp load(name) 0x8fc88c64): the path made, te_fopen
-// 0x8fc88ac0(path, "rb") answering a descriptor, negative on a failure, with an error line of its own; the file's
-// size by three calls of the seek 0x8c0a3280(descriptor, offset low, offset high, from) with from 2, 1 and 0 (the
+// What stock does, read whole for this unit (svg_loader.cpp load(name) 0x8fc8ab7c): the path made, te_fopen
+// 0x8fc8a9d8(path, "rb") answering a descriptor, negative on a failure, with an error line of its own; the file's
+// size by three calls of the seek 0x8c0a3630(descriptor, offset low, offset high, from) with from 2, 1 and 0 (the
 // end, where am I, the start), whose answer is the new place's low word; a buffer of the size and one byte from
-// 0x8fcc5744; te_fread 0x8fc88a90(buffer, 1, bytes, descriptor) answering the count read; te_fclose 0x8fc88a7c; a
-// zero byte behind the text; parse_svg_from_ram 0x8c040260; the buffer freed with 0x8fcc4e10; the document
+// 0x8fcc7560; te_fread 0x8fc8a9a8(buffer, 1, bytes, descriptor) answering the count read; te_fclose 0x8fc8a994; a
+// zero byte behind the text; parse_svg_from_ram 0x8c040298; the buffer freed with 0x8fcc6c30; the document
 // answered, 0 with an error line on every failure (the caller asserts on 0).
 //
 // What this unit does for a name a pack carries a picture for: the pack's file opened by the path the base wrote
@@ -140,24 +141,24 @@ typedef unsigned char u8;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void* (*AllocFn)(u32 bytes);                       // 0x8fcc5744: svg_loader's buffer, 0 when the heap is out
-typedef void (*FreeFn)(void* block);                       // 0x8fcc4e10
-typedef void* (*ParseFn)(char* text);                      // 0x8c040260 parse_svg_from_ram: the document, 0 on failure
-typedef int (*FileOpenFn)(const char* path, const char* mode);              // 0x8fc88ac0: a descriptor, negative on a failure
-typedef int (*FileReadFn)(void* buffer, int size, int count, int descriptor);   // 0x8fc88a90: the count read
-typedef int (*FileCloseFn)(int descriptor);                                 // 0x8fc88a7c
-typedef int (*FileSeekFn)(int descriptor, u32 offset_low, u32 offset_high, int from);   // 0x8c0a3280: the new place's low word; from 0 is the file's start
+typedef void* (*AllocFn)(u32 bytes);                       // 0x8fcc7560: svg_loader's buffer, 0 when the heap is out
+typedef void (*FreeFn)(void* block);                       // 0x8fcc6c30
+typedef void* (*ParseFn)(char* text);                      // 0x8c040298 parse_svg_from_ram: the document, 0 on failure
+typedef int (*FileOpenFn)(const char* path, const char* mode);              // 0x8fc8a9d8: a descriptor, negative on a failure
+typedef int (*FileReadFn)(void* buffer, int size, int count, int descriptor);   // 0x8fc8a9a8: the count read
+typedef int (*FileCloseFn)(int descriptor);                                 // 0x8fc8a994
+typedef int (*FileSeekFn)(int descriptor, u32 offset_low, u32 offset_high, int from);   // 0x8c0a3630: the new place's low word; from 0 is the file's start
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_ALLOC ((AllocFn)0x8fcc5744u)
-#define STOCK_FREE ((FreeFn)0x8fcc4e10u)
-#define STOCK_PARSE_SVG ((ParseFn)0x8c040260u)
-#define STOCK_FILE_OPEN ((FileOpenFn)0x8fc88ac0u)
-#define STOCK_FILE_READ ((FileReadFn)0x8fc88a90u)
-#define STOCK_FILE_CLOSE ((FileCloseFn)0x8fc88a7cu)
-#define STOCK_FILE_SEEK ((FileSeekFn)0x8c0a3280u)
-#define STOCK_READ_MODE ((const char*)0x848daa84u)         // the text "rb", which te_fopen compares its mode with
-#define STOCK_PICTURE_PATH_FORMAT ((const char*)0x848dab20u)   // P1: svg_loader.cpp's own "content/display/%s"; the folder is read from it
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_ALLOC ((AllocFn)0x8fcc7560u)
+#define STOCK_FREE ((FreeFn)0x8fcc6c30u)
+#define STOCK_PARSE_SVG ((ParseFn)0x8c040298u)
+#define STOCK_FILE_OPEN ((FileOpenFn)0x8fc8a9d8u)
+#define STOCK_FILE_READ ((FileReadFn)0x8fc8a9a8u)
+#define STOCK_FILE_CLOSE ((FileCloseFn)0x8fc8a994u)
+#define STOCK_FILE_SEEK ((FileSeekFn)0x8c0a3630u)
+#define STOCK_READ_MODE ((const char*)0x848daec0u)         // the text "rb", which te_fopen compares its mode with
+#define STOCK_PICTURE_PATH_FORMAT ((const char*)0x848daf5cu)   // P1: svg_loader.cpp's own "content/display/%s"; the folder is read from it
 
 static const char LOG_FILE[] = "../src/main/ctls/op1f_tape_art.cpp";
 
@@ -384,7 +385,7 @@ static char* not_made(const char* name, const ArtDir* dir, char* picture, const 
 
 // P2: the two makers are kept functions of their own, so that what they need of the stack (the line's words, the
 // path, the stock pictures) is given back before stock's parser runs: the loader then stands on less of the stack
-// under the parser than stock's own loader does (0x8fc88c64: 288 bytes and its saved registers).
+// under the parser than stock's own loader does (0x8fc8ab7c: 288 bytes and its saved registers).
 static char* make(const char* name, const ArtDir* dir, const char* text, u32 bytes, u32* made, u32* own) __attribute__((noinline));
 
 // The picture a set of instructions makes, in a buffer of its size and one byte: or 0 with a line that says why.
@@ -514,8 +515,8 @@ static char* __attribute__((noinline)) make2(const char* name, const ArtDir* dir
             if (!decimal(&w[2], &stock_bytes)) return not_made2(name, dir, picture, stocks, count_of, "its instructions name a number that is none", 0, 0);
             if (count_of == STOCKS) return not_made2(name, dir, picture, stocks, count_of, "its instructions take more stock pictures than the unit holds", count_of, 0);
             // What a set may ask of stock's heap is held to a bound, because stock's buffer function does not answer
-            // "none": with no room its allocator logs an error and aborts (0x8d4e373c, which 0x8fcc5744
-            // reaches through 0x8d4e5854). So the tests for no buffer are never met on the unit, and a length with a digit
+            // "none": with no room its allocator logs an error and aborts (0x8d4e373c, which 0x8fcc7560
+            // reaches through 0x8d4e63bc). So the tests for no buffer are never met on the unit, and a length with a digit
             // too many would stop the start. A picture is a megabyte at most and the stock pictures of a set a megabyte
             // together, where the heap had 4,911 KiB free at its top after a start (2026-11-13).
             if (stock_bytes > LARGEST - held) return not_made2(name, dir, picture, stocks, count_of, "its instructions take stock pictures larger than the unit holds at once", stock_bytes, LARGEST - held);

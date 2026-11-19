@@ -9,7 +9,7 @@ The install needs no build: the install page has everything it needs, the loader
 | Result | From | By |
 | --- | --- | --- |
 | The five packs: the base `base`, and the features `8 tracks`, `fx train`, `lfo` and `sidechain` | their recipes in `packs/`, the sources in `module/`, the pictures' instructions in `pictures/` | `tools/pack_build.py` |
-| The loader: `build/build_m4_loader.bin`, which is the builder's file `builder/loader-1.7.0-v3.bin` byte for byte | the sources `build.json` lists | `tools/module_build.py` |
+| The loader: `build/build_m4_loader.bin`, which is the builder's file `builder/loader-1.7.3-v1.bin` byte for byte | the sources `build.json` lists | `tools/module_build.py` |
 | The example packs `wink`, `yoyo`, `list` and `trampolines` | each its own folder in `examples/` | `tools/pack_build.py` |
 | The builder's manifest, `builder/loader.json` | the loader's file, its linked file, the profile, and your own `os.ldr` for one number | `builder/write-manifest.mjs` |
 | Your firmware file | your own `os.ldr`, the loader's file and the manifest | the builder page, or `builder/build-image.mjs` |
@@ -49,19 +49,19 @@ The pack files are then in `out/packs/` (`base.pack` among them: every unit need
 ## The steps one by one
 
 ```bash
-python -I tools/table_build.py --profile profiles/op1f-1.7.0.json --check
+python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --check
 ```
 
 ```bash
-python -I tools/pack_build.py build3 --recipe "packs/8 tracks.json" --recipe packs/base.json --recipe "packs/fx train.json" --recipe packs/lfo.json --recipe packs/sidechain.json --profile profiles/op1f-1.7.0.json --out-dir out/packs
+python -I tools/pack_build.py build3 --recipe "packs/8 tracks.json" --recipe packs/base.json --recipe "packs/fx train.json" --recipe packs/lfo.json --recipe packs/sidechain.json --profile profiles/op1f-1.7.3.json --out-dir out/packs
 ```
 
 ```bash
-python -I tools/module_build.py --name build_m4_loader --out build --linker linker/op1f-1.7.0-base.ld --include module module/build_j_boot.s module/build_j_base.s module/build_m4_loader.cpp module/build_k6_base_disk.s module/build_m1_loader_disk.cpp module/build_l1_base_table.s module/build_j5b_base.s module/build_l1_base_text_table.s
+python -I tools/module_build.py --name build_m4_loader --out build --linker linker/op1f-1.7.3-base.ld --include module module/build_j_boot.s module/build_j_base.s module/build_m4_loader.cpp module/build_k6_base_disk.s module/build_m1_loader_disk.cpp module/build_l1_base_table.s module/build_j5b_base.s module/build_l1_base_text_table.s
 ```
 
 ```bash
-python -I tools/pack_build.py build3 --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.0.json --out out/wink.pack
+python -I tools/pack_build.py build3 --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.3.json --out out/wink.pack
 ```
 
 The loader's binary, `build/build_m4_loader.bin`, is the file the builder adds to a firmware file; `tools/build_all.py` copies it into `out/` under the name `build.json` gives it. The other examples build as `wink` does, with their own recipe; `trampolines` takes its own profile, `examples/trampolines/profile.json`. The tools refuse to overwrite a finished file: build into an empty `out/`.
@@ -81,32 +81,32 @@ The first checks the builder: your file, the manifest and the loader's file must
 The manifest and the loader's file in `builder/` are made by a tool, from a build. After a build you can see that they are the ones the tool gives:
 
 ```bash
-node builder/write-manifest.mjs --check --loader out/loader-1.7.0-v3.bin --elf build/build_m4_loader.elf --version v3 --stock <your own os.ldr>
+node builder/write-manifest.mjs --check --loader out/loader-1.7.3-v1.bin --elf build/build_m4_loader.elf --version v1 --stock <your own os.ldr>
 ```
 
 It writes nothing. It answers 0 when both files are, byte for byte, what the tool makes from this build and your own file.
 
 ## If you change something
 
-- **A place where the firmware is changed**: change `profiles/op1f-1.7.0.json`, then write the tables and the change list anew:
+- **A place where the firmware is changed**: change `profiles/op1f-1.7.3.json`, then write the tables and the change list anew:
 
 ```bash
-python -I tools/table_build.py --profile profiles/op1f-1.7.0.json --all
+python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --all
 ```
 
 ```bash
-python -I tools/change_list.py --profile profiles/op1f-1.7.0.json
+python -I tools/change_list.py --profile profiles/op1f-1.7.3.json
 ```
 
   A place's `sum` is the CRC-32 of the firmware's own bytes there. You work it out from your own firmware file; the bytes themselves never go into the profile:
 
 ```bash
-python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dc920
+python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dd488
 ```
 
 - **A pack's pictures**: a recipe names them. `python -I tools/pack_build.py pictures --recipe <recipe> --out <the pack's pictures source>` writes the directory the pack carries.
 - **A pack's card or the base's release**: `python -I tools/pack_build.py card --recipe <recipe> --out <the pack's card source>` writes a pack's card from its recipe, and `python -I tools/pack_build.py release --recipe packs/base.json --out module/build_m3_base_release.s` the release the start screen shows behind the words open-field.
-- **A function of the firmware that a source binds**: add its words to `profiles/op1f-1.7.0-interfaces.json` and write the page anew with `python -I tools/interfaces.py`.
+- **A function of the firmware that a source binds**: add its words to `profiles/op1f-1.7.3-interfaces.json` and write the page anew with `python -I tools/interfaces.py`.
 - **Anything in a pack, the base among them**: build again. `packs/built.json` then no longer matches, which is right: a changed pack is another file. Give it another version number in its recipe, and let the build write the new size and SHA-256:
 
 ```bash
@@ -120,12 +120,12 @@ python -I tools/build_all.py --out out-new --update
 The loader is not a file on the unit. It is the one file in `builder/` that the builder adds to an owner's firmware file. So a change to it is of another weight than a change to a pack, the base included:
 
 1. **It reaches a unit only with a new install.** The owner builds a new firmware file and writes it to the unit, with the risk the guide describes. A pack is a file copied.
-2. **It needs a new loader's file under a new version name.** A version that anyone may have installed keeps its bytes for good. So a changed loader is `v4` where the one before it is `v3`, and its file is `loader-1.7.0-v4.bin`.
+2. **It needs a new loader's file under a new version name.** A version that anyone may have installed keeps its bytes for good. So a changed loader is `v2` where the one before it is `v1`, and its file is `loader-1.7.3-v2.bin`.
 3. **It needs a manifest for that file.** The builder writes a firmware file only when its SHA-256 is the one the manifest names, and a changed loader gives another firmware file.
 
 Most changes need no new loader: what a pack can do is the base's, and the base is a pack. A new loader is for a change to what the loader itself does: how it reads, places and joins pack files, its start screen's words, its folder `packs`. Where a pack needs something only a newer loader gives, the pack names the loader's mark (`op1f_loader_1` today), and an older loader leaves it out with a line in the log.
 
-You can do all of it on your own computer. It takes the toolchain, Node, and your own OS 1.7.0 file. Open an issue first: such a change is worth agreeing on before the work is done.
+You can do all of it on your own computer. It takes the toolchain, Node, and your own OS 1.7.3 file. Open an issue first: such a change is worth agreeing on before the work is done.
 
 ### The steps
 
@@ -134,18 +134,18 @@ You can do all of it on your own computer. It takes the toolchain, Node, and you
 **2. Build under a new version name.**
 
 ```bash
-python -I tools/build_all.py --out out-new --update --loader-version v4
+python -I tools/build_all.py --out out-new --update --loader-version v2
 ```
 
-This names the loader's file `loader-1.7.0-v4.bin` in `build.json`, builds it, and writes the new sizes and SHA-256s into `packs/built.json`. It answers 1 this time, because the builder's own two files are not written yet. Its last lines give the command that writes them.
+This names the loader's file `loader-1.7.3-v2.bin` in `build.json`, builds it, and writes the new sizes and SHA-256s into `packs/built.json`. It answers 1 this time, because the builder's own two files are not written yet. Its last lines give the command that writes them.
 
 **3. Write the loader's file and its manifest into `builder/`.**
 
 ```bash
-node builder/write-manifest.mjs --loader out-new/loader-1.7.0-v4.bin --elf build/build_m4_loader.elf --version v4 --stock <your own os.ldr>
+node builder/write-manifest.mjs --loader out-new/loader-1.7.3-v2.bin --elf build/build_m4_loader.elf --version v2 --stock <your own os.ldr>
 ```
 
-It copies the loader's file into `builder/` and writes its manifest, `loader-1.7.0-v4.json`, beside it. `--elf` is the loader's linked file, which the build leaves in `build/`: the address at which the loader is entered is read from it. Your firmware file is read for one thing: the size and the SHA-256 of the firmware file the builder gives with the new loader. Nothing of it is written anywhere, and any file but the exact OS 1.7.0 file is refused.
+It copies the loader's file into `builder/` and writes its manifest, `loader-1.7.3-v2.json`, beside it. `--elf` is the loader's linked file, which the build leaves in `build/`: the address at which the loader is entered is read from it. Your firmware file is read for one thing: the size and the SHA-256 of the firmware file the builder gives with the new loader. Nothing of it is written anywhere, and any file but the exact OS 1.7.3 file is refused.
 
 **4. Build again, and check the builder.**
 
@@ -154,7 +154,7 @@ python -I tools/build_all.py --out out-check
 ```
 
 ```bash
-node builder/validate-builder.mjs --loader 1.7.0-v4 --stock <your own os.ldr>
+node builder/validate-builder.mjs --loader 1.7.3-v2 --stock <your own os.ldr>
 ```
 
 The build now answers 0: every file is the kept one, the loader's file in `builder/` is the one that was built, and its manifest names it. The second command makes the firmware file from your own file and holds its SHA-256 to the manifest's.
@@ -163,7 +163,7 @@ The build now answers 0: every file is the kept one, the loader's file in `build
 
 ### What an owner gets, and what stays with the maintainer
 
-Your new version stands **beside** the one the builder's page offers. `builder/loader.json` is the manifest the page loads by itself, and you have not touched it. An owner who opens the page gets the same firmware file as before. Your version is offered only to someone who asks for it by name, with `?loader=1.7.0-v4` behind the page's address, and the page shows `not run on a unit yet` beside it.
+Your new version stands **beside** the one the builder's page offers. `builder/loader.json` is the manifest the page loads by itself, and you have not touched it. An owner who opens the page gets the same firmware file as before. Your version is offered only to someone who asks for it by name, with `?loader=1.7.3-v2` behind the page's address, and the page shows `not run on a unit yet` beside it.
 
 Two things are still open then:
 
@@ -171,7 +171,7 @@ Two things are still open then:
 - **Which version the page offers by itself.** That is the maintainer's to say. When the new version has run on a unit, one command makes it the page's own and writes the result beside it:
 
 ```bash
-node builder/write-manifest.mjs --loader out-check/loader-1.7.0-v4.bin --elf build/build_m4_loader.elf --version v4 --current --status "ran on a unit (2026-11-20)" --stock <your own os.ldr>
+node builder/write-manifest.mjs --loader out-check/loader-1.7.3-v2.bin --elf build/build_m4_loader.elf --version v2 --current --status "ran on a unit (2026-11-20)" --stock <your own os.ldr>
 ```
 
   The manifest that was the page's own is kept under its own name. So the version before stays there for someone who asks for it by name.

@@ -17,7 +17,7 @@ It uses the base's helpers `op1f_screen`, `op1f_node`, `op1f_show` and `op1f_log
 Build it, from the top of the repository, into a file that is not there yet (the tool overwrites nothing):
 
 ```bash
-python -I tools/pack_build.py build3 --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.0.json --out out/wink.pack
+python -I tools/pack_build.py build3 --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.3.json --out out/wink.pack
 ```
 
 `python -I tools/build_all.py` builds it too, into `out/examples/`, and holds it to the size and SHA-256 kept in `packs/built.json`.

@@ -70,8 +70,8 @@
         to start for good ("bricked"), and installing this will void the warranty of your device. Whether to do it is
         your choice alone.</li>
       <li>You need a <b>Windows</b> computer with <b>Chrome or Edge</b>, a USB cable that carries data, a
-        <b>charged</b> unit on <b>OS 1.7.0</b> with bootloader <b>1000.1.1</b> (step 1 checks both), and half an hour.
-        Mac and Linux are not supported yet.</li>
+        <b>charged</b> unit on the original <b>OS 1.7.3</b> with bootloader <b>1000.1.1</b> (step 1 checks both, and
+        step 5 checks your firmware file), and half an hour. Mac and Linux are not supported yet.</li>
       <li><b>Keep your own firmware file.</b> Step 3 copies it off your unit into a folder on this computer. Put a copy
         somewhere else as well (a USB stick, another computer): it is your way back.</li>
       <li><b>In the bootloader's menus, press only the keys this page names.</b> In its main menu, <code>3</code>
@@ -79,6 +79,8 @@
         <code>1</code> is a factory reset, which erases your recordings and sounds at once and asks nothing, and its
         key <code>3</code> resets a calibration.</li>
     </ul>
+    <p class="note" id="olderOs">Still on OS 1.7.0? <a href="./1.7.0/">The page for it is kept here, as it was.</a>
+      Only for a unit that was never updated to 1.7.3.</p>
     <p class="note" id="loaderInfo">Loading the builder's files…</p>
     <p class="warn hidden" id="loadError"></p>
   </div>
@@ -149,8 +151,8 @@
     <div class="lines" id="helperLines"></div>
     <p id="helperStatus" class="note"></p>
     <div id="notOriginal" class="hidden">
-      <p class="warn">The firmware file on your unit is not the original OS 1.7.0 file, so nothing can be built from
-        it. If you kept your own original file from before, put it into the folder as <code>os-1.7.0-yours.ldr</code>
+      <p class="warn">The firmware file on your unit is not the original OS 1.7.3 file, so nothing can be built from
+        it. If you kept your own original file from before, put it into the folder as <code>os-1.7.3-yours.ldr</code>
         (the page finds it there by itself), or choose it:</p>
       <p><input type="file" id="keptFile" accept=".ldr,application/octet-stream" hidden>
         <button type="button" class="ghost" id="chooseKept">Choose the firmware file you kept…</button>
@@ -176,7 +178,7 @@
       <p class="note" id="pPlace"></p>
       <p><button type="button" class="ghost" id="lookAgain">Look at the packs folder again</button></p>
       <label class="gate"><input type="checkbox" id="kept">
-        <span>I have put a copy of <code id="stockName">os-1.7.0-yours.ldr</code> from the folder somewhere other than
+        <span>I have put a copy of <code id="stockName">os-1.7.3-yours.ldr</code> from the folder somewhere other than
           this computer.</span></label>
       <p><button type="button" id="go" disabled>Put the files on the unit</button></p>
       <p class="note">This writes the new file, <code>base.pack</code>, the packs you ticked and the plan into the folder.
@@ -214,10 +216,10 @@
   <div class="card later" id="s8">
     <h2><span class="num">8</span>Read the start screen</h2>
     <p>The proof is the start screen. With the new firmware file and this page's <code>base.pack</code> it reads
-      <code id="startWords">1.7.0 - open-field 0.3</code>: the number is the release of <code>base.pack</code>. If a pack
+      <code id="startWords">1.7.3 - open-field 0.3</code>: the number is the release of <code>base.pack</code>. If a pack
       file cannot run, the words end in <code>(1 left out)</code> and the others run. Holding the <b>help</b> key while
       you switch on starts the unit as the original firmware for one start, with no packs, and the start screen reads
-      <code>1.7.0 stock (help key)</code>.</p>
+      <code id="stockWords">1.7.3 stock (help key)</code>.</p>
     <p>After the way back (step 5's second choice), the start screen shows the original firmware's version line with
       nothing added.</p>
     <p class="note">The owner's guide, <code>docs/guide.md</code> in the repository, has the rest: adding and taking
@@ -240,7 +242,12 @@
 
   const $ = (id) => document.getElementById(id);
   const SUPPORTED_BL = ["1000.1.1", "1000.1.1+0"];   // te-boot answers "1000.1.1" (2026-11-15); its screen says "+0"
-  const SUPPORTED_OS = ["1.7.0", "1.7.0+0"];
+  const FIRMWARE = "1.7.3";                          // the one firmware this page builds for: the original OS 1.7.3
+  const SUPPORTED_OS = [FIRMWARE, FIRMWARE + "+0"];
+  const OLDER_OS = ["1.7.0", "1.7.0+0"];             // a unit on it is sent to the page kept for it, ./1.7.0/
+  // The browser's storage of this tab is shared with the page kept for OS 1.7.0 (the same site): this page's keys carry
+  // its firmware, so that neither page takes what the other one stored.
+  const GATE_KEY = "open-field-gate-" + FIRMWARE, PAGE_KEY = "open-field-page-" + FIRMWARE;
   let manifest = null, loader = null, session = null, folder = null, folderHandle = null, keptStock = null;
   let basePack = null;      // the page's own base.pack, {bytes, sha256, version, release}, checked against base-pack.json
   let gate = null;          // what the bootloader said, once it passed
@@ -258,9 +265,9 @@
   // This page's mark: written into the folder it chose (page.json) and named in the helper's line, so that the helper
   // checks it works in the folder this page reads. Kept for the browser tab, so that a reload follows the same helper.
   const PAGE_ID = (() => {
-    try { const kept = sessionStorage.getItem("open-field-page"); if (kept && /^[0-9a-f]{8}$/.test(kept)) return kept; } catch { /* none kept */ }
+    try { const kept = sessionStorage.getItem(PAGE_KEY); if (kept && /^[0-9a-f]{8}$/.test(kept)) return kept; } catch { /* none kept */ }
     const id = [...crypto.getRandomValues(new Uint8Array(4))].map((b) => b.toString(16).padStart(2, "0")).join("");
-    try { sessionStorage.setItem("open-field-page", id); } catch { /* not kept */ }
+    try { sessionStorage.setItem(PAGE_KEY, id); } catch { /* not kept */ }
     return id;
   })();
 
@@ -295,7 +302,7 @@
     });
   }
 
-  // ---- the builder's files: loader.json, or a version kept beside it, asked for as ?loader=1.7.0-v4 ----
+  // ---- the builder's files: loader.json, or a version kept beside it, asked for as ?loader=1.7.3-v2 ----
   // (the loader is our small piece inside the firmware file; the base is the pack base.pack)
   async function loadLoader() {
     try {
@@ -321,6 +328,7 @@
       if (bytes.length !== named.bytes || (await sha256(bytes)) !== named.sha256) throw new Error("base.pack is not the file base-pack.json names");
       basePack = { bytes, sha256: named.sha256, version: named.version, release: named.release };
       $("startWords").textContent = manifest.os + " - open-field " + named.release;
+      $("stockWords").textContent = manifest.os + " stock (help key)";
       $("loaderInfo").textContent = "Builder: loader " + our.version + " for OS " + manifest.os + (our.status ? " · " + our.status : "") +
         " · base.pack " + named.version + " (release " + named.release + ")";
     } catch (e) {
@@ -449,14 +457,19 @@
   }
 
   // ---- step 1: the bootloader, over USB MIDI ----
+  // A gate kept for this tab is taken again only when it is this page's, for this page's firmware, and what the unit
+  // said then is still a supported answer: anything else is asked of the unit again in step 1.
   function restoreGate() {
-    try { gate = JSON.parse(sessionStorage.getItem("open-field-gate") || "null"); } catch { gate = null; }
+    try { gate = JSON.parse(sessionStorage.getItem(GATE_KEY) || "null"); } catch { gate = null; }
+    const fits = (g) => !!g && typeof g === "object" && g.firmware === FIRMWARE && SUPPORTED_BL.includes(g.bl || "") &&
+      (g.os === null || SUPPORTED_OS.includes(g.os));
+    if (gate && !fits(gate)) { gate = null; try { sessionStorage.removeItem(GATE_KEY); } catch { /* nothing kept */ } }
     if (gate) { $("gate").innerHTML = "<span class='ok'>Bootloader " + gate.bl + ", OS " + (gate.os || "not said") + ": supported. ✔</span>"; show("devBox"); }
     refresh();
   }
   $("find").addEventListener("click", async () => {
     if (!navigator.requestMIDIAccess) { log("This browser has no USB MIDI: use Chrome or Edge on a desktop computer.", "warn"); return; }
-    gate = null; sessionStorage.removeItem("open-field-gate"); show("devBox", false); $("gate").textContent = "";
+    gate = null; sessionStorage.removeItem(GATE_KEY); show("devBox", false); $("gate").textContent = "";
     $("findStatus").textContent = "connecting…";
     try {
       if (session) { try { session.close(); } catch { /* never opened */ } }
@@ -470,13 +483,18 @@
       const blOk = SUPPORTED_BL.includes(id.bl_version || "");
       const osOk = !id.os_version || SUPPORTED_OS.includes(id.os_version);
       if (blOk && osOk) {
-        gate = { bl: id.bl_version, os: id.os_version || null };
-        sessionStorage.setItem("open-field-gate", JSON.stringify(gate));
+        gate = { firmware: FIRMWARE, bl: id.bl_version, os: id.os_version || null };
+        sessionStorage.setItem(GATE_KEY, JSON.stringify(gate));
         $("gate").innerHTML = "<span class='ok'>Bootloader " + id.bl_version + ", OS " + (id.os_version || "not said by the bootloader; the firmware file's check in step 5 decides") + ": supported. ✔</span>";
         show("devBox"); refresh();
+      } else if (blOk && OLDER_OS.includes(id.os_version)) {
+        $("gate").innerHTML = "<span class='warn'>This unit runs OS " + id.os_version + ". This page is for OS 1.7.3 only. Stop here on this unit: " +
+          "<a href=\"./1.7.0/\">the page for OS 1.7.0</a>, kept as it was, is the one for it. Or update the unit to OS 1.7.3 itself " +
+          "(not a later build) with Teenage Engineering's own update first, and then come back to this page.</span>";
+        log("refused: OS " + id.os_version + "; the page for it is ./1.7.0/", "warn");
       } else {
-        $("gate").innerHTML = "<span class='warn'>" + (blOk ? "OS " + id.os_version + " is not 1.7.0" : "Bootloader " + (id.bl_version || "?") + " is not 1000.1.1") +
-          ". open-field is made for OS 1.7.0 with bootloader 1000.1.1 only. Stop here on this unit.</span>";
+        $("gate").innerHTML = "<span class='warn'>" + (blOk ? "OS " + id.os_version + " is not 1.7.3" : "Bootloader " + (id.bl_version || "?") + " is not 1000.1.1") +
+          ". open-field is made for OS 1.7.3 with bootloader 1000.1.1 only. Stop here on this unit.</span>";
         log("refused: not the supported versions", "warn");
       }
     } catch (e) { $("findStatus").textContent = ""; log("could not reach the unit: " + (e.message || e), "warn"); }
@@ -669,7 +687,7 @@
       const there = await folder.readBytes(NAMES.stock).catch(() => null);
       if (there && (await sha256(there)) === manifest.stock.sha256) {
         keptStock = there;
-        log("your original OS 1.7.0 file is in the folder as " + NAMES.stock + ": it is used", "ok");
+        log("your original OS 1.7.3 file is in the folder as " + NAMES.stock + ": it is used", "ok");
       }
     }
     show("notOriginal", !original && !keptStock);
@@ -691,7 +709,7 @@
     const p = preview.plan;
     const fromListing = new Set((p.chosen ?? []).map((c) => c.name.toLowerCase()));
     $("pStock").textContent = keptStock ? NAMES.stock + " (the original)" : h.stock.file;
-    $("stockName").textContent = keptStock ? "os-1.7.0-yours.ldr" : h.stock.file;
+    $("stockName").textContent = keptStock ? NAMES.stock : h.stock.file;
     $("pImage").textContent = (p.wayBack ? p.image.file + " (your own original file)" : NAMES.image) + " · " + p.image.bytes.toLocaleString() + " bytes";
     $("pPad").textContent = p.pad ? p.pad.name + " · " + p.pad.bytes.toLocaleString() + " bytes" : "none needed";
     $("pPacks").textContent = p.packs.length ? p.packs.map((x) => x.name + (x.name === "base.pack" && preview.base ? " (this page's, release " + basePack.release + ")" :
@@ -720,9 +738,9 @@
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
       e.target.value = "";
-      if ((await sha256(bytes)) !== manifest.stock.sha256) { $("keptStatus").innerHTML = "<span class='warn'>That is not the original OS 1.7.0 file either.</span>"; return; }
+      if ((await sha256(bytes)) !== manifest.stock.sha256) { $("keptStatus").innerHTML = "<span class='warn'>That is not the original OS 1.7.3 file either.</span>"; return; }
       keptStock = bytes;
-      $("keptStatus").innerHTML = "<span class='ok'>the original OS 1.7.0 file ✔</span>";
+      $("keptStatus").innerHTML = "<span class='ok'>the original OS 1.7.3 file ✔</span>";
       if (!(await folder.readBytes(NAMES.stock))) { await folder.writeBytes(NAMES.stock, bytes); log("your original file is now also in the folder as " + NAMES.stock); }
       show("notOriginal", false);
       offered = null;

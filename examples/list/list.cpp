@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M3, the third example pack, list (docs/base.md, level 3): a folder of its own that the
 // computer sees in the disk mode, and a page of its own that lists the names of the files in it, through level 3 of
 // the base's interface (module/build_m3_card.h). It changes no place of the firmware and names no address of it.

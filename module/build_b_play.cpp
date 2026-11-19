@@ -1,10 +1,11 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B1: playback of tape tracks 5 and 6 (track indices 4 and 5).
 // Build F, image F1: four extension tracks (indices 4-7), the filter loop in assembly, the silence skip per track.
 //
 // Stock plays a tape block in the L1 driver 0x11a07fe4 (OS 1.7.0+0) in three steps, read in
 // analysis/build_b_design.md, section 7:
 //
-//   read_block(speed, state, rolling)  0x8f01d144  fills four 600-frame window buffers (0x84c61e88 + t * 0x12c0)
+//   read_block(speed, state, rolling)  0x8f01ec34  fills four 600-frame window buffers (0x84c61e88 + t * 0x12c0)
 //                                                   with source frames [W0, W0 + wanted) from the chunk cache,
 //                                                   with the per-track volume/pan gains and the loop crossfades
 //                                                   applied; returns W0, the window's first frame
@@ -12,7 +13,7 @@
 //                                                   track over the window, times the tape level; per-track
 //                                                   outputs into the output area and the stereo sums into
 //                                                   0x119027a0 (left) and 0x119028a0 (right)
-//   mixer(speed, state)                0x8f01d9f0  a speed-dependent low-pass and the speed-squared level ramp
+//   mixer(speed, state)                0x8f01f4e0  a speed-dependent low-pass and the speed-squared level ramp
 //                                                   on the sums (in place), then the smoothing of the per-track
 //                                                   outputs; the DSP core carries the sums on as the main mix
 //
@@ -45,7 +46,7 @@
 // build_l4_fir.s, written from what it computes, with the same job and the same two sums bit for bit; the one in
 // build_b_play.s is its elder, which every pack before L4 has (analysis/clean_base_study.md, section 17).
 //
-// B3b: the loop crossfade. While stock's loop flag B[0x848d03bc] is set (read_block sets it within 297 frames
+// B3b: the loop crossfade. While stock's loop flag B[0x8400129d] is set (read_block sets it within 297 frames
 // of a loop point and clears it after) the window start is wrapped into [loop_a, loop_b) as stock wraps its
 // own, and every frame from loop_b - 297 on (frames past loop_b continuing at loop_a) or within 297 frames
 // after loop_a comes from the track's loop buffer in build_b_xfade.cpp when that buffer is valid, else from
@@ -81,11 +82,11 @@ struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (anal
 };
 typedef Slot* (*SlotForLogicalFn)(int logical);
 
-#define STOCK_READ_BLOCK ((ReadBlockFn)0x8f01d144u)
-#define STOCK_MIXER ((MixerFn)0x8f01d9f0u)
-#define STOCK_SLOT_FOR_LOGICAL ((SlotForLogicalFn)0x8fc1f780u)   // slot_by_logical[l], or 0
+#define STOCK_READ_BLOCK ((ReadBlockFn)0x8f01ec34u)
+#define STOCK_MIXER ((MixerFn)0x8f01f4e0u)
+#define STOCK_SLOT_FOR_LOGICAL ((SlotForLogicalFn)0x8fc21280u)   // slot_by_logical[l], or 0
 #define POSITION64 (*(volatile i32*)0x11905a18u)                    // tape position in 1/64 frames
-#define LEVEL_PAIR (*(volatile u32*)0x848ce124u)                    // low half: current level (Q15), high half: target
+#define LEVEL_PAIR (*(volatile u32*)0x848ce530u)                    // low half: current level (Q15), high half: target
 #define SUM_LEFT ((volatile i32*)0x119027a0u)                       // 64 samples each, the stereo mix of the tape
 #define SUM_RIGHT ((volatile i32*)0x119028a0u)
 #define COEFFICIENTS_END 0x11904af4u                                // phase 0 of the 16 x 64 polyphase table
@@ -114,9 +115,9 @@ extern "C" u16 op1f_ext_vu[4] asm("op1f_ext_vu");                   // B3a: per-
 extern "C" i32 op1f_ext_loop_buffer[XFADE_TRACKS][LOOP_BUFFER_FRAMES * 2] asm("op1f_ext_loop_buffer");   // B3b (build_b_xfade.cpp)
 extern "C" u32 op1f_ext_xfade_valid asm("op1f_ext_xfade_valid");               // B3b: bit j = the buffer of track 4 + j is computed
 extern "C" void op1f_ext_xfade_compute(i32 loop_a, i32 loop_b) asm("op1f_ext_xfade_compute");
-#define XFADE_FLAG (*(volatile unsigned char*)0x848d03bcu)                     // B3b: read_block's "near a loop point" flag (0x8fc21864 / 0x8fc21878)
-#define LOOP_A (*(volatile i32*)0x84c61d94u)                                   // the loop points, in frames
-#define LOOP_B (*(volatile i32*)0x84c61d98u)
+#define XFADE_FLAG (*(volatile unsigned char*)0x8400129du)                     // B3b: read_block's "near a loop point" flag (0x8fc21864 / 0x8fc21878)
+#define LOOP_A (*(volatile i32*)0x84c62220u)                                   // the loop points, in frames
+#define LOOP_B (*(volatile i32*)0x84c62224u)
 #define XFADE_MASK ((1u << XFADE_TRACKS) - 1u)
 
 // The filter job for build_b_play.s (F1) and build_l4_fir.s (L4): the layout is the assembly's contract, see there.
@@ -301,7 +302,7 @@ static int fill_window(i32 w0, u32 wanted, int loop_flag, u32 loop_valid, i32 lo
     return from_buffer;
 }
 
-// Replaces the driver's call of 0x8f01d144 at 0x11a0822e.
+// Replaces the driver's call of 0x8f01ec34 at 0x11a0825e.
 extern "C" int op1f_read_block_ext(int speed, void* state, int rolling) asm("op1f_read_block_ext");
 extern "C" int op1f_read_block_ext(int speed, void* state, int rolling) {
     if (&op1f_duck_block_gains != 0) op1f_duck_block_gains();       // Build G: this block's duck gains, before stock reads the solo words
@@ -333,7 +334,7 @@ extern "C" int op1f_read_block_ext(int speed, void* state, int rolling) {
     return w0;
 }
 
-// Replaces the driver's call of 0x8f01d9f0 at 0x11a0826a: the stock resampler has just written the 64 stereo
+// Replaces the driver's call of 0x8f01f4e0 at 0x11a0829a: the stock resampler has just written the 64 stereo
 // sums of tracks 1-4; add the active extension tracks with the same arithmetic, then let the stock mixer
 // filter the result.
 extern "C" void op1f_mixer_ext(int speed, void* state) asm("op1f_mixer_ext");

@@ -9,7 +9,7 @@ data in the other file by the bytes around it.
 
 What it reads:
   * every place of change in the profile (`--profile`, by default
-    `profiles/op1f-1.7.0.json`). A place's bytes are read from the source file. A
+    the profile `build.json` names, `profiles/op1f-1.7.3.json`). A place's bytes are read from the source file. A
     profile that carries a checksum of them (`sum`) is held by it, one that carries
     the bytes themselves and their file offset (`before`, `file_offset`) by those:
     a source file that is not the profile's own is refused;
@@ -35,8 +35,8 @@ a tracked folder.
 Standard library only, plus this project's `ldr_inspect` for the file's records.
 The source file is the one `--source` names, or the environment's OPEN_FIELD_STOCK.
 
-    python -I tools/os_port.py --source <your 1.7.0 os.ldr> --target <the other os.ldr> --out build/port
-    python -I tools/os_port.py --source <your 1.7.0 os.ldr> --self-check     # onto itself: every site must be found once, unmoved
+    python -I tools/os_port.py --source <your 1.7.3 os.ldr> --target <the other os.ldr> --out build/port
+    python -I tools/os_port.py --source <your 1.7.3 os.ldr> --self-check     # onto itself: every site must be found once, unmoved
 """
 import argparse
 import glob
@@ -52,7 +52,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
 from ldr_inspect import parse as parse_ldr  # noqa: E402
 
-DEFAULT_PROFILE = ROOT / 'profiles/op1f-1.7.0.json'
+DEFAULT_PROFILE = ROOT / json.loads((ROOT / 'build.json').read_text(encoding='utf-8'))['profile']     # the tree's own profile
 STOCK_VARIABLE = 'OPEN_FIELD_STOCK'     # the environment's name for one's own firmware file, as the public tree's tests take it
 MODULE_GLOBS = ('module/*.s', 'module/*.cpp', 'module/*.h')
 
@@ -336,7 +336,7 @@ def in_repo_but_not_build(path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--source', type=Path, default=os.environ.get(STOCK_VARIABLE) or None,
-                        help='the os.ldr the profile was made for (1.7.0); without it, the file the environment\'s %s names' % STOCK_VARIABLE)
+                        help='the os.ldr the profile was made for (1.7.3); without it, the file the environment\'s %s names' % STOCK_VARIABLE)
     parser.add_argument('--target', type=Path, help='stock os.ldr of the release to port to; omitted with --self-check')
     parser.add_argument('--profile', type=Path, default=DEFAULT_PROFILE)
     parser.add_argument('--module-dir', type=Path, default=ROOT / 'module')

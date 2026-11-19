@@ -12,8 +12,8 @@ body:
     id: os
     attributes:
       label: OS version
-      description: The version on the start screen, before the words open-field. open-field is for 1.7.0 only.
-      placeholder: "1.7.0"
+      description: The version on the start screen, before the words open-field. open-field is for 1.7.3 only (the page kept for 1.7.0 is the release of before).
+      placeholder: "1.7.3"
     validations:
       required: true
 
@@ -31,7 +31,7 @@ body:
     attributes:
       label: What the start screen reads
       description: All of the line under the version, as the screen shows it.
-      placeholder: "1.7.0 - open-field 0.3"
+      placeholder: "1.7.3 - open-field 0.3"
     validations:
       required: true
 

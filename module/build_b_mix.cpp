@@ -1,16 +1,17 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3a: the mixer strip of tape tracks 5 and 6, their glyphs on the tape screen, and the
 // ReadInterface mute getter for six tracks (OS 1.7.0+0; read in analysis/build_b_design.md, section 9).
 //
 // What stock does: the four tracks' volumes (Q31) sit at 0x11b01eb0, their pans (Q31 in -0.5..0.5, positive is
 // right) at 0x11b01ec0 and the mute gains (0x7fffffff or 0, computed from the flag bytes 0x11902e34 by
-// 0x8d50485c) at 0x11b01ed0, all in L1 data. read_block (0x8f01d144) turns them into each track's playback gain
+// 0x8d50485c) at 0x11b01ed0, all in L1 data. read_block (0x8f01ec34) turns them into each track's playback gain
 // matrix, the L1 core's input monitoring (0x11a02b28) reads the selected track's three values through the
-// index in P0, and the screens read them back through ReadInterface getters: 0x8d515734 builds a float vector
-// of the eight values, 0x8d5156c4(ch) answers "is track ch unmuted" and asserts ch < 4 (ReadInterface.cpp:469,
+// index in P0, and the screens read them back through ReadInterface getters: 0x8d5168f4 builds a float vector
+// of the eight values, 0x8d516884(ch) answers "is track ch unmuted" and asserts ch < 4 (ReadInterface.cpp:469,
 // fatal). The tape screen shows the selected track's number through four svg nodes "track1".."track4"
 // (pointers at this + 0x34..0x40, display byte at node + 0x5c), remembers the shown track at this + 0xd0, which
 // its clip loop and record bar use as the selected track, and shift + track key toggles a mute and shows that
-// track's number through 0x8fc7ee58(track) ([0x848d98e4], reset to -1 when shift is released).
+// track's number through 0x8fc809b8(track) ([0x848d98e4], reset to -1 when shift is released).
 //
 // This unit (profile group "build-b3a", with changes in build_b_record.s/.cpp and build_b_play.cpp):
 //   * op1f_ext_params: volume, pan and mute gain of tracks 5-8 (5 and 6 in use) in stock's own layout, so the
@@ -21,7 +22,7 @@
 //     (stock's own words for tracks 1-4, this unit's for 5-6); op1f_ext_mix_toggle_mute: tape key + shift +
 //     track key 1/2 toggles the mute of track 5/6. Both are called from the TapeController filters in
 //     build_b_record.cpp. The values of tracks 5-6 live in RAM only (reset at boot) until a later step saves them.
-//   * op1f_track_unmuted replaces the ReadInterface getter 0x8d5156c4 for six tracks (callers: the tape screen
+//   * op1f_track_unmuted replaces the ReadInterface getter 0x8d516884 for six tracks (callers: the tape screen
 //     with the shown track, the signal-flow screen with the selected track, the mixer screen with 0-3).
 //   * op1f_tape_glyph_slot / op1f_tape_glyph_hide serve the two CALL.a stubs in build_b_mix.s that replace the
 //     tape screen's node-table indexing: tracks 0-3 use the screen's table, tracks 4-5 the svg nodes "track5"
@@ -51,18 +52,18 @@ typedef void (*FlashTrackFn)(int track);
 typedef void* (*ObjectFn)();
 typedef void (*NotifyFn)(void* object);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)     // Screen::find_node(this, id, optional): 0 when optional and missing
-#define STOCK_FLASH_TRACK ((FlashTrackFn)0x8fc7ee58u)   // [0x848d98e4] = track: the tape screen shows that track's number while shift is held
-#define STOCK_TAPE_MODEL ((ObjectFn)0x8c0c1420u)        // the tape model the TapeController observes: a notify writes the tape JSON (0x8c0c116c)
-#define STOCK_NOTIFY ((NotifyFn)0x8fca00e2u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)     // Screen::find_node(this, id, optional): 0 when optional and missing
+#define STOCK_FLASH_TRACK ((FlashTrackFn)0x8fc809b8u)   // [0x848d98e4] = track: the tape screen shows that track's number while shift is held
+#define STOCK_TAPE_MODEL ((ObjectFn)0x8c0c1dd0u)        // the tape model the TapeController observes: a notify writes the tape JSON (0x8c0c116c)
+#define STOCK_NOTIFY ((NotifyFn)0x8fca1ed2u)
 
 #define SELECTED_TRACK (*(volatile i32*)0x11905a08u)
 #define STOCK_MUTE_FLAGS ((volatile unsigned char*)0x11902e34u)   // tracks 0-3: 1 = muted
 #define STOCK_VOLUMES ((volatile i32*)0x11b01eb0u)                // tracks 0-3, Q31; the pans follow at +0x10
 
 // Build D: the ROM soft-float routines stock's MIDI mixer handler 0x8f00de30 calls, in its order, and the two
-// 16-bit pairs {lo, hi} it scales a 0..127 value into (0x848c6f1c: the volume 0..32767; 0x848c6f20: the pan
+// 16-bit pairs {lo, hi} it scales a 0..127 value into (0x848c732c: the volume 0..32767; 0x848c6f20: the pan
 // -16384..16384), truncated to an int and shifted left 16 into the Q31 word.
 typedef u32 (*RomFloat1Fn)(u32);
 typedef u32 (*RomFloat2Fn)(u32, u32);
@@ -73,7 +74,7 @@ typedef u32 (*RomFloat2Fn)(u32, u32);
 #define ROM_FLOAT_DIV ((RomFloat2Fn)0x040219e4u)
 #define ROM_FLOAT_MUL ((RomFloat2Fn)0x04021ac0u)
 #define ROM_FLOAT_TO_INT ((RomFloat1Fn)0x04021310u)
-#define MIDI_PAIRS ((const u32*)0x848c6f1cu)                         // [0] the volume pair, [1] the pan pair
+#define MIDI_PAIRS ((const u32*)0x848c732cu)                         // [0] the volume pair, [1] the pan pair
 #define FLOAT_127 0x42fe0000u
 
 enum {
@@ -217,7 +218,7 @@ extern "C" int op1f_ext_mix_toggle_mute(int track) {
 }
 
 // Build D: stock's MIDI mixer handler (0x8f00de30; the channel in the status byte's low nibble, type 7 volume,
-// 10 pan, 9 mute, the value 0..127) returns at 0x8f00de9c for a channel of 4 or more; the trampoline
+// 10 pan, 9 mute, the value 0..127) returns at 0x8f00f96c for a channel of 4 or more; the trampoline
 // op1f_midi_bound (build_d_clip.s) sends channels 4-5 here. Stock's law through the same ROM routines:
 // lo + value / 127 x (hi - lo) from the pair, truncated and shifted left 16; the mute is value >= 64. No
 // tape-model notify (a controller can stream values): the tape JSON takes the words at its next save, as it
@@ -266,7 +267,7 @@ extern "C" void op1f_midi_mixer(i32 channel, i32 type, i32 value) {
     }
 }
 
-// Replaces ReadInterface's is-unmuted(ch) 0x8d5156c4: stock's flag byte for tracks 0-3, this unit's mute for 4-5,
+// Replaces ReadInterface's is-unmuted(ch) 0x8d516884: stock's flag byte for tracks 0-3, this unit's mute for 4-5,
 // 0 (muted) for anything else where stock asserted.
 extern "C" int op1f_track_unmuted(int ch) asm("op1f_track_unmuted");
 extern "C" int op1f_track_unmuted(int ch) {
@@ -307,7 +308,7 @@ static void ensure_glyphs(void* screen) {
     }
 }
 
-// For the stub at 0x8fc82740: remember the shown track (this + 0xd0, read by the clip loop and the record bar)
+// For the stub at 0x8fc842a0: remember the shown track (this + 0xd0, read by the clip loop and the record bar)
 // and return the address of the node pointer whose display byte stock sets next.
 extern "C" void** op1f_tape_glyph_slot(void* screen, i32 track) asm("op1f_tape_glyph_slot");
 extern "C" void** op1f_tape_glyph_slot(void* screen, i32 track) {
@@ -320,7 +321,7 @@ extern "C" void** op1f_tape_glyph_slot(void* screen, i32 track) {
     return &glyph_fallback_slot;
 }
 
-// For the stub at 0x8fc8272c: hide the number shown before (stock: B[node + 0x5c] = 0 through its four-entry table).
+// For the stub at 0x8fc8428c: hide the number shown before (stock: B[node + 0x5c] = 0 through its four-entry table).
 extern "C" void op1f_tape_glyph_hide(void* screen, i32 index) asm("op1f_tape_glyph_hide");
 extern "C" void op1f_tape_glyph_hide(void* screen, i32 index) {
     void* node;

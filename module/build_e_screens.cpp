@@ -1,9 +1,10 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build E: the two cosmetic screens for tracks 5 and 6 (OS 1.7.0+0; read in analysis/build_b_design.md, section 18).
 //
-// The help screen (HelpScreen.cpp, help.svg): its update asks the selected-track getter 0x8d513188, then colours
+// The help screen (HelpScreen.cpp, help.svg): its update asks the selected-track getter 0x8d514348, then colours
 // the four legend boxes t1tape..t4tape (node pointers at this + 0x2c, one 4-byte colour each) in a hardware loop:
 // the highlight word at this + 0xa4 for the box whose index equals the track, the normal word at this + 0xa8 for
-// the others. With track 4 or 5 selected no box matched. The CALL.a at 0x8fc2ca3c now lands in op1f_help_track
+// the others. With track 4 or 5 selected no box matched. The CALL.a at 0x8fc2e5bc now lands in op1f_help_track
 // (build_e_screens.s), which passes the screen here. Since E3 the module serves a help.svg whose legend row has
 // six boxes (tools/help_svg_ext.py): the stock four moved closer together and, for tracks 5 and 6, two boxes drawn
 // twice each, a dim copy (t5tapeoff, t6tapeoff, in stock's normal colour #5B6670) and a lit copy (t5tapeon,
@@ -15,10 +16,10 @@
 // replaces both with the six-box row.
 //
 // The signal-flow screen (SignalFlowScreen.cpp, signalflow.svg, shift + mixer): its update asks the selected
-// track, whether it is unmuted (0x8d5156c4) and, when it is, the track's level from the eight-float vector of
-// 0x8d515734 (the volumes of tracks 1-4, then their pans; the index is the track) for the warning triangle beside
+// track, whether it is unmuted (0x8d516884) and, when it is, the track's level from the eight-float vector of
+// 0x8d5168f4 (the volumes of tracks 1-4, then their pans; the index is the track) for the warning triangle beside
 // the big track digit, shown below 0.2. With track 4 or 5 the index read the pan of track 1 or 2. The CALL.a at
-// 0x8fc33bce now lands in op1f_signalflow_unmuted: tracks 0-3 go on to the six-track getter; for 4-5 the module
+// 0x8fc3574e now lands in op1f_signalflow_unmuted: tracks 0-3 go on to the six-track getter; for 4-5 the module
 // answers the mute from its strip and rewrites the index slot so that stock's load lands on the module's float of
 // that track's volume, converted as stock converts its own values (the ROM int-to-float, divided by 2^31).
 //
@@ -26,10 +27,10 @@
 // drawing: a line node (tapevuN) that it reshapes on every update with a transform built from the track's level,
 // anchored at the box of the base dot (tapevubaseN). Its loop over the four: the level in dB from the VU vector
 // (20 log10 of the block peak / 32768, the words cleared as read), plus 6, capped at 3.3 (anything not below 3.3,
-// infinities included, reads as 3.3), 10^(x / 20) through 0x8f004fe8, then 0x8fc33b20 (× 1.4, − 1, × 1024, to an
-// int), a one-pole smoothing with the gain word at 0x84c9708c (new = ((gain − 921) × fixed + old × 921) >> 10, the
-// old value kept per meter), 0x8fc2df4c(anchor max x, anchor max y − 1024, new) building a 9-word transform, and
-// 0x8c03db96(line, transform) applying it. The CALL.a that takes the VU vector (0x8fc33bb8) now lands in
+// infinities included, reads as 3.3), 10^(x / 20) through 0x8f0061a8, then 0x8fc356a0 (× 1.4, − 1, × 1024, to an
+// int), a one-pole smoothing with the gain word at 0x84c9752c (new = ((gain − 921) × fixed + old × 921) >> 10, the
+// old value kept per meter), 0x8fc2facc(anchor max x, anchor max y − 1024, new) building a 9-word transform, and
+// 0x8c03dbbe(line, transform) applying it. The CALL.a that takes the VU vector (0x8fc35738) now lands in
 // op1f_signalflow_vu, which returns stock's vector and runs the same steps for tracks 5 and 6 on the lines
 // tapevu5 and tapevu6 of the module's signalflow.svg (tools/signalflow_svg_ext.py), from the module's own peaks.
 //
@@ -52,13 +53,13 @@ typedef int i32;
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
 typedef u32 (*FloatFromIntFn)(i32 value);                          // ROM 0x04021854: the float of an int
 typedef u32 (*FloatDivFn)(u32 a, u32 b);                           // ROM 0x040219e4: a / b
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc241d0: 0 when optional and missing
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc25cc0: 0 when optional and missing
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
 #define STOCK_FLOAT_FROM_INT ((FloatFromIntFn)0x04021854u)
 #define STOCK_FLOAT_DIV ((FloatDivFn)0x040219e4u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define SELECTED_TRACK (*(volatile i32*)0x11905a08u)               // the GUI's selected track, what 0x8d513188 returns
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define SELECTED_TRACK (*(volatile i32*)0x11905a08u)               // the GUI's selected track, what 0x8d514348 returns
 
 enum {
     STOCK_TRACKS = 4,
@@ -67,7 +68,7 @@ enum {
     NODE_DISPLAY = 0x5c,                // an svg node's display byte, the one the tape screen toggles for its digits
     LEGEND_NODES = 2 * EXT_TRACKS,      // t5tapeoff, t5tapeon, .. t8tapeoff, t8tapeon
     VECTOR_BEGIN_OFFSET = 4,            // the float vector: its first element's address at +4 (stock reads [R7 + 4])
-    FLOAT_2_31 = 0x4f000000,            // 2147483648.0f, what 0x8d515734 divides by
+    FLOAT_2_31 = 0x4f000000,            // 2147483648.0f, what 0x8d5168f4 divides by
     LOG_BUDGET = 8                      // F2: the F1b log dropped the gauge's line with a budget of four
 };
 
@@ -218,31 +219,31 @@ extern "C" i32 op1f_signalflow_level_ext(u32 track, const u8* vector, u32* slot)
 
 // ---- the signal-flow meters of tracks 5 and 6 (E4) ---------------------------------------------------------
 
-typedef void* (*VuVectorFn)();                                     // 0x8d515ad0: the four-float VU vector, in dB
-typedef u32 (*FloatCurveFn)(u32 x);                                // 0x8f005014: 20 log10 x
+typedef void* (*VuVectorFn)();                                     // 0x8d516c90: the four-float VU vector, in dB
+typedef u32 (*FloatCurveFn)(u32 x);                                // 0x8f0061d4: 20 log10 x
 typedef u32 (*FloatAddFn)(u32 a, u32 b);                           // 0x040218e2: a + b
-typedef u32 (*DbToAmpFn)(u32 db);                                  // 0x8f004fe8: 10 ^ (db / 20)
-typedef i32 (*ToFixedFn)(u32 amp);                                 // 0x8fc33b20: ((amp × 1.4) − 1) × 1024, as an int
-typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);      // 0x8c03db96: the node takes the transform
+typedef u32 (*DbToAmpFn)(u32 db);                                  // 0x8f0061a8: 10 ^ (db / 20)
+typedef i32 (*ToFixedFn)(u32 amp);                                 // 0x8fc356a0: ((amp × 1.4) − 1) × 1024, as an int
+typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);      // 0x8c03dbbe: the node takes the transform
 typedef void (*BoundsFn)(void* node, i32* box);                    // a node's vtable slot 3: its box, min x, max x, min y, max y
-typedef u8* (*ColourPointerFn)(void* screen, const char* id, int optional);   // 0x8fc243cc: the colour bytes of the node with that id
+typedef u8* (*ColourPointerFn)(void* screen, const char* id, int optional);   // 0x8fc25ebc: the colour bytes of the node with that id
 typedef u32 (*FloatMulFn)(u32 a, u32 b);                           // 0x04021ac0: a × b
 typedef u32 (*FloatDivFn2)(u32 a, u32 b);                          // 0x040219e4: a / b
 typedef i32 (*FloatToIntFn)(u32 a);                                // 0x04020fd8: the int of a float, as stock's meter code uses it
 
-#define STOCK_VU_VALUES ((VuVectorFn)0x8d515ad0u)
-#define STOCK_VU_CURVE ((FloatCurveFn)0x8f005014u)
+#define STOCK_VU_VALUES ((VuVectorFn)0x8d516c90u)
+#define STOCK_VU_CURVE ((FloatCurveFn)0x8f0061d4u)
 #define STOCK_FLOAT_ADD ((FloatAddFn)0x040218e2u)
 #define STOCK_FLOAT_MUL ((FloatMulFn)0x04021ac0u)
 #define STOCK_FLOAT_DIV2 ((FloatDivFn2)0x040219e4u)
 #define STOCK_FLOAT_TO_INT ((FloatToIntFn)0x04020fd8u)
-#define STOCK_DB_TO_AMP ((DbToAmpFn)0x8f004fe8u)
-#define STOCK_METER_FIXED ((ToFixedFn)0x8fc33b20u)
-#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03db96u)
-#define STOCK_COLOUR_POINTER ((ColourPointerFn)0x8fc243ccu)
-#define METER_SMOOTH_GAIN (*(volatile i32*)0x84c9708cu)             // stock's smoothing gain word, read per meter as stock does
-#define SIGNALFLOW_PALETTE ((const volatile u32*)0x84c9663cu)       // the screen's colour words: +0x20 bright, +0x28 dim, +0x38 over the threshold
-#define LIGHT_THRESHOLD (*(const volatile u32*)0x848d3fc8u)         // 0.9f: a level at or above it takes the colour at +0x38
+#define STOCK_DB_TO_AMP ((DbToAmpFn)0x8f0061a8u)
+#define STOCK_METER_FIXED ((ToFixedFn)0x8fc356a0u)
+#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03dbbeu)
+#define STOCK_COLOUR_POINTER ((ColourPointerFn)0x8fc25ebcu)
+#define METER_SMOOTH_GAIN (*(volatile i32*)0x84c9752cu)             // stock's smoothing gain word, read per meter as stock does
+#define SIGNALFLOW_PALETTE ((const volatile u32*)0x84c96ac8u)       // the screen's colour words: +0x20 bright, +0x28 dim, +0x38 over the threshold
+#define LIGHT_THRESHOLD (*(const volatile u32*)0x848d43e4u)         // 0.9f: a level at or above it takes the colour at +0x38
 
 enum {
     METERS = 4,                         // F2: the meters of tracks 5-8 (2 until F1b)

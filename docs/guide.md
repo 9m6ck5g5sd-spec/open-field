@@ -8,18 +8,30 @@ Read the whole page before you begin. The install changes the firmware of your u
 
 ## What you need
 
-- An OP-1 Field with **OS 1.7.0** and bootloader **1000.1.1**. The install page checks both and refuses any other.
+- An OP-1 Field with the original **OS 1.7.3** and bootloader **1000.1.1**. The install page checks both and refuses any other. The original firmware's start screen shows `1.7.3`. A build of 1.7.3 with another number behind it, such as `1.7.3+1`, is another firmware file: the page's check of the firmware file in step 5 refuses it.
 - A **Windows** computer with **Chrome or Edge**, and a USB cable that carries data. A Mac or a Linux computer cannot be used yet.
 - A **charged** unit. A write that loses power halfway can leave nothing to start from.
 - Half an hour in which you will not be interrupted.
 
-**If your unit is on a later OS version than 1.7.0, you cannot use this yet.** The builder takes only the OS 1.7.0 file, which such a unit does not hold. Whether such a unit can be brought back to OS 1.7.0 is not known: do not count on it.
+**If your unit is on a later OS version than 1.7.3, you cannot use this yet.** The builder takes only the OS 1.7.3 file, which such a unit does not hold. Whether such a unit can be brought back to OS 1.7.3 is not known: do not count on it.
 
-**If your unit is on OS 1.7.0 and you want open-field, do not update the unit.** An official update writes the maker's firmware over the one with our loader in it. The unit is then on the original firmware of the new version, open-field is gone from it, and you are in the case above.
+**If your unit is on OS 1.7.3 and you want to keep open-field, do not update the unit.** An official update writes the maker's firmware over the one with our loader in it. The unit is then on the original firmware of the new version, open-field is gone from it, and you are in the case above.
+
+### A unit on OS 1.7.0
+
+open-field was made for OS 1.7.0 first. A unit still on OS 1.7.0 has two ways:
+
+- **Update the unit to OS 1.7.3** with Teenage Engineering's own update, as they offer it, and then install open-field from this page as on any unit. The update writes the maker's firmware: if the unit ran open-field for 1.7.0, the loader is gone after it, and the unit is on the original OS 1.7.3. Check which version the update gives before you run it: this page works with OS 1.7.3 itself. A later build, such as `1.7.3+1`, is another firmware, and the page refuses it.
+- **Stay on OS 1.7.0** and use the page kept for it: the install page links to it at the top ("Still on OS 1.7.0?"). It is the release of before, kept as it was, and it will not change. Use it only on a unit that was never updated to 1.7.3: on a unit that was, it stops at its own first step.
+
+**Pack files left from OS 1.7.0.** A pack file is made for one firmware. The loader for 1.7.3 leaves out every pack file made for 1.7.0 and starts everything else; the start screen counts what it left out, `1.7.3 - open-field 0.3 (4 left out)` for four such files. Nothing breaks, but those features do not run. Two ways to set it right:
+
+- In step 5 of the install, tick the packs again in the listing: the page puts their 1.7.3 files into the folder `packs`, and the helper copies them onto the unit in place of the old files of the same name. `base.pack` is always the page's own. Look at the folder `packs` inside `open-field` on your computer before step 5, too: a pack file from your 1.7.0 install that is still there would be copied onto the unit again, and left out again. Delete the ones you do not tick.
+- Or delete the old files from the folder `packs` on the unit in the disk mode ([below](#taking-a-feature-away)).
 
 ## Two rules before anything else
 
-1. **Keep the firmware file you copy off your unit.** The helper puts it into the folder `open-field` in your user folder as `os-1.7.0-yours.ldr`. Put a copy somewhere safe as well, away from the computer you work on. It is your way back.
+1. **Keep the firmware file you copy off your unit.** The helper puts it into the folder `open-field` in your user folder as `os-1.7.3-yours.ldr`. Put a copy somewhere safe as well, away from the computer you work on. It is your way back.
 2. **In the bootloader's menus press only the keys this guide names.** In its main menu, `3` opens the developer menu. In the developer menu you will only ever need `2` and `4`: its key `1` is a factory reset, which erases your recordings and sounds at once and asks nothing, and its key `3` resets a calibration.
 
 ## The install, once
@@ -30,12 +42,12 @@ One page leads you through it, `builder/index.html`, with a small helper that do
 2. **Open the unit's drive.** On the unit press `3` (the developer menu opens), then `2` (its drive mode). The unit shows on the computer as a drive named OP-1.
 3. **Choose the folder.** The page and the helper share one folder on the computer: `open-field` in your user folder. On the page, press **Choose the folder**; in the dialog, open your user folder, make a folder named `open-field` there if there is none (the dialog's **New folder**), choose it, and let the browser view and edit its files. The page writes a small mark into it (`page.json`) and keeps the folder for the rest of the install. On a later visit it offers it again: press **Use open-field again**.
 4. **Run the helper.** The page shows one line to paste into PowerShell (press the Windows key, type `PowerShell`, press Enter). The line carries the page's mark. The helper first checks that mark in its folder, so that the page and the helper never work in two different folders; if the mark is not there, it stops at once and does nothing. Then it finds the unit, copies your own firmware file off (it lies in `upgrade/firmware/blackfin/bin` on the unit), takes the unit's log files off into the same folder (the unit writes logs whenever it runs, and they would change the count of the next step), takes off the pad files an earlier install left, lists the unit's disk, and waits. Leave its window open.
-5. **Build, and plan the write.** This starts on the page by itself once the helper waits. The page checks that your file is the exact OS 1.7.0 file, builds the new one, and checks its own result against a known SHA-256. Then it works out where the write lands: the bootloader can only write the file when its working memory happens to stand at the right place, and where it stands follows from what is on the unit's disk (how many files and folders, and how large the files are). When the disk as it stands would not do, the page adds one extra file, the pad file, of the size that makes it do. In the same step, tick the packs you want from the listing ([below](#pack-files-in-the-same-visit)). When you have put a copy of your own file somewhere safe, tick the box and press **Put the files on the unit**.
+5. **Build, and plan the write.** This starts on the page by itself once the helper waits. The page checks that your file is the exact OS 1.7.3 file, builds the new one, and checks its own result against a known SHA-256. Then it works out where the write lands: the bootloader can only write the file when its working memory happens to stand at the right place, and where it stands follows from what is on the unit's disk (how many files and folders, and how large the files are). When the disk as it stands would not do, the page adds one extra file, the pad file, of the size that makes it do. In the same step, tick the packs you want from the listing ([below](#pack-files-in-the-same-visit)). When you have put a copy of your own file somewhere safe, tick the box and press **Put the files on the unit**.
 6. **The helper finishes by itself.** It puts the new file on the unit as `os.ldr`, the pad file if there is one, and the pack files with `base.pack` last, lists the disk again and holds the listing against the page's plan row for row, and reads every file it copied back to check its SHA-256. It says `READY TO WRITE`, and so does the page.
 
 The page and the helper write nothing to the unit but `os.ldr`, the pad file, `base.pack` and the pack files of the folder `packs`, and take nothing off it but your firmware file (a copy), the log files and the pad files of earlier installs. Nothing is sent anywhere: the page works inside your browser, on your files.
 
-If your unit's `upgrade` folder holds another file than the original OS 1.7.0 one (it can, on a unit that once took a custom package), the page says so and asks for the original file you kept from before.
+If your unit's `upgrade` folder holds another file than the original OS 1.7.3 one (it can, on a unit that once took a custom package), the page says so and asks for the original file you kept from before.
 
 If you prefer a command line for the build alone, `node builder/build-image.mjs <your os.ldr> <the new file>` does what the page does, with the same code.
 
@@ -63,10 +75,10 @@ The way back to the original firmware (step 5's second choice) puts no pack on.
 
 | The start screen reads | What it means |
 | --- | --- |
-| `1.7.0 - open-field 0.3` | The loader is in, and `base.pack` and your feature files run. `0.3` is the release of the base |
-| `1.7.0 stock (no pack)` | The loader is in, and there is no pack file on the unit: the unit behaves exactly as before |
-| `1.7.0 stock (4 need base)` | The loader is in, and the feature files cannot run because `base.pack` is not on the unit. Copy it into `packs`: it is [`builder/base.pack`](../builder/base.pack) in this repository |
-| `1.7.0` and nothing behind it | The loader does not run: on a first install, the write did not take, and the unit runs its firmware of before |
+| `1.7.3 - open-field 0.3` | The loader is in, and `base.pack` and your feature files run. `0.3` is the release of the base |
+| `1.7.3 stock (no pack)` | The loader is in, and there is no pack file on the unit: the unit behaves exactly as before |
+| `1.7.3 stock (4 need base)` | The loader is in, and the feature files cannot run because `base.pack` is not on the unit. Copy it into `packs`: it is [`builder/base.pack`](../builder/base.pack) in this repository |
+| `1.7.3` and nothing behind it | The loader does not run: on a first install, the write did not take, and the unit runs its firmware of before |
 
 If, in place of step 3, small text shows that names a source file and a line number (`rsi.c` and a number): the write stopped before it touched the firmware your unit runs. Switch off, switch on with no key, and the unit starts as before. One thing did change: the unit keeps a spare copy of its firmware, and the stop has erased that spare. So from now on there is no spare, which is one more reason for rule 1. Go back to step 1 of the install and run it again.
 
@@ -83,17 +95,17 @@ The pad file may stay on the unit; it served only this write. The next install t
 3. Copy the file into `packs`.
 4. Leave the disk mode and switch the unit off and on.
 
-The start screen reads `1.7.0 - open-field 0.3`. It does not name the features: each shows itself where it is used ([what each feature adds](#what-each-feature-adds-in-short)).
+The start screen reads `1.7.3 - open-field 0.3`. It does not name the features: each shows itself where it is used ([what each feature adds](#what-each-feature-adds-in-short)).
 
 You can also copy the files in the bootloader's drive mode (hold COM, switch on, `3`, `2`); the folder is then `user/pk`.
 
-A file may have any name that ends in `.pack`. If a file cannot run, the start screen counts it, `1.7.0 - open-field 0.3 (1 left out)`, and everything else runs.
+A file may have any name that ends in `.pack`. If a file cannot run, the start screen counts it, `1.7.3 - open-field 0.3 (1 left out)`, and everything else runs.
 
 **A new `base.pack`** is copied over the old one in the same way, with no install; the next run of the install page also puts the page's own on. The number behind `open-field` on the start screen is the release of the base that runs.
 
 ## Taking a feature away
 
-Delete its file from `packs` in the disk mode, and switch the unit off and on. Keep `base.pack` while any feature file is there. With no pack file left, the unit starts as the original firmware and the start screen reads `1.7.0 stock (no pack)`.
+Delete its file from `packs` in the disk mode, and switch the unit off and on. Keep `base.pack` while any feature file is there. With no pack file left, the unit starts as the original firmware and the start screen reads `1.7.3 stock (no pack)`.
 
 ## What each feature adds, in short
 
@@ -114,7 +126,7 @@ One thing to know: if you record on such a tape while the unit runs **without** 
 
 ## The safe start
 
-Hold the **help** key while you switch the unit on, and keep it held until the first screen shows. The unit then starts as the original firmware for this one start: no feature file is read. The start screen reads `1.7.0 stock (help key)`.
+Hold the **help** key while you switch the unit on, and keep it held until the first screen shows. The unit then starts as the original firmware for this one start: no feature file is read. The start screen reads `1.7.3 stock (help key)`.
 
 Use it when a feature file misbehaves. The disk mode still shows the folder `packs`, so you can delete or replace the file. The next start with no key held reads the feature files again.
 
@@ -130,10 +142,11 @@ The third way has the same risk as the install, and it has not yet been tried on
 
 ## If something is not as described
 
-- **The page refuses your unit or your file.** Then your OS or bootloader version is not the supported one, or the file is not the original OS 1.7.0 file. Do not try to get around the refusal.
+- **Find my OP-1 Field lists the unit but gets no reply.** Another tab or program is holding the unit's MIDI port, often a tab that used the OP-1 while it ran normally: a browser shares one connection between its tabs. Close that tab or program, or close the browser and open it again; keep the unit on the bootloader's menu, and press Find again.
+- **The page refuses your unit or your file.** Then your OS or bootloader version is not the supported one, or the file is not the original OS 1.7.3 file. Do not try to get around the refusal.
 - **The write stops with small text.** See "Write" above. It is the common case and harms nothing.
 - **The unit does not start after a write.** Hold COM and switch on. The bootloader is a separate program and should still show its menu; from there, write the file you kept, by the way back above. This has not been rehearsed on a unit in that state.
 - **The helper stops.** It says why in red, and it writes nothing to the unit after a stop. Run its line again: it starts over, from the disk as it finds it.
 - **A feature misbehaves.** Use the safe start, delete its file, start again.
-- **The start screen reads `1.7.0 stock (4 need base)`.** `base.pack` is not on the unit. Copy it into `packs` (it is `builder/base.pack` in this repository) and start again.
+- **The start screen reads `1.7.3 stock (4 need base)`.** `base.pack` is not on the unit. Copy it into `packs` (it is `builder/base.pack` in this repository) and start again.
 - **The start screen says `(1 left out)`.** A pack file cannot run: a file damaged while it was copied, or one made for another base. The others run. The unit's log says which file and why ([methods](methods.md), "The log").

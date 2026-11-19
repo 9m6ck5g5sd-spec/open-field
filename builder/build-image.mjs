@@ -4,13 +4,13 @@
 //   node builder/build-image.mjs <your own os.ldr> <the file to write>
 //   node builder/build-image.mjs --loader <os>-<version> <your own os.ldr> <the file to write>
 //
-// Your file must be the exact OS 1.7.0 file; any other is refused. The result is written only when its SHA-256 is
+// Your file must be the exact OS 1.7.3 file (the original, 1.7.3+0); any other is refused. The result is written only when its SHA-256 is
 // the one the manifest names, and never over an existing file. Keep your own os.ldr: it is the way back.
 //
 // The file it adds to yours is the loader, our small piece of code (builder/loader-<os>-<version>.bin). Without
 // --loader the manifest is loader.json: the version the page offers by itself. With it, a version by its name:
-// --loader 1.7.0-v4 takes loader-1.7.0-v4.json, the manifest of a version kept beside that one, as
-// index.html?loader=1.7.0-v4 does; or loader.json, when that is the version it names. The line this command prints
+// --loader 1.7.3-v2 takes loader-1.7.3-v2.json, the manifest of a version kept beside that one, as
+// index.html?loader=1.7.3-v2 does; or loader.json, when that is the version it names. The line this command prints
 // at the end says whether that version's firmware file has run on a unit.
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

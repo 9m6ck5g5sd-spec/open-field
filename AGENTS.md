@@ -14,7 +14,7 @@ You are working in the repository of open-field: extra features for the OP-1 Fie
 ## The three rules
 
 1. **Never put anything of the firmware into this repository.** No firmware file or part of one, no copy of a unit's storage, no log of a unit, no listing of the firmware's code, no bytes of it written as hex or as data, no picture, font or sound of the device. Not in a source, not in a comment, not in a test, not in a commit message.
-2. **Everything here is for OS 1.7.0.** An address, a length and a checksum belong to that one firmware file.
+2. **Everything here is for OS 1.7.3**, the original (`1.7.3+0`). An address, a length and a checksum belong to that one firmware file. The release for OS 1.7.0 is in the history (commit `b6501e4`); do not mix the two.
 3. **Say what was tried.** A build that passes says nothing about a unit. When you report, say what was built, what was run on a unit, and what was not. Never present a build or a test on a computer as proof that a unit works.
 
 ## Writing about the firmware
@@ -64,8 +64,8 @@ Change the source, then run the tool. Never edit these by hand.
 | File | Made from | By |
 | --- | --- | --- |
 | The tables, `module/*_table.s` and `examples/*/*_table.s` | The profile beside them | `python -I tools/table_build.py --profile <profile> --all` |
-| `docs/changes.md` | `profiles/op1f-1.7.0.json` | `python -I tools/change_list.py --profile profiles/op1f-1.7.0.json` |
-| `docs/firmware-interfaces.md` | The sources and `profiles/op1f-1.7.0-interfaces.json` | `python -I tools/interfaces.py` |
+| `docs/changes.md` | `profiles/op1f-1.7.3.json` | `python -I tools/change_list.py --profile profiles/op1f-1.7.3.json` |
+| `docs/firmware-interfaces.md` | The sources and `profiles/op1f-1.7.3-interfaces.json` | `python -I tools/interfaces.py` |
 | A pack's directory of pictures, `module/*_pictures.s` and `examples/*/*_pictures.s` | The pack's recipe | `python -I tools/pack_build.py pictures --recipe <recipe> --out <file>` |
 | A pack's card, `examples/*/*_card.s` | The pack's recipe | `tools/pack_build.py card`, as [docs/base.md](docs/base.md) says under "The card" |
 | The base's release, `module/build_m3_base_release.s` | `packs/base.json` | `tools/pack_build.py release` |
@@ -79,7 +79,7 @@ Change the source, then run the tool. Never edit these by hand.
 3. Write, in your own words, what stands there and what our function does there.
 4. In the description of the change, say how you know what stands there.
 
-A wrong address does no harm on a unit as long as its checksum is right for OS 1.7.0: the loader leaves a pack out when a place is not what the checksum says. A wrong *type* for a function you call is a crash. Read a caller before you bind a function.
+A wrong address does no harm on a unit as long as its checksum is right for OS 1.7.3: the loader leaves a pack out when a place is not what the checksum says. A wrong *type* for a function you call is a crash. Read a caller before you bind a function.
 
 ## Code that runs on the unit
 

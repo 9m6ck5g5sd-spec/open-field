@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M1, the example pack `wink` (docs/first-pack.md walks through it): the first pack that uses the interface the
 // base offers packs by other people. It changes no place of the firmware and names no address of it.
 //

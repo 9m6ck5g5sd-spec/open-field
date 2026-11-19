@@ -1,8 +1,9 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build K, pack K5 (analysis/tape_stock_safe.md, sections 9 and 10): the chunks of tracks 5 to 8 lie at the top of
 // the tape, and each has a sum, so that what another firmware recorded over is heard as silence and not as a
 // piece of something else.
 //
-// Why. Stock firmware knows four tracks. Its allocator (0x8fc20d48) walks the reference bytes upwards from a
+// Why. Stock firmware knows four tracks. Its allocator (0x8fc22838) walks the reference bytes upwards from a
 // cursor that every tape load puts back to 0 and takes the first chunk none of its own four tables holds, so
 // under stock firmware the chunks of tracks 5 to 8 are free, and the lowest of them are the first it takes. Until
 // K5 the module took the chunks of tracks 5 to 8 from that same allocator: they lay low on the tape, among the
@@ -64,11 +65,11 @@ typedef void (*LogFn)(int level, const char* file, int line, const char* format,
 typedef void (*VoidFn)();
 typedef int (*IntFn)();
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_MARK_MAP_DIRTY ((VoidFn)0x8fc20578u)                // sets the map's dirty byte: the idle flush saves the map
-#define STOCK_MOUNTED_TAPE ((IntFn)0x8fc1fea8u)                   // the mounted tape's index, -1 for none
-#define STOCK_REFERENCES ((volatile u8*)0x84c93d7cu)              // one byte a physical chunk: bit n set, record n holds it
-#define STOCK_CURRENT_SNAPSHOT (*(volatile i32*)0x848cfb84u)      // the live record's index
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_MARK_MAP_DIRTY ((VoidFn)0x8fc22064u)                // sets the map's dirty byte: the idle flush saves the map
+#define STOCK_MOUNTED_TAPE ((IntFn)0x8fc219a8u)                   // the mounted tape's index, -1 for none
+#define STOCK_REFERENCES ((volatile u8*)0x84c94208u)              // one byte a physical chunk: bit n set, record n holds it
+#define STOCK_CURRENT_SNAPSHOT (*(volatile i32*)0x848cff90u)      // the live record's index
 
 enum {
     CHUNKS = 8192,                               // a tape partition

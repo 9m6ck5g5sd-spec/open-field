@@ -1,9 +1,10 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build D, step D2: the disk mode's track files for tracks 5 and 6 (OS 1.7.0+0; read in
 // analysis/build_b_design.md, section 17).
 //
 // What stock does (src/usb/mtp in record 309): the USB disk is an MTP device. basset_device.cpp populates
 // one folder per labelled tape with tape.json, readme.txt and track_1.wav to track_4.wav (a loop to 4 at
-// 0x8fcad910). When the host opens a file, tape_behavior.cpp's lookup 0x8fcb9cac compares the name with its
+// 0x8fcaf730). When the host opens a file, tape_behavior.cpp's lookup 0x8fcb9cac compares the name with its
 // six names and, for a track file, takes the track from the name's digit and builds an EmmcWav object
 // (0x8fcb9a84, asserting track < 4 at tape_behavior.cpp:160 and again in emmc_wav.h:29; the partition name
 // helper 0x8d4fa4f8 asserts it a third time). The object opens the tape with tape_open (the module's map

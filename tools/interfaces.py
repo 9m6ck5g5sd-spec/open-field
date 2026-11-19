@@ -9,10 +9,10 @@ A source of ours that calls a function of the firmware binds it in two lines: th
 its address.
 
   typedef int (*FileSizeFn)(const char* path);
-  #define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
+  #define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
 
 This tool reads every such pair in module/ and examples/ and joins them with the words kept in
-profiles/op1f-1.7.0-interfaces.json: for an address, a short name, what the caller hands over and gets back, and the
+the words file beside the profile build.json names (profiles/op1f-1.7.3-interfaces.json): for an address, a short name, what the caller hands over and gets back, and the
 thread our code calls it on. The page lists the described functions by subject, and after them every function that
 is bound in the sources and has no words yet, with its type and the files that bind it. So the page cannot name a
 function the code does not use, and cannot leave one out.
@@ -23,7 +23,7 @@ the firmware").
 
 `--check` writes nothing and answers 1 when the page in the tree is not what the sources and the words give, or when
 the words describe an address no source binds. `--list` prints every binding with the files it stands in. Every
-address belongs to OS 1.7.0. Standard library only.
+address belongs to the firmware of that profile, OS 1.7.3. Standard library only.
 """
 
 import argparse
@@ -35,7 +35,14 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WORDS = os.path.join(ROOT, "profiles", "op1f-1.7.0-interfaces.json")
+def words_path():
+    """The words beside the profile build.json names: profiles/<the profile's name>-interfaces.json."""
+    with open(os.path.join(ROOT, "build.json"), encoding="utf-8") as f:
+        profile = json.load(f)["profile"]
+    return os.path.join(ROOT, *(profile[:-len(".json")] + "-interfaces.json").split("/"))
+
+
+WORDS = words_path()
 PAGE = os.path.join(ROOT, "docs", "firmware-interfaces.md")
 SOURCES = ("module/*.cpp", "module/*.h", "examples/*/*.cpp", "examples/*/*.h")
 
@@ -115,7 +122,7 @@ def render(found, words):
     lines = [
         "# The firmware's functions our code uses",
         "",
-        "Made by `tools/interfaces.py` from the sources and from `profiles/op1f-1.7.0-interfaces.json`; change those, not this page.",
+        "Made by `tools/interfaces.py` from the sources and from `%s`; change those, not this page." % os.path.relpath(WORDS, ROOT).replace("\\", "/"),
         "",
     ]
     lines += words["about"]
@@ -140,7 +147,7 @@ def render(found, words):
     lines += [
         "## Bound in the sources, not described yet",
         "",
-        "Each of these is called by the files named. The type is what our code hands over and takes back; the name is the sources' own. Read the file's comments at the binding before you use one, and add its words to `profiles/op1f-1.7.0-interfaces.json` when you have.",
+        "Each of these is called by the files named. The type is what our code hands over and takes back; the name is the sources' own. Read the file's comments at the binding before you use one, and add its words to `%s` when you have." % os.path.relpath(WORDS, ROOT).replace("\\", "/"),
         "",
         "| Address | The call | Bound in |",
         "| --- | --- | --- |",

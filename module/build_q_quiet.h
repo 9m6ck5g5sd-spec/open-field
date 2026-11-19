@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build Q, packs Q1: a gate for a unit's periodic log lines (analysis/quiet_log_study.md).
 //
 // Since H0 the units of the effect train have printed their summary lines every 232 frames, four seconds, whatever

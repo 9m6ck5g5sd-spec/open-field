@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build I image I9: an instrument carries its train and its LFOs (analysis/lfo_train_study.md section 22).
 //
 // What was wanted after the pairs of presets: a change of instrument empties the train and the LFOs and puts the
@@ -6,14 +7,14 @@
 // changed the wagon under the lamp and the LFO under the searchlight, and the rest stayed.
 //
 // What stock does (BgFile.cpp, read for this image):
-//   * A patch chosen in the list is loaded by a job: the synth's 0x8d4e9cb0 reads the file (0x8c0828b0 at
-//     0x8d4e9d18), runs the schema pass 0x8d4f787c over it (a fresh document of the known keys: anything else in the
+//   * A patch chosen in the list is loaded by a job: the synth's 0x8d4e9cb0 reads the file (0x8c0828e0 at
+//     0x8d4ea880), runs the schema pass 0x8d4f787c over it (a fresh document of the known keys: anything else in the
 //     file is gone after it), and puts the json on the slot's record through 0x8d4f2a00(record, json); the synth
-//     sampler's and the drum's jobs read their file with the plain reader 0x8c0534a0 (at 0x8d4ebc3a and 0x8d4eb004),
+//     sampler's and the drum's jobs read their file with the plain reader 0x8c0534d0 (at 0x8d4ec7a2 and 0x8d4ebb6c),
 //     copy the audio, and end in the same 0x8d4f2a00. A change of engine (the synth's and the drum's type jobs) ends
 //     there too, with the old document's effect and LFO kept. Then the job tells the GUI, which applies the record.
 //   * The save of an instrument, 0x8c0cd4dc(slot), copies the record's document, names it and hands it to
-//     0x8d4fdde0 (synth) or 0x8d4fdf10 (drum), which write the file with the json file writer.
+//     0x8d4fef30 (synth) or 0x8d4ff060 (drum), which write the file with the json file writer.
 //   * The boot, the save itself and the random patch put a document on a record by another way (0x8d4f5b1c), so
 //     none of them passes 0x8d4f2a00.
 //
@@ -48,36 +49,36 @@ typedef unsigned char u8;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef int (*JsonSizeFn)(void* json);                               // 0x8c084bf2
-typedef void* (*JsonLookupFn)(void* json, const char* key);          // 0x8c085e54: the member, inserted when missing
-typedef int (*JsonHasFn)(void* json, const char* key);               // 0x8c085038
-typedef void* (*JsonGetFn)(void* json, const char* key);             // 0x8c084f44
-typedef void* (*JsonAtFn)(void* json, int index);                    // 0x8c084eb0
-typedef int (*JsonIntFn)(void* json);                                // 0x8c084810
-typedef void (*JsonCtorFn)(void* json, int kind);                    // 0x8c085b78: 0 is null, which the first push turns into an array
-typedef void (*JsonFromIntFn)(void* json, int value);                // 0x8c083aec
-typedef void (*JsonPushFn)(void* array, void* value);                // 0x8c085d24
-typedef u32 (*JsonAssignFn)(void* target, void* value);              // 0x8c084588; what it leaves in R0 is handed back to 0x8d4f2a00, which returns it
-typedef void (*JsonDtorFn)(void* json);                              // 0x8c0844b0
-typedef int (*JsonReadFileFn)(const char* path, void* json);         // 0x8c0534a0: the file parsed into the json, non-zero on success
-typedef int (*JsonReadRawFn)(void* a, void* path_string, void* json, int flag);   // 0x8c0828b0: the reader under it, as the synth's patch job calls it (R0 to R2 and one word on the stack, as 0x8c0534a0 calls it at 0x8c05356c); non-zero on success
+typedef int (*JsonSizeFn)(void* json);                               // 0x8c084c22
+typedef void* (*JsonLookupFn)(void* json, const char* key);          // 0x8c085e84: the member, inserted when missing
+typedef int (*JsonHasFn)(void* json, const char* key);               // 0x8c085068
+typedef void* (*JsonGetFn)(void* json, const char* key);             // 0x8c084f74
+typedef void* (*JsonAtFn)(void* json, int index);                    // 0x8c084ee0
+typedef int (*JsonIntFn)(void* json);                                // 0x8c084840
+typedef void (*JsonCtorFn)(void* json, int kind);                    // 0x8c085ba8: 0 is null, which the first push turns into an array
+typedef void (*JsonFromIntFn)(void* json, int value);                // 0x8c083b1c
+typedef void (*JsonPushFn)(void* array, void* value);                // 0x8c085d54
+typedef u32 (*JsonAssignFn)(void* target, void* value);              // 0x8c0845b8; what it leaves in R0 is handed back to 0x8d4f2a00, which returns it
+typedef void (*JsonDtorFn)(void* json);                              // 0x8c0844e0
+typedef int (*JsonReadFileFn)(const char* path, void* json);         // 0x8c0534d0: the file parsed into the json, non-zero on success
+typedef int (*JsonReadRawFn)(void* a, void* path_string, void* json, int flag);   // 0x8c0828e0: the reader under it, as the synth's patch job calls it (R0 to R2 and one word on the stack, as 0x8c0534d0 calls it at 0x8c05356c); non-zero on success
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084bf2u)
-#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e54u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c084588u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_READ_RAW ((JsonReadRawFn)0x8c0828b0u)
-#define STOCK_SYNTH_RECORDS 0x080235d0u                              // eight records of 52 bytes, the document at +8
-#define STOCK_DRUM_RECORDS 0x08023770u
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084c22u)
+#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e84u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_READ_RAW ((JsonReadRawFn)0x8c0828e0u)
+#define STOCK_SYNTH_RECORDS 0x080235dcu                              // eight records of 52 bytes, the document at +8
+#define STOCK_DRUM_RECORDS 0x0802377cu
 #define STOCK_SYNTH_SLOT (*(volatile u32*)0x11904704u)               // the GUI's current sound slot, by host
 #define STOCK_DRUM_SLOT (*(volatile u32*)0x11904708u)
 
@@ -92,8 +93,8 @@ enum { HOSTS = 2, SLOTS = 8, INTS = OP1F_PATCH_INTS, RECORD_BYTES = 52, JSON_ARR
 enum { KIND_NONE = 0, KIND_SYNTH_PRESET = 1, KIND_DRUM = 2, KIND_SYNTH_SAMPLER = 3, KINDS = 4 };
 enum { LATE_MS = 500, EVENT_LINES = 60, COUNT_LINES = 40 };
 // The return addresses into the five jobs that call 0x8d4f2a00 (each a 4-byte CALL, so the site + 4).
-static const u32 CALLER_SYNTH_PRESET = 0x8d4e9df2u, CALLER_DRUM = 0x8d4eb432u, CALLER_SYNTH_SAMPLER = 0x8d4ebe00u;
-static const u32 CALLER_SYNTH_TYPE = 0x8d4ebb88u, CALLER_DRUM_TYPE = 0x8d4eaef8u;
+static const u32 CALLER_SYNTH_PRESET = 0x8d4ea95au, CALLER_DRUM = 0x8d4ebf9au, CALLER_SYNTH_SAMPLER = 0x8d4ec968u;
+static const u32 CALLER_SYNTH_TYPE = 0x8d4ec6f0u, CALLER_DRUM_TYPE = 0x8d4eba60u;
 
 // What the last patch file read carried for the module. Written and read by the reads and the assign hook only (the
 // thread that runs stock's patch jobs).
@@ -135,7 +136,7 @@ static void stash_take(int kind, void* json) {
 
 // ---------------------------------------------------------------- the three file reads (the job thread)
 
-// Replaces the call of 0x8c0828b0 at 0x8d4e9d18: the synth's patch file, read before the schema pass.
+// Replaces the call of 0x8c0828e0 at 0x8d4ea880: the synth's patch file, read before the schema pass.
 extern "C" int op1f_patch_read_preset(void* a, void* path_string, void* json, int flag) asm("op1f_patch_read_preset");
 extern "C" int op1f_patch_read_preset(void* a, void* path_string, void* json, int flag) {
     int ok = STOCK_JSON_READ_RAW(a, path_string, json, flag);
@@ -143,7 +144,7 @@ extern "C" int op1f_patch_read_preset(void* a, void* path_string, void* json, in
     return ok;
 }
 
-// Replaces the call of 0x8c0534a0 at 0x8d4ebc3a: the synth sampler's patch file.
+// Replaces the call of 0x8c0534d0 at 0x8d4ec7a2: the synth sampler's patch file.
 extern "C" int op1f_patch_read_sampler(const char* path, void* json) asm("op1f_patch_read_sampler");
 extern "C" int op1f_patch_read_sampler(const char* path, void* json) {
     int ok = STOCK_JSON_READ_FILE(path, json);
@@ -151,7 +152,7 @@ extern "C" int op1f_patch_read_sampler(const char* path, void* json) {
     return ok;
 }
 
-// Replaces the call of 0x8c0534a0 at 0x8d4eb004: the drum's patch file.
+// Replaces the call of 0x8c0534d0 at 0x8d4ebb6c: the drum's patch file.
 extern "C" int op1f_patch_read_drum(const char* path, void* json) asm("op1f_patch_read_drum");
 extern "C" int op1f_patch_read_drum(const char* path, void* json) {
     int ok = STOCK_JSON_READ_FILE(path, json);
@@ -169,7 +170,7 @@ static int record_slot(u32 record, int* host) {
     return -1;
 }
 
-// From the stub at 0x8d4f2a06: stock's own call first, then the word for the GUI thread.
+// From the stub at 0x8d4f3b26: stock's own call first, then the word for the GUI thread.
 extern "C" u32 op1f_patch_assign(void* document, void* json, u32 caller) asm("op1f_patch_assign");
 extern "C" u32 op1f_patch_assign(void* document, void* json, u32 caller) {
     int kind = caller == CALLER_SYNTH_PRESET ? KIND_SYNTH_PRESET : (caller == CALLER_DRUM ? KIND_DRUM : (caller == CALLER_SYNTH_SAMPLER ? KIND_SYNTH_SAMPLER : KIND_NONE));
@@ -214,7 +215,7 @@ extern "C" int op1f_patch_pending(int host, int slot, int* out) {
     return count;
 }
 
-// From the stubs at 0x8c0cd7ec and 0x8c0cd83a: the json stock is about to write as the instrument's file.
+// From the stubs at 0x8c0ce1cc and 0x8c0ce21a: the json stock is about to write as the instrument's file.
 extern "C" void op1f_patch_saving(int host, int slot, void* json) asm("op1f_patch_saving");
 extern "C" void op1f_patch_saving(int host, int slot, void* json) {
     static int values[INTS];

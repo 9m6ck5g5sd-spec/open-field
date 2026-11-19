@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build D, step D1: the TapeController's lift-all loop bound, the lift-all and drop-all command handlers of
  * audio_clipboard.cpp / tape_c.cpp, and the channel bound of the MIDI mixer handler (OS 1.7.0+0). Logic in
  * build_d_clip.cpp (lift-all, drop-all) and build_b_mix.cpp (op1f_midi_mixer).
@@ -8,15 +9,15 @@
  * handler with R0 (the command) and RETS untouched. R1, P0-P2 and CC are scratch at the entry (the handlers
  * read only R0).
  *
- *      lift-all bound   0x8c0c1cc6   the test of the loop's count against four, and its step            -> continue at 0x8c0c1cce
+ *      lift-all bound   0x8c0c2676   the test of the loop's count against four, and its step            -> continue at 0x8c0c267e
  *                       (the loop of 0x8c0c1c98 over the tracks with a clip at the cursor: the bound becomes
  *                       6; R0, R4, R6 and CC are what stock computes there, P2 is unused by that function)
- *      lift-all handler 0x8f009fec  -> its room, then 0x8f009ff4
- *      drop-all handler 0x8f009a20  -> its room, then 0x8f009a28
- *      MIDI bound       0x8f00de9c   the test of the channel against four, and a load of 9              -> continue at 0x8f00dea4
+ *      lift-all handler 0x8f00b24c  -> its room, then 0x8f009ff4
+ *      drop-all handler 0x8f00ac78  -> its room, then 0x8f009a28
+ *      MIDI bound       0x8f00f96c   the test of the channel against four, and a load of 9              -> continue at 0x8f00f974
  *                       (R5 = the channel, R4 = the type, R7 = the value; channels 0-3 continue in stock with
  *                       R0 = 9 as the displaced load left it; channels 4-5 call op1f_midi_mixer(channel, type,
- *                       value) and leave through stock's epilogue at 0x8f00df20 like any other channel; P1,
+ *                       value) and leave through stock's epilogue at 0x8f00f9f0 like any other channel; P1,
  *                       the constant pair stock's path still reads, is preserved; P2 is free at the site)
  *
  * The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 the two handler stubs ran the instructions
@@ -26,9 +27,9 @@
  * names the room). P2, the register a stub jumps through, is the one it jumped through before. The two bounds are
  * hooks in the middle of a function: they do what the instructions under them did with another number, and stay.
  */
-.set LIFT_ALL_BOUND_CONTINUE, 0x8c0c1cce
-.set MIDI_CONTINUE,           0x8f00dea4
-.set MIDI_RETURN,             0x8f00df20
+.set LIFT_ALL_BOUND_CONTINUE, 0x8c0c267e
+.set MIDI_CONTINUE,           0x8f00f974
+.set MIDI_RETURN,             0x8f00f9f0
 
 .section .text
 .align 2

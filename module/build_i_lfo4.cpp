@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build I images I6 and I7: four LFOs per sound on the synth (analysis/lfo_train_study.md sections 18 and 20).
 //
 // The owner's rule (the study's section 10): four LFOs per sound, each stock's own LFO in every part, shown as a
@@ -9,19 +10,19 @@
 // The audio side, on the synth:
 //
 //   * the envelope's part of a voice (the apply with the class 1) and, for the velocity kind, the level's method,
-//     from the stub at 0x11a04304 (build_i_lfo4.s), after stock's own LFO has had its call;
-//   * the engine's part of a voice (the class 0), from the stub at 0x11a04590;
+//     from the stub at 0x11a04334 (build_i_lfo4.s), after stock's own LFO has had its call;
+//   * the engine's part of a voice (the class 0), from the stub at 0x11a045c0;
 //   * the fx side (the class 2), from the chain's run (op1f_fx_chain_run in build_h_chain.cpp), which every block of
 //     the second stage reaches after stock's own fx-side call and before any effect wagon runs; the chain unit's
 //     op1f_lfofx_extra aims each LFO at the effect wagon of its choice, as I2 to I4 do for stock's LFO;
-//   * the note-on, from a wrapper of the reset 0x8d5032d6 at its three calls.
+//   * the note-on, from a wrapper of the reset 0x8d504496 at its three calls.
 //
 // Every class is called for every LFO, as stock calls its own whatever the destination: the kinds advance their
 // state in each call (the random kind's generator, the value kind's oscillator at the fx side). What an LFO adds to
 // the scratch 0x11904754 or to the voice's buffers stays there: that is the modulation, on top of what stock's LFO
 // added before it. Around each call the LFO's own copy of the words its kind keeps outside the object goes in and
 // comes out again (KIND[].keep; the study's 14.4), so stock's LFO and its page see only their own. When a call
-// moved the scratch, stock's page is sent its copy as stock sends it (0x8d503694, which does nothing while one is
+// moved the scratch, stock's page is sent its copy as stock sends it (0x8d504854, which does nothing while one is
 // waiting to be read).
 //
 // The GUI side: the store (per synth slot the lamp's knob, four wagons and their order on the page), the instances
@@ -59,34 +60,34 @@ typedef int (*ApplyFn)(void* self, u32* block, int cls);
 typedef void (*NoteOnFn)(void* self, u32* block);
 typedef int (*VelocityFn)(void* self, u32* block, int v);
 typedef void (*ResetFn)(u32 voice);
-typedef void (*PageCopyFn)(u32 slot, u32 type, int cls);          // 0x8d503694: the scratch and the three words to the page, unless one is waiting
-typedef void (*LfoPickFn)(void* record, int id);                  // 0x8d4f2934: the catalog's lfo_types entry of that id onto the record (lfo_type, lfo_params), then its apply
-typedef void (*OnSetFn)(u32 slot, int value);                     // 0x8d503148: the synth slot's LFO on byte
-typedef void (*SetWordsDocFn)(void* record, const u32* words);    // 0x8d4f2b64: the document's lfo_params (each word shifted right by sixteen), then the change notice
-typedef void (*SetValueDocFn)(void* record, int value);           // 0x8d4f2bec: the document's lfo_active, then the change notice
+typedef void (*PageCopyFn)(u32 slot, u32 type, int cls);          // 0x8d504854: the scratch and the three words to the page, unless one is waiting
+typedef void (*LfoPickFn)(void* record, int id);                  // 0x8d4f3a54: the catalog's lfo_types entry of that id onto the record (lfo_type, lfo_params), then its apply
+typedef void (*OnSetFn)(u32 slot, int value);                     // 0x8d504308: the synth slot's LFO on byte
+typedef void (*SetWordsDocFn)(void* record, const u32* words);    // 0x8d4f3c84: the document's lfo_params (each word shifted right by sixteen), then the change notice
+typedef void (*SetValueDocFn)(void* record, int value);           // 0x8d4f3d0c: the document's lfo_active, then the change notice
 typedef void (*RecordFn)(void* record);                           // the record's virtuals
 typedef void (*ControllerFn)(void* self);                         // the controller's virtuals without an argument
 typedef int (*KeyEventFn)(void* self, const int* event);
 typedef void (*ListFn)(void* self, int slot);                      // the controller's virtual at +0x40: stock's list of LFO kinds, as shift + T4 opens it (0x8c0cf130)
-typedef void (*JsonCtorFn)(void* json, int kind);                 // 0x8c085b78
-typedef void (*JsonFromCstrFn)(void* json, const char* text);     // 0x8c084400
-typedef void* (*JsonLookupFn)(void* json, const char* key);       // 0x8c085e54: the member, inserted when missing
-typedef void (*JsonAssignFn)(void* target, void* value);          // 0x8c084588
-typedef void (*JsonDtorFn)(void* json);                           // 0x8c0844b0
+typedef void (*JsonCtorFn)(void* json, int kind);                 // 0x8c085ba8
+typedef void (*JsonFromCstrFn)(void* json, const char* text);     // 0x8c084430
+typedef void* (*JsonLookupFn)(void* json, const char* key);       // 0x8c085e84: the member, inserted when missing
+typedef void (*JsonAssignFn)(void* target, void* value);          // 0x8c0845b8
+typedef void (*JsonDtorFn)(void* json);                           // 0x8c0844e0
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_RESET_SYNTH ((ResetFn)0x8d5032d6u)               // (voice): the note-on of the voice's LFO object and of the fx-side one, while the slot's LFO is on
-#define STOCK_PAGE_COPY ((PageCopyFn)0x8d503694u)
-#define STOCK_LFO_PICK ((LfoPickFn)0x8d4f2934u)
-#define STOCK_LFO_ON_SET ((OnSetFn)0x8d503148u)
-#define STOCK_SET_LFO_WORDS_DOC ((SetWordsDocFn)0x8d4f2b64u)
-#define STOCK_SET_LFO_ACTIVE_DOC ((SetValueDocFn)0x8d4f2becu)
-#define STOCK_SYNTH_KEY_DOWN ((KeyEventFn)0x8c0cf4ccu)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084400u)
-#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e54u)
-#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c084588u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_RESET_SYNTH ((ResetFn)0x8d504496u)               // (voice): the note-on of the voice's LFO object and of the fx-side one, while the slot's LFO is on
+#define STOCK_PAGE_COPY ((PageCopyFn)0x8d504854u)
+#define STOCK_LFO_PICK ((LfoPickFn)0x8d4f3a54u)
+#define STOCK_LFO_ON_SET ((OnSetFn)0x8d504308u)
+#define STOCK_SET_LFO_WORDS_DOC ((SetWordsDocFn)0x8d4f3c84u)
+#define STOCK_SET_LFO_ACTIVE_DOC ((SetValueDocFn)0x8d4f3d0cu)
+#define STOCK_SYNTH_KEY_DOWN ((KeyEventFn)0x8c0cfe7cu)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084430u)
+#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e84u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
 #define RD32(a) (*(volatile u32*)(a))
 #define RD8(a) (*(volatile u8*)(a))
 #define RD16S(a) (*(volatile i16*)(a))
@@ -101,18 +102,18 @@ enum { HOLD_MS = 400, CLEAN_MS = 120, SWALLOW_MS = 300 };      // the effect tra
 enum { PRINT_FRAMES = 232, EVENT_LINES = 160, SUMMARY_LINES = 240, CHANGE_LINES = 240, POPUP_LINES = 60, FAST_SUMMARIES = 30, LINES_A_SUMMARY = 3, SETTLE_FRAMES = 30 };
 enum { BY_PERIOD, BY_CHANGE, BY_POPUP, BUDGETS };              // a summary's budget: the three kinds never spend each other's lines
 
-static const u32 BUILT_SLOT = 0x84a010e4u;                    // the sound slot the audio thread plays
+static const u32 BUILT_SLOT = 0x84a01524u;                    // the sound slot the audio thread plays
 static const u32 GUI_SLOT = 0x11904704u;                      // the synth slot on the screen
-static const u32 MODE_GUI = 0x84d20bc4u;                      // 0 while the synth is the mode on the screen
-static const u32 LFO_ON = 0x84a01114u;                        // + slot: the slot's LFO is on (a byte)
+static const u32 MODE_GUI = 0x84d21088u;                      // 0 while the synth is the mode on the screen
+static const u32 LFO_ON = 0x84a01554u;                        // + slot: the slot's LFO is on (a byte)
 static const u32 LFO_TYPE = 0x119035a0u;                      // + 4 x slot: the slot's LFO kind
 static const u32 LFO_BLOCK = 0x119037e0u;                     // + 32 x slot: the slot's eight LFO words
 static const u32 ENGINE_TYPE = 0x11904714u;                   // + 4 x slot: the slot's engine, for the engine page's copy (0x11a04c68)
 static const u32 FX_TYPE = 0x11904794u;                       // + 4 x slot: the slot's effect, for the effect page's copy (0x11a054f0)
-static const u32 SYNTH_RECORDS = 0x080235d0u;                 // + 52 x slot: the slot's record (its table at +0, its document at +8)
-static const u32 RANDOM_LATCH = 0x84026b5cu;                  // a byte the stage sets at its start (0x11a0413a): the first random LFO apply of the block takes it and leaves a value for the page (0x8d50bcb4)
-static const u32 LFO_DESCRIPTORS = 0x840af6d4u;               // 48 bytes a kind, 6 a parameter: the lowest and highest value as signed half-words, filled at boot
-static const u32 POWER_POPUP_SHOWN = 0x84c9af40u;             // 1 while the shutdown countdown is on the screen
+static const u32 SYNTH_RECORDS = 0x080235dcu;                 // + 52 x slot: the slot's record (its table at +0, its document at +8)
+static const u32 RANDOM_LATCH = 0x84026dc8u;                  // a byte the stage sets at its start (0x11a0413a): the first random LFO apply of the block takes it and leaves a value for the page (0x8d50bcb4)
+static const u32 LFO_DESCRIPTORS = 0x840af940u;               // 48 bytes a kind, 6 a parameter: the lowest and highest value as signed half-words, filled at boot
+static const u32 POWER_POPUP_SHOWN = 0x84c9b3e4u;             // 1 while the shutdown countdown is on the screen
 static const char LOG_FILE[] = "op1f_lfo4";
 static const char LFO_TYPE_KEY[] = "lfo_type";
 
@@ -120,26 +121,26 @@ static const char LFO_TYPE_KEY[] = "lfo_type";
 // object and of the fx-side one (the factories 0x8f00cfae and 0x8f00cf00 write the class after the constructor;
 // the tremolo and midi constructors write their own, the same word), the object's size in words, and the words the
 // kind keeps outside its objects (14.4), which each LFO must have for itself. A kind's name is stock's own and is read
-// where stock keeps the six (packs L3; until then this table carried them): entries of eight bytes at 0x84d251fc, the
+// where stock keeps the six (packs L3; until then this table carried them): entries of eight bytes at 0x84d256c4, the
 // name's address and the kind, in stock's numbering. That table is not in the image: one of the constructors the start
 // code runs before main fills it (0x8fca6224). These are the names stock's lookup 0x8fca618c knows, so a name written
 // into a sound's document is one it takes. `name` says where the name's address stands.
-#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d251fcu + 8u * (kind)))
+#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d256c4u + 8u * (kind)))
 struct Kind {
     const char* const* name;
     u32 ctor_voice, ctor_fx, vtable_voice, vtable_fx, words;
     struct { u32 addr, words; } keep[KEEP_REGIONS];
 };
 static const Kind KIND[KINDS] = {
-    { LFO_NAME_ENTRY(0), 0x8d508b30u, 0,           0x840adb8cu, 0,           7,  { { 0x0802678cu, 11 }, { 0x840adb80u, 1 } } },   // 28 bytes; no fx side; the struct the page draws from (the apply 0x8d508c4a, the note-on 0x8d508b88) and the step
-    { LFO_NAME_ENTRY(1), 0x8d50c100u, 0x8d50c100u, 0x840ae118u, 0x840ae150u, 3,  { { 0x080269f4u, 3 },  { 0, 0 } } },             // 12 bytes; the oscillator all voices share in the FREE form
-    { LFO_NAME_ENTRY(2), 0x8d50b928u, 0x8d50b928u, 0x840adfb4u, 0x840adfecu, 13, { { 0, 0 },            { 0, 0 } } },             // 52 bytes; the generator's seed is everybody's and the latch is stock's: see lfo_apply
-    { LFO_NAME_ENTRY(3), 0x8d50a520u, 0x8d50a520u, 0x840ade0cu, 0x840ade44u, 14, { { 0, 0 },            { 0, 0 } } },             // 56 bytes; its source buffer lives within one call
-    { LFO_NAME_ENTRY(4), 0x8d509f3eu, 0x8d50a224u, 0x840adca8u, 0x840adce0u, 1,  { { 0x080267f8u, 2 },  { 0, 0 } } },             // 4 bytes; four half-words the voices' direct volume reads
-    { LFO_NAME_ENTRY(5), 0x8d50cd08u, 0x8d50cd08u, 0x840ae2acu, 0x840ae2e4u, 15, { { 0x08026aa4u, 1 },  { 0, 0 } } },             // 60 bytes; a byte for the page
+    { LFO_NAME_ENTRY(0), 0x8d509cf0u, 0,           0x840addf8u, 0,           7,  { { 0x080267acu, 11 }, { 0x840addecu, 1 } } },   // 28 bytes; no fx side; the struct the page draws from (the apply 0x8d508c4a, the note-on 0x8d508b88) and the step
+    { LFO_NAME_ENTRY(1), 0x8d50d2c0u, 0x8d50d2c0u, 0x840ae384u, 0x840ae3bcu, 3,  { { 0x08026a14u, 3 },  { 0, 0 } } },             // 12 bytes; the oscillator all voices share in the FREE form
+    { LFO_NAME_ENTRY(2), 0x8d50cae8u, 0x8d50cae8u, 0x840ae220u, 0x840ae258u, 13, { { 0, 0 },            { 0, 0 } } },             // 52 bytes; the generator's seed is everybody's and the latch is stock's: see lfo_apply
+    { LFO_NAME_ENTRY(3), 0x8d50b6e0u, 0x8d50b6e0u, 0x840ae078u, 0x840ae0b0u, 14, { { 0, 0 },            { 0, 0 } } },             // 56 bytes; its source buffer lives within one call
+    { LFO_NAME_ENTRY(4), 0x8d50b0feu, 0x8d50b3e4u, 0x840adf14u, 0x840adf4cu, 1,  { { 0x08026818u, 2 },  { 0, 0 } } },             // 4 bytes; four half-words the voices' direct volume reads
+    { LFO_NAME_ENTRY(5), 0x8d50dec8u, 0x8d50dec8u, 0x840ae518u, 0x840ae550u, 15, { { 0x08026ac4u, 1 },  { 0, 0 } } },             // 60 bytes; a byte for the page
 };
 // A new LFO's eight parameters: content/op1_factory.json, lfo_types[].default_params (what stock's own pick takes
-// from the catalog, 0x8d4f2934).
+// from the catalog, 0x8d4f3a54).
 static const i16 DEFAULTS[KINDS][PARAMS] = {
     { 16000, 0, 0, 16000, 0, 0, 0, 0 }, { 1000, 4000, 2000, 2000, 0, 0, 0, 0 }, { 2000, 4000, 2000, 24000, 0, 0, 0, 0 },
     { 4688, 9886, 2000, 10640, 0, 0, 0, 0 }, { 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000 }, { 32767, 9886, 2000, 1024, 0, 0, 0, 0 } };
@@ -288,7 +289,7 @@ static int lfo_apply(Inst* in, u32* object, int cls) {
     return moved;
 }
 
-// The stub at 0x11a04304: the envelope's part of a voice, after stock's own LFO has had its call. Answers the
+// The stub at 0x11a04334: the envelope's part of a voice, after stock's own LFO has had its call. Answers the
 // voice's level, which the velocity kind changes.
 extern "C" int op1f_lfo4_env(u32* frame, int level) asm("op1f_lfo4_env");
 extern "C" int op1f_lfo4_env(u32* frame, int level) {
@@ -315,7 +316,7 @@ extern "C" int op1f_lfo4_env(u32* frame, int level) {
     return level;
 }
 
-// The stub at 0x11a04590: the engine's part of a voice, the same way. The direct destinations write the voice's
+// The stub at 0x11a045c0: the engine's part of a voice, the same way. The direct destinations write the voice's
 // buffers, which are ready here (stock's own call was just before).
 extern "C" void op1f_lfo4_eng(u32* frame) asm("op1f_lfo4_eng");
 extern "C" void op1f_lfo4_eng(u32* frame) {
@@ -367,7 +368,7 @@ extern "C" void op1f_lfo4_block(int host) {
     account(&time_fx, cycles() - t_in);
 }
 
-// In place of the reset 0x8d5032d6 at its three calls: stock's reset as it is, then the note-on of each of the
+// In place of the reset 0x8d504496 at its three calls: stock's reset as it is, then the note-on of each of the
 // module's LFOs for the same voice (its voice object, then its fx-side one, as stock's reset does for its own).
 extern "C" void op1f_lfo4_reset_synth(u32 voice) asm("op1f_lfo4_reset_synth");
 extern "C" void op1f_lfo4_reset_synth(u32 voice) {

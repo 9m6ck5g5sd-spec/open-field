@@ -12,7 +12,10 @@ What the files are held against, all of it on this computer and none of it ever 
 bootloader as folders of memory records (`--stock`, repeatable; without it `analysis/os-records` and
 `analysis/boot-records`), the stock pictures (`--display`; without it `op-1field backup/content/display`), and the
 places the firmware is changed at (`--profile`, repeatable; without it the profiles of `profiles/` that name such
-places). A profile is read for addresses and lengths only: the bytes of a place are taken from the image.
+places). A profile is read for addresses and lengths only: the bytes of a place are taken from the image. A profile
+that names its stock image's size (and its record count, where it names one) is read in the folder of records whose
+index names the same, so that one run with the records of several firmwares holds each profile's places to its own
+firmware's bytes.
 
 The rules. Each has a name, which stands in front of its findings, and its numbers are named below the imports.
 
@@ -186,13 +189,14 @@ class Images:
     """The stock images: one index for the search of runs, and each image's memory by address."""
 
     def __init__(self, sources):
-        regions, self.memories = [], []
+        regions, self.memories, self.identities = [], [], []
         for source in sources:
             if os.path.isdir(source):
                 more, pieces = ss.load_records(source)
                 regions += more
                 pieces = sorted(pieces, key=lambda piece: piece[0])
                 self.memories.append((pieces, [piece[0] for piece in pieces]))
+                self.identities.append(identity_of(source))
             else:
                 with open(source, "rb") as f:
                     regions.append((os.path.basename(source), 0, f.read()))
@@ -209,11 +213,22 @@ class Images:
                         self.public.append((address + at, address + (stop if stop >= 0 else len(data))))
                     at = data.find(first, at + 1)
 
-    def read(self, address, count, stored=True):
+    def of(self, identity):
+        """The numbers of the images whose index names `identity`, (size of the image, count of its records); a count
+        of None matches any count."""
+        if not identity or identity[0] is None:
+            return []
+        return [number for number, held in enumerate(self.identities)
+                if held is not None and held[0] == identity[0] and identity[1] in (None, held[1])]
+
+    def read(self, address, count, stored=True, among=None):
         """What each image holds at `address`: [bytes], one for every image that holds all `count` bytes there (in
-        stored records only, unless `stored` is false: then a fill record's bytes count too)."""
+        stored records only, unless `stored` is false: then a fill record's bytes count too). `among`, when given, is
+        the numbers of the images read; the others are passed over."""
         out = []
-        for pieces, starts in self.memories:
+        for which, (pieces, starts) in enumerate(self.memories):
+            if among is not None and which not in among:
+                continue
             data, at, left = b"", address, count
             while left:
                 number = bisect.bisect_right(starts, at) - 1
@@ -250,22 +265,65 @@ class Images:
 def read_places(profiles, images):
     """The places the firmware is changed at, in the form tools/stock_search.py takes them: ([addresses], [(address,
     the image's own bytes there, group)]). A profile is read for the address and the length; its "before" bytes are
-    used only where no image holds the place."""
+    used only where no image holds the place. A profile that names its stock image's size (and its record count,
+    where it names one) is read only in the images whose index names the same, when one does: the same address holds
+    other bytes in another firmware. A profile that names no size, or that no image here matches, is read in the first
+    image that holds the place."""
     found = {}
     for path in profiles:
         with open(path, encoding="utf-8") as f:
             profile = json.load(f)
+        identity = (profile.get("stock_bytes"), profile.get("stock_records")) if isinstance(profile, dict) else None
+        among = images.of(identity)
         for patch in profile.get("patches", ()):
             if "address" not in patch:
                 continue
             address = int(patch["address"], 16)
             length = int(patch.get("length") or len(patch.get("before", "")) // 2)
-            held = images.read(address, length) if length else []
+            held = images.read(address, length, among=among or None) if length else []
             data = held[0] if held else bytes.fromhex(patch.get("before", ""))
             if data:
-                found.setdefault(address, (address, data, patch.get("group", "")))
+                found.setdefault((address, data), (address, data, patch.get("group", "")))
     places = sorted(found.values())
-    return [place[0] for place in places], places
+    return sorted({place[0] for place in places}), places
+
+
+def identity_of(source):
+    """(size of the image, count of its records) as a folder of records names them in its index, or None."""
+    index = os.path.join(source, "index.json")
+    try:
+        with open(index, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    records = data.get("records")
+    return (data.get("bytes"), len(records) if isinstance(records, list) else records)
+
+
+def of_these_images(profile_path, sources):
+    """Whether a profile of the default list is of a stock image held here (since the port to 1.7.3, 2026-11-19, the
+    profiles folder holds a profile of each firmware): its stock size and record count are those of one folder of
+    records, as that folder's index names them. A profile that names neither, or a folder with no index, is kept. A
+    place is read at its address in the images held, so another firmware's profile would read other bytes."""
+    try:
+        with open(profile_path, encoding="utf-8") as f:
+            profile = json.load(f)
+    except (OSError, ValueError):
+        return True
+    if not isinstance(profile, dict) or "stock_bytes" not in profile or "stock_records" not in profile:
+        return True
+    held = []
+    for source in sources:
+        index = os.path.join(source, "index.json")
+        if not os.path.isfile(index):
+            return True
+        with open(index, encoding="utf-8") as f:
+            data = json.load(f)
+        records = data.get("records")
+        held.append((data.get("bytes"), len(records) if isinstance(records, list) else records))
+    return (profile["stock_bytes"], profile["stock_records"]) in held
 
 
 def read_allowed(path):
@@ -978,6 +1036,7 @@ def main(argv=None):
             if profiles is None:
                 folder = os.path.join(ROOT, "profiles")
                 profiles = sorted(os.path.join(folder, name) for name in (os.listdir(folder) if os.path.isdir(folder) else ()) if name.endswith(".json"))
+                profiles = [path for path in profiles if of_these_images(path, sources)]
             places = read_places(profiles, images)
         except (OSError, ValueError) as problem:
             print("error: %s" % problem)

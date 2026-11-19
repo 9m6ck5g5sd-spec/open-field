@@ -12,7 +12,7 @@ One page that leads an owner through the install, the Windows helper that does t
 | `patch.mjs`, `ldr.mjs` | The builder: the open-field firmware file from the owner's own file |
 | `placement.mjs` | Where the bootloader's write lands, worked out from a listing of the unit's disk, and the size of the one extra file (the pad file) that makes it land |
 | `loader.json` | The manifest: what the builder does. It names the two places the builder changes, the loader's file it adds, and the SHA-256 the result must have. This one is the version the page offers by itself |
-| `loader-1.7.0-v3.bin` | The loader's file that manifest names: the loader, our small piece of code inside the firmware file, built from this repository. The packs, `base.pack` among them, are files on the unit and are not in it |
+| `loader-1.7.3-v1.bin` | The loader's file that manifest names: the loader, our small piece of code inside the firmware file, built from this repository. The packs, `base.pack` among them, are files on the unit and are not in it |
 | `base.pack` | The base, the shared pack every feature needs, built from this repository. The page puts it on every unit it installs, with the new firmware file. The build holds it to `packs/built.json`, byte for byte |
 | `base-pack.json` | Its size and SHA-256, and its version and release: the page refuses a `base.pack` that is not this one |
 | `build-image.mjs` | The builder as a command, for those who prefer one |
@@ -56,12 +56,12 @@ The helper can be run whole without a unit, on Windows: `-Source` names a folder
 
 ## More than one version of the loader
 
-The loader's file has a version: `v3` today. A version that anyone may have installed keeps its bytes for good, so a changed loader is a new file under a new name, with a manifest of its own. A change to the base, `base.pack`, needs none of this: the base is a file on the unit, and a new one is copied there.
+The loader's file has a version: `v1` today, the first for OS 1.7.3. A version that anyone may have installed keeps its bytes for good, so a changed loader is a new file under a new name, with a manifest of its own. A change to the base, `base.pack`, needs none of this: the base is a file on the unit, and a new one is copied there.
 
 | In this folder | What it is | Who gets it |
 | --- | --- | --- |
 | `loader.json` and the loader's file it names | The version the page offers by itself | Everyone who opens the page |
-| A manifest named after its version, such as `loader-1.7.0-v4.json`, and its loader's file | A version kept beside that one: a new one that waits for a try on a unit, or an older one | Someone who asks for it by name, with `?loader=1.7.0-v4` behind the page's address |
+| A manifest named after its version, such as `loader-1.7.3-v2.json`, and its loader's file | A version kept beside that one: a new one that waits for a try on a unit, or an older one | Someone who asks for it by name, with `?loader=1.7.3-v2` behind the page's address |
 
 The page shows a line beside the version it has loaded: `ran on a unit` with a date, or `not run on a unit yet`. That line comes from the manifest.
 
@@ -70,11 +70,11 @@ The page shows a line beside the version it has loaded: `ran on a unit` with a d
 The two commands that take a manifest take a version's name too:
 
 ```bash
-node builder/validate-builder.mjs --loader 1.7.0-v3 --stock <your own os.ldr>
+node builder/validate-builder.mjs --loader 1.7.3-v1 --stock <your own os.ldr>
 ```
 
 ```bash
-node builder/build-image.mjs --loader 1.7.0-v3 <your own os.ldr> <the file to write>
+node builder/build-image.mjs --loader 1.7.3-v1 <your own os.ldr> <the file to write>
 ```
 
 A version's name works wherever its manifest lies: beside `loader.json`, or as `loader.json` itself, and so does `?loader=` on the page.
@@ -84,6 +84,7 @@ A version's name works wherever its manifest lies: beside `loader.json`, or as `
 The page can be served from any web address over HTTPS: the unit's check uses USB MIDI, and the folder the page and the helper share uses the browser's folder access, and a browser offers both only to a page served over HTTPS or from the computer itself. The workflow `.github/workflows/pages.yml` publishes this folder, `builder/`, on the host's pages, once the checks have passed on `main`. What that needs:
 
 - **This folder alone is served**, as it stands on `main`, with the listing of packs beside it: the workflow copies `catalog/packs.json` into it as `packs.json` before it publishes. The page loads only files beside it, by relative paths, and one thing from another site: the file of a pack the owner ticks, from its author's repository at the commit the listing names (`raw.githubusercontent.com`), held to the listing's size and SHA-256 before it is used. `tools/tests/test_tree.py` holds that (`ThePagesOnAHost`). Its one link to another site is a link the owner may follow, not a load.
+- **The page for OS 1.7.0 is served beside it, as it was.** The workflow takes the folder `builder/` and the listing of the last commit for OS 1.7.0, `b6501e4`, from the history, and puts them in a folder `1.7.0` beside the page before it publishes; nothing of it is kept on `main`. The page links to it in one line, for a unit that was never updated to 1.7.3. Its keys in the browser's storage carry the firmware, so that the two pages, on one site, never take each other's.
 - **Script files ending in `.mjs` are served as scripts.** A browser runs a module only when the server says it is JavaScript.
 - **`open-field-helper.ps1` is served as text or as a download.** PowerShell reads it either way. The line the page shows for it is made from the page's own address, so it names the host's address there.
 - **`base.pack` and the loader's file are served as they are**, byte for byte: the page holds each to its SHA-256 and refuses one that is not.

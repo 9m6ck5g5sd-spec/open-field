@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M2 (docs/base.md): what a pack shows the base, and what the base offers a pack,
 // at level 2. A sibling of module/build_m1_card.h, which stays as it was for the packs built against level 1: every
 // word of level 1 stands here at the same place with the same meaning, and level 2 adds behind it.

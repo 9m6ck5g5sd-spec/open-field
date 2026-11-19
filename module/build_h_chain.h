@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build H images H2 and H3: what the chain unit (build_h_chain.cpp) tells the train page (build_h_train.cpp) each
 // frame. Plain integers only; the train unit reads it, the chain unit fills it from its own state. H5 adds the
 // presets list's view for build_h_presets.cpp (the chain unit keeps the store, the file and the keys; the presets

@@ -1,24 +1,25 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build B, step B3d: trampolines and stubs for the tape JSON loader and the MixerController (OS 1.7.0+0).
  * Logic in build_b_mixer.cpp.
  *
- * 1. The loader post-wrap. A JUMP.a at the first 8 bytes of TapeController's load(this, flag) 0x8c0c2adc lands
+ * 1. The loader post-wrap. A JUMP.a at the first 8 bytes of TapeController's load(this, flag) 0x8c0c348c lands
  *    here. The stub keeps the caller's RETS and the flag in op1f_json_load_state, points RETS at its own
  *    continuation and goes into stock through its room; stock's own return then comes back to the
  *    continuation with the stack as it was at entry, where the C function reads the extension strip.
  *    The stock function uses no stack argument (only its own spill of R0 in the caller's argument space), and
  *    its result is unused by both callers; it is kept anyway.
  *
- *      load  0x8c0c2adc  -> its room, then 0x8c0c2ae4
+ *      load  0x8c0c348c  -> its room, then 0x8c0c2ae4
  *
  * 2. Entry trampolines at four MixerController handlers, the construction of B2's TapeController trampolines:
  *    the C filter decides, a taken event returns 1 to the dispatcher, otherwise the stub goes on through its
  *    room and stock continues. R0-R3, P0-P2 and RETS are scratch around the C call; the arguments are saved.
  *
- *      key-down          0x8c0bb5c0  -> its room, then 0x8c0bb5c8
- *      key-up            0x8c0bb4c8  -> its room, then 0x8c0bb4d4 (the instructions under the hook end twelve
+ *      key-down          0x8c0bbef8  -> its room, then 0x8c0bb5c8
+ *      key-up            0x8c0bbe00  -> its room, then 0x8c0bb4d4 (the instructions under the hook end twelve
  *                        bytes in: the second is eight bytes long and begins inside the hook's eight)
- *      shifted key-down  0x8c0bb078  -> its room, then 0x8c0bb080
- *      on_encoder        0x8c0ba95c  -> its room, then 0x8c0ba964
+ *      shifted key-down  0x8c0bb9b0  -> its room, then 0x8c0bb080
+ *      on_encoder        0x8c0bb294  -> its room, then 0x8c0ba964
  *
  *    The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 each of these five stubs ran the
  *    instructions its hook displaced itself, as a copy or said in other words. Now it holds none of them and ends
@@ -27,7 +28,7 @@
  *    make_trampoline; the table entry names the room and how many bytes the instructions take). P2, the register
  *    a stub jumps through, is the one it jumped through before.
  *
- * 3. A load replacement in the MixerScreen's update: the 8-byte load of 0x11b01eb0 into P4 at 0x8fc2e7c0, the base of the
+ * 3. A load replacement in the MixerScreen's update: the 8-byte load of 0x11b01eb0 into P4 at 0x8fc30340, the base of the
  *    four level numbers, becomes a CALL.a to op1f_mixer_levels_p4, which loads P4 with the module's strip while
  *    the page is held. R0 and CC are dead at the site (both set before their next use); the function is LINKed.
  */

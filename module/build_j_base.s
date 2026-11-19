@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build J image J4: the base's cache routine for code it has loaded (analysis/pack_loader_study.md, section 13).
  *
  * The base reads a pack's bytes into DDR with ordinary stores, so they stand in the data cache, which writes back

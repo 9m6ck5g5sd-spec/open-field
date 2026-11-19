@@ -43,6 +43,9 @@ def load(*parts):
         return json.load(f)
 
 
+PROFILE = load("build.json")["profile"]                                         # the tree's one profile: profiles/op1f-<the firmware>.json
+
+
 def text(*parts):
     with open(os.path.join(ROOT, *parts), encoding="utf-8", newline="") as f:
         return f.read()
@@ -51,12 +54,12 @@ def text(*parts):
 class TheProfile(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.profile = load("profiles", "op1f-1.7.0.json")
+        cls.profile = load(*PROFILE.split("/"))
         cls.places = {place["address"]: place for place in cls.profile["patches"]}
 
     def test_it_holds_no_byte_of_the_firmware(self):
         """No field for the bytes a place holds, and no long run of hex but the firmware file's SHA-256."""
-        written = text("profiles", "op1f-1.7.0.json")
+        written = text(*PROFILE.split("/"))
         self.assertNotIn('"before"', written)
         self.assertNotIn('"after"', written)
         runs = [run for run in re.findall(r"[0-9a-fA-F]{12,}", written) if run != self.profile["stock_sha256"]]
@@ -83,7 +86,7 @@ class TheProfile(unittest.TestCase):
     def test_the_table_sources_are_what_the_profile_gives(self):
         builder = tool("table_build")
         for table in self.profile["tables"]:
-            self.assertEqual(text(*table["file"].split("/")), builder.render(self.profile, table, "profiles/op1f-1.7.0.json"), table["file"])
+            self.assertEqual(text(*table["file"].split("/")), builder.render(self.profile, table, PROFILE), table["file"])
 
     def test_a_table_holds_a_checksum_in_every_entry_and_no_stock_word(self):
         """Every entry's kind has the bit that says "a checksum stands here"; its last word is a room's name or 0."""
@@ -164,7 +167,7 @@ class TheRecipes(unittest.TestCase):
         self.assertFalse(base["named"])                         # the start screen shows its release, not its name
 
     def test_a_change_made_only_when_another_pack_is_away_is_in_the_pack_s_table(self):
-        profile = load("profiles", "op1f-1.7.0.json")
+        profile = load(*PROFILE.split("/"))
         tables = {table["part"]: {entry["address"] for entry in table["entries"]} for table in profile["tables"] if table["part"] != "loader"}
         for name in PACKS:
             for mark in load("packs", name + ".json")["marks"]:
@@ -241,7 +244,7 @@ class TheExamplePack(unittest.TestCase):
         self.assertEqual((self.recipe["works_with"], self.recipe["serves"], self.recipe["exports"], self.recipe["marks"]), ([], [], [], []))
 
     def test_its_profile_is_for_the_same_firmware_file_and_holds_no_byte_of_it(self):
-        main = load("profiles", "op1f-1.7.0.json")
+        main = load(*PROFILE.split("/"))
         self.assertEqual(self.profile["stock_sha256"], main["stock_sha256"])
         written = text("examples", "trampolines", "profile.json")
         self.assertNotIn('"before"', written)
@@ -366,8 +369,12 @@ class ThePages(unittest.TestCase):
 
     def test_the_example_s_function_of_the_firmware_is_on_that_page(self):
         """The example calls one function of the firmware, the logger: the page describes it."""
-        self.assertIn("| `0x8c0539f0` | `void log(", text("docs", "firmware-interfaces.md"))
-        self.assertIn("0x8c0539f0u", text("examples", "trampolines", "trampolines.cpp"))
+        self.assertIn("| `0x8c053a20` | `void log(", text("docs", "firmware-interfaces.md"))
+        self.assertIn("0x8c053a20u", text("examples", "trampolines", "trampolines.cpp"))
+
+    def test_the_words_for_the_functions_are_the_profile_s_own(self):
+        """The words beside the profile build.json names, for the same firmware."""
+        self.assertEqual(os.path.relpath(tool("interfaces").WORDS, ROOT).replace("\\", "/"), PROFILE[:-len(".json")] + "-interfaces.json")
 
 
 MANIFEST = re.compile(r"^loader-[0-9]+(\.[0-9]+)*-v[0-9]+\.json$")
@@ -383,7 +390,7 @@ class TheInstaller(unittest.TestCase):
     def setUpClass(cls):
         cls.manifests = {name: load("builder", name) for name in sorted(os.listdir(os.path.join(ROOT, "builder")))
                          if name == "loader.json" or MANIFEST.match(name)}
-        cls.profile = load("profiles", "op1f-1.7.0.json")
+        cls.profile = load(*PROFILE.split("/"))
 
     def test_the_page_s_own_manifest_is_there(self):
         self.assertIn("loader.json", self.manifests)
@@ -591,6 +598,21 @@ class ThePagesOnAHost(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(ROOT, "catalog", "packs.json")))
         self.assertFalse(os.path.isfile(os.path.join(self.folder, "packs.json")), "a copy kept beside the page would go stale: the workflow makes it")
 
+    FROZEN = "b6501e4b4351c9a9f35898dab7b38d4fe5121da9"                         # the last commit for OS 1.7.0
+
+    def test_the_page_for_os_1_7_0_comes_from_one_commit_and_no_other(self):
+        """The page for a unit still on OS 1.7.0 is that commit's builder/ with that commit's listing beside it, put
+        into 1.7.0/ by the pages workflow; nothing of it is kept in the tree, and the main page links to it."""
+        workflow = text(".github", "workflows", "pages.yml")
+        self.assertRegex(workflow, r"(?m)^\s*fetch-depth:\s*0\s*$")
+        self.assertEqual(set(re.findall(r"\b[0-9a-f]{40}\b", workflow)), {self.FROZEN})
+        for said in ("mkdir -p %s/1.7.0" % self.served,
+                     "git archive %s builder | tar -x -C %s/1.7.0 --strip-components=1" % (self.FROZEN, self.served),
+                     "git show %s:catalog/packs.json > %s/1.7.0/packs.json" % (self.FROZEN, self.served)):
+            self.assertIn(said, workflow)
+        self.assertFalse(os.path.exists(os.path.join(self.folder, "1.7.0")), "the page for 1.7.0 is made by the workflow, never kept")
+        self.assertIn('href="./1.7.0/"', text(self.served, "index.html"))
+
     def test_the_helper_s_line_is_made_from_the_page_s_own_address(self):
         page = text(self.served, "index.html")
         self.assertIn("\"$openFieldPage = '\" + PAGE_ID + \"'; irm '\" + helperUrl + \"' | iex\"", page)       # with the page's mark
@@ -599,6 +621,44 @@ class ThePagesOnAHost(unittest.TestCase):
         self.assertIn("$Page = [string] $openFieldPage", helper)                                                         # and which the helper checks
         self.assertIn("STOPPED: the install page did not choose this folder", helper)
         self.assertNotRegex(page, r"irm\s+'https?://")
+
+
+class ThePageSStorage(unittest.TestCase):
+    """The page shares its site with the page kept for OS 1.7.0 (the pages workflow serves it beside this one). So the
+    keys of the browser's storage the page writes carry its firmware, and a check of the unit it finds stored (step 1,
+    the gate) is taken again only when it was made for this firmware and its answer is still a supported one. Without
+    that, a gate one page let through could be taken by the other."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.page = text("builder", "index.html")
+        cls.firmware = load(*PROFILE.split("/"))["firmware_version"].split("+")[0]
+
+    def test_the_page_is_for_the_tree_s_firmware(self):
+        self.assertIn('const FIRMWARE = "%s";' % self.firmware, self.page)
+        self.assertIn("const SUPPORTED_OS = [FIRMWARE, FIRMWARE + \"+0\"];", self.page)
+        self.assertEqual(load("builder", "loader.json")["os"], self.firmware)
+
+    def test_every_key_of_the_session_s_storage_carries_the_firmware(self):
+        self.assertIn('const GATE_KEY = "open-field-gate-" + FIRMWARE, PAGE_KEY = "open-field-page-" + FIRMWARE;', self.page)
+        keys = re.findall(r"sessionStorage\.(?:getItem|setItem|removeItem)\(\s*([^,)]+)", self.page)
+        self.assertGreater(len(keys), 4)
+        self.assertEqual(sorted(set(key.strip() for key in keys)), ["GATE_KEY", "PAGE_KEY"])
+
+    def test_a_stored_gate_is_held_to_the_firmware_and_the_supported_versions_again(self):
+        body = re.search(r"\n  function restoreGate\(\) \{\n(.*?)\n  \}\n", self.page, re.S).group(1)
+        check = body.index("const fits")
+        self.assertIn("g.firmware === FIRMWARE", body)
+        self.assertIn("SUPPORTED_BL.includes(g.bl", body)
+        self.assertIn("SUPPORTED_OS.includes(g.os)", body)
+        self.assertLess(check, body.index("if (gate && !fits(gate)) { gate = null;"))
+        self.assertLess(body.index("if (gate && !fits(gate)) { gate = null;"), body.index("if (gate) {"))
+        self.assertIn("gate = { firmware: FIRMWARE, bl: id.bl_version, os: id.os_version || null };", self.page)
+
+    def test_a_unit_on_os_1_7_0_is_sent_to_the_page_kept_for_it(self):
+        self.assertIn('const OLDER_OS = ["1.7.0", "1.7.0+0"];', self.page)
+        self.assertIn("} else if (blOk && OLDER_OS.includes(id.os_version)) {", self.page)
+        self.assertIn('<a href=\\"./1.7.0/\\">the page for OS 1.7.0</a>', self.page)
 
 
 class TheCheckByForm(unittest.TestCase):
@@ -616,7 +676,7 @@ class TheCheckByForm(unittest.TestCase):
 class TheProfileAgainstYourOwnFirmwareFile(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.profile = load("profiles", "op1f-1.7.0.json")
+        cls.profile = load(*PROFILE.split("/"))
         with open(STOCK, "rb") as f:
             cls.image = f.read()
         cls.records = [record for record in tool("ldr_dump_records").parse(cls.image) if not record["fill"]]

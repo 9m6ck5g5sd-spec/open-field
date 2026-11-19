@@ -25,7 +25,8 @@ import { analyzeListing, fileTnodes } from "./placement.mjs";
 import { RAW, NOTICE, readListing, rawLink, isOurs, fileName, withNeeds, neededBy, download } from "./catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const IMAGE_BYTES = 2096140;      // the size of the firmware file the page builds today (loader.json's output, image M4; image L5's was 2217628 until 2026-11-18)
+const IMAGE_BYTES = 2104908;      // the size of the firmware file the page builds today (loader.json's output, image N1 for OS 1.7.3; image M4's for 1.7.0 was 2096140, image L5's 2217628 until 2026-11-18)
+const STOCK_BYTES = 2079016;      // the size of the original OS 1.7.3 file (OS 1.7.0's was 2070248)
 
 // A folder of this computer, as install.mjs wants one.
 export function nodeFolder(root) {
@@ -85,7 +86,7 @@ function volume({ files = 40, tapeBytes = 30_000_000, osLdr = null, pk = false, 
     { path: "content", dir: true }, { path: "firmware.version", size: 8, dir: false }, { path: "logs", dir: true },
     { path: "lost+found", size: 4080, dir: false }, { path: "tape01", dir: true }, { path: "upgrade", dir: true },
     { path: "upgrade/firmware", dir: true }, { path: "upgrade/firmware/blackfin", dir: true }, { path: "upgrade/firmware/blackfin/bin", dir: true },
-    { path: "upgrade/firmware/blackfin/bin/os.ldr", size: 2070248, dir: false }, { path: "user", dir: true },
+    { path: "upgrade/firmware/blackfin/bin/os.ldr", size: STOCK_BYTES, dir: false }, { path: "user", dir: true },
   ];
   for (let i = 0; i < 430; i++) rows.push({ path: "content/factory" + i + ".aif", size: 200_000 + i * 263, dir: false });
   for (let i = 0; i < files; i++) rows.push({ path: "content/f" + i + ".aif", size: 100_000 + i * 7919, dir: false });
@@ -207,14 +208,14 @@ async function selfChecks() {
   const back = memoryFolder({
     [NAMES.helper]: JSON.stringify({ helper: 1, run: "back-run", state: "listed", stock: { file: NAMES.stock } }),
     [NAMES.before]: listingText,
-    [NAMES.stock]: new Uint8Array(2070248).fill(5),
+    [NAMES.stock]: new Uint8Array(STOCK_BYTES).fill(5),
     [NAMES.packs + "/base.pack"]: new Uint8Array(93596),
   });
   let built = false;
   const { plan: wayBack } = await prepare(back, { build: async () => { built = true; return { image: fakeImage }; }, wayBack: true });
   check("the way back builds nothing", !built);
-  check("the way back writes the owner's own file as os.ldr", wayBack.wayBack === true && wayBack.image.file === NAMES.stock && wayBack.image.bytes === 2070248 &&
-    wayBack.expected.some((r) => r.path === "os.ldr" && r.size === 2070248));
+  check("the way back writes the owner's own file as os.ldr", wayBack.wayBack === true && wayBack.image.file === NAMES.stock && wayBack.image.bytes === STOCK_BYTES &&
+    wayBack.expected.some((r) => r.path === "os.ldr" && r.size === STOCK_BYTES));
   check("the way back writes no new firmware file and copies no pack", !back.writes.includes(NAMES.image) && wayBack.packs.length === 0);
   check("the way back's plan lands", analyzeListing(wayBack.expected).current.pass);
   // base.pack, which comes with the page (2026-11-18, the owner's word: "base.pack is part of open-field"): put into
@@ -292,17 +293,17 @@ async function selfChecks() {
   // the listing as the page reads it (catalog.mjs), and the download of a ticked pack held to its entry
   const COMMIT = "0123456789abcdef0123456789abcdef01234567";
   const entry = (id, more = {}) => ({ id, author: "someone", status: "listed", categories: ["tools"], description: "A pack.", repository: "https://github.com/someone/packs",
-    commit: COMMIT, path: "build/" + id + ".pack", sha256: "a".repeat(64), bytes: 100, version: 1, firmware: "1.7.0", places: 0, needs: ["base"], folders: [], ...more });
+    commit: COMMIT, path: "build/" + id + ".pack", sha256: "a".repeat(64), bytes: 100, version: 1, firmware: "1.7.3", places: 0, needs: ["base"], folders: [], ...more });
   const data = {
     about: "test", categories: { tools: "tools", examples: "examples" }, ours: ["https://github.com/open-field-test/packs"],
     packs: [
       { id: "base", author: "open-field", status: "bundled", categories: ["tools"], description: "The base.", path: "builder/base.pack" },
-      entry("one"), entry("two", { needs: ["base", "one"], categories: ["examples", "tools"] }), entry("old", { firmware: "1.7.3" }),
+      entry("one"), entry("two", { needs: ["base", "one"], categories: ["examples", "tools"] }), entry("old", { firmware: "1.7.0" }),
       entry("held", { status: "reserved" }), entry("ours", { author: "open-field", repository: "https://github.com/open-field-test/packs" }),
       entry("bad/id"), entry("One"), entry("needy", { needs: ["nowhere"] }),
     ],
   };
-  const seen = readListing(data, "1.7.0");
+  const seen = readListing(data, "1.7.3");
   check("the listing offers only listed packs for the unit's firmware, each once", [...seen.offered.keys()].join("|") === "one|two|ours|needy", [...seen.offered.keys()].join("|"));
   check("the bundled base is shown apart", seen.base?.id === "base");
   check("a pack for another firmware is counted, not shown", seen.otherFirmware === 1);
@@ -316,7 +317,7 @@ async function selfChecks() {
   check("the download link is the repository's file at the entry's commit", rawLink(entry("a b", { path: "packs/a b.pack" })) === RAW + "someone/packs/" + COMMIT + "/packs/a%20b.pack" &&
     RAW === "https://raw.githubusercontent.com/");
   check("a pack's file takes its id as its name", fileName(entry("fx train")) === "fx train.pack");
-  throws("a malformed listing is refused", () => readListing({ packs: {} }, "1.7.0"), /not in form/);
+  throws("a malformed listing is refused", () => readListing({ packs: {} }, "1.7.3"), /not in form/);
   const fileBytes = new Uint8Array(100).fill(21), good = entry("one", { sha256: await sha256(fileBytes) });
   const answer = (bytes, status = 200) => async (url, options) => { answer.asked = { url, options }; return { ok: status === 200, status, arrayBuffer: async () => bytes.buffer.slice(0) }; };
   const got = await download(good, answer(fileBytes));
@@ -373,7 +374,7 @@ async function play(root, { stockPath, manifestName = "loader.json", timeout = 9
   if (helper.state === "stopped") { console.log("play: the helper stopped before the plan: " + helper.message); return 1; }
   // As the page does: the unit's own file when it is the original one, else the file the owner kept (--stock).
   const original = helper.stock && helper.stock.sha256 === manifest.stock.sha256;
-  if (!original) console.log("play: the unit's firmware file is " + (helper.stock ? "not the original OS 1.7.0 file" : "not there") + (stockPath ? "; the kept file is used" : ""));
+  if (!original) console.log("play: the unit's firmware file is " + (helper.stock ? "not the original OS 1.7.3 file" : "not there") + (stockPath ? "; the kept file is used" : ""));
   const stock = !original && stockPath ? new Uint8Array(readFileSync(stockPath)) : null;
   const base = pageOwnBase();        // as the page does: its own base.pack, beside it, onto every unit it installs
   if (base.problem !== null) { console.log("play: no plan: " + base.problem); return 1; }

@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M1 image M1: the loader's "packs" folder in the disk mode.
 //
 // The words. From step M1 on the loader is our piece inside the firmware file, which every unit before this one
@@ -24,12 +25,12 @@
 //     does for each file it adds. The object stands on a file that exists, as since J3: an empty placeholder is
 //     written first, and the computer's bytes replace it through stock's file class (a temporary and a rename);
 //   * a delete removes the file. K6b's delete emptied a slot, since a slot's file always existed; a folder of files
-//     named freely has no slots, so the file object's delete slot calls stock's removal 0x8fcbd194(path)
+//     named freely has no slots, so the file object's delete slot calls stock's removal 0x8fcbefb4(path)
 //     (patch_import.cpp: the path as the open takes it, relative to the root folder's descriptor; 0 when it is
 //     gone) and the line says what the disk holds afterwards.
 //
 // A path is now user/pk/ and a name of up to thirty-nine characters, more than the fifteen a stock string keeps in
-// its own buffer. Stock's file class copies the path into a string of its own, which it frees (0x8fcb8d98; its
+// its own buffer. Stock's file class copies the path into a string of its own, which it frees (0x8fcbabb8; its
 // open, close, size and time read the text behind the pointer when the room word says sixteen or more: 0x8fcb8ed0,
 // 0x8fcb8fa8). The one string this unit makes itself, for stock's json writer, is freed as the clipboard unit frees
 // its own (build_k_clip.cpp, on the unit since K3).
@@ -40,15 +41,15 @@
 typedef unsigned int u32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void* (*MakeFolderFn)(void* parent, const char* name);              // 0x8fcaccf0
-typedef void* (*AddFileFn)(void* folder, const char* name);                  // 0x8fcacf48
-typedef void* (*HeapAllocFn)(u32 bytes);                                     // 0x8d4e5854
-typedef void (*FreeFn)(void* memory);                                        // 0x8d4e5864
-typedef void (*FsFileCtorFn)(void* obj, const char* path);                   // 0x8fcb8d98: the filesystem-backed file object (0x40 bytes)
-typedef void* (*RootChildFn)(void* behaviour, const char* name);             // 0x8fcab080: stock's root child maker
+typedef void* (*MakeFolderFn)(void* parent, const char* name);              // 0x8fcaeb10
+typedef void* (*AddFileFn)(void* folder, const char* name);                  // 0x8fcaed68
+typedef void* (*HeapAllocFn)(u32 bytes);                                     // 0x8d4e63bc
+typedef void (*FreeFn)(void* memory);                                        // 0x8d4e63cc
+typedef void (*FsFileCtorFn)(void* obj, const char* path);                   // 0x8fcbabb8: the filesystem-backed file object (0x40 bytes)
+typedef void* (*RootChildFn)(void* behaviour, const char* name);             // 0x8fcacea0: stock's root child maker
 typedef void (*PopulateFn)(void* root);
 typedef int (*FileSizeFn)(const char* path);
-typedef int (*FileRemoveFn)(const char* path);                               // 0x8fcbd194
+typedef int (*FileRemoveFn)(const char* path);                               // 0x8fcbefb4
 typedef int (*MakeFoldersFn)(const char* path);
 typedef void (*JsonCtorFn)(void* json, int kind);
 typedef void (*JsonDtorFn)(void* json);
@@ -58,24 +59,24 @@ typedef void* (*DirOpenFn)(const char* path);
 typedef void* (*DirNextFn)(void* handle);
 typedef int (*DirCloseFn)(void* handle);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_MAKE_FOLDER ((MakeFolderFn)0x8fcaccf0u)
-#define STOCK_ADD_FILE ((AddFileFn)0x8fcacf48u)
-#define STOCK_HEAP_ALLOC ((HeapAllocFn)0x8d4e5854u)
-#define STOCK_FREE ((FreeFn)0x8d4e5864u)
-#define STOCK_FS_FILE_CTOR ((FsFileCtorFn)0x8fcb8d98u)
-#define STOCK_ROOT_CHILD ((RootChildFn)0x8fcab080u)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_FILE_REMOVE ((FileRemoveFn)0x8fcbd194u)
-#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05203cu)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
-#define STOCK_FS_EMPTY_DELETE ((u32)0x8fcb8a74u)
-#define STOCK_DIR_OPEN ((DirOpenFn)0x8c051df8u)
-#define STOCK_DIR_NEXT ((DirNextFn)0x8c0a4820u)
-#define STOCK_DIR_CLOSE ((DirCloseFn)0x8c0a5424u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_MAKE_FOLDER ((MakeFolderFn)0x8fcaeb10u)
+#define STOCK_ADD_FILE ((AddFileFn)0x8fcaed68u)
+#define STOCK_HEAP_ALLOC ((HeapAllocFn)0x8d4e63bcu)
+#define STOCK_FREE ((FreeFn)0x8d4e63ccu)
+#define STOCK_FS_FILE_CTOR ((FsFileCtorFn)0x8fcbabb8u)
+#define STOCK_ROOT_CHILD ((RootChildFn)0x8fcacea0u)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_FILE_REMOVE ((FileRemoveFn)0x8fcbefb4u)
+#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05206cu)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
+#define STOCK_FS_EMPTY_DELETE ((u32)0x8fcba894u)
+#define STOCK_DIR_OPEN ((DirOpenFn)0x8c051e28u)
+#define STOCK_DIR_NEXT ((DirNextFn)0x8c0a4bd0u)
+#define STOCK_DIR_CLOSE ((DirCloseFn)0x8c0a57d4u)
 
 enum { FS_FILE_BYTES = 0x40, JSON_OBJECT_KIND = 7 };
 enum { FS_FILE_SLOTS = 12, FS_DELETE_SLOT = 7, FS_PATH_OWN = 8, FS_PATH_ROOM = 0x1c };
@@ -200,7 +201,7 @@ static const void* pack_behaviour[2] = { pack_behaviour_vtable, 0 };
 
 // ---------------------------------------------------------------- the two hooks
 
-// The root behaviour's +0x10 (the word at 0x8490f810): "packs" is the loader's folder; every other name goes to a
+// The root behaviour's +0x10 (the word at 0x8490fc4c): "packs" is the loader's folder; every other name goes to a
 // pack that has folders of its own, which answers its own and hands the rest to stock, or to stock.
 extern "C" void* op1f_base_root_child(void* behaviour, const char* name) asm("op1f_base_root_child");
 extern "C" void* op1f_base_root_child(void* behaviour, const char* name) {

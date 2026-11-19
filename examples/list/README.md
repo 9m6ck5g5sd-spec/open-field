@@ -29,7 +29,7 @@ It uses the base's helpers `op1f_picture`, `op1f_text`, `op1f_list`, `op1f_path`
 Build it, from the top of the repository, into a file that is not there yet (the tool overwrites nothing):
 
 ```bash
-python -I tools/pack_build.py build3 --recipe examples/list/recipe.json --profile profiles/op1f-1.7.0.json --out out/list.pack
+python -I tools/pack_build.py build3 --recipe examples/list/recipe.json --profile profiles/op1f-1.7.3.json --out out/list.pack
 ```
 
 `python -I tools/build_all.py` builds it too, into `out/examples/`, and holds it to the size and SHA-256 kept in `packs/built.json`.

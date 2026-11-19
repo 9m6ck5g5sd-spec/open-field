@@ -1,18 +1,19 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build H images H2 and H3: the artwork train, a screen of the GUI's own, alive (analysis/fx_chain_study.md sections
 // 17 and 18; the drawing: tools/fx_train_svg.py).
 //
 // What this unit uses of the firmware's screens (docs/methods.md says how such things are found):
 //   * A screen is an object that the firmware registers under a number. The constructor of its base class,
-//     0x8fc248a8(obj, id, name), makes one in memory of ours and registers it. The document, which is the parsed
+//     0x8fc26398(obj, id, name), makes one in memory of ours and registers it. The document, which is the parsed
 //     picture, is the object's second word, and this unit sets it; the number is its third. A number that is taken
 //     stops the firmware, and the number 0 is never registered. The numbers no screen of the firmware takes in 1.7.0
 //     are 0, 37, 38, 77 and 85 (the firmware says so for each in its log at every start). The screens are drawn in
 //     the order of their numbers and the power popup has the number 82: a screen of ours takes a free number below
 //     it, or it would be drawn over the shutdown countdown (H6d).
 //   * The synth controller and the drum controller each say which screen is to be shown through the tenth word of
-//     their table of functions (0x84013670 for the synth, 0x8400e8b0 for the drum; the firmware's own functions there
-//     are 0x8c0d4fbc and 0x8c0b6404, which this unit calls for every case that is not ours). The firmware asks after
-//     every key event, and 0x8c0b1d8c() makes it ask again. A screen's parts are found by 0x8fc241d0(screen, id,
+//     their table of functions (0x8401384c for the synth, 0x8400ea54 for the drum; the firmware's own functions there
+//     are 0x8c0d5b24 and 0x8c0b6d3c, which this unit calls for every case that is not ours). The firmware asks after
+//     every key event, and 0x8c0b2554() makes it ask again. A screen's parts are found by 0x8fc25cc0(screen, id,
 //     optional), which needs the screen's document and nothing else of the screen.
 //
 // The design (H2, section 17.2; H3, section 18.2):
@@ -22,13 +23,13 @@
 //     which answer 77 while the chain says the train is open and this screen exists, else stock's answer. The GUI
 //     then shows the train as it shows any page: the popups overlay it, the transitions apply.
 //   * Every frame (from the gfx frame hook, after the chain's frame work) the train is dressed from the chain's view
-//     with display bytes (+0x5c) and matrices (0x8c03db96), which the renderer draws on the next frame: the four
+//     with display bytes (+0x5c) and matrices (0x8c03dbbe), which the renderer draws on the next frame: the four
 //     wagons placed in signal order, each knob's chassis and the character of its effect translated to an eased
 //     position (a moved wagon hops over its neighbour, a wagon dropping onto its siding slides down), the labels in
 //     the knob colours, an uncoupled wagon on its siding (its chassis and label in the dark step of its knob's colour
 //     since H3b, its character dim), the links as
 //     unit lines mapped onto the coupling bars (skipping the sidings), the lamp on the mirrored wagon, the hint row
-//     under shift (0x8fc231b4), the parameter card after a knob turn, the dial's needle rotated by the cost; a
+//     under shift (0x8fc24ca4), the parameter card after a knob turn, the dial's needle rotated by the cost; a
 //     refused pick sags the rail under the wagon (the sag group), squashes its wheels (the sketched chassis) and
 //     names the refused effect in red while FULL shows and the needle stands red at the stop (H3).
 //   * The motion (H3): the train runs while the instrument sounds (the chain unit's bus peak, held for half a
@@ -67,19 +68,19 @@ typedef unsigned char u8;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void (*ScreenCtorFn)(void* obj, int id, const char* name);         // 0x8fc248a8: Screen::Screen, registers the object by id
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc241d0: 0 when optional and missing
-typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);               // 0x8c03db96
-typedef int (*ShiftFn)();                                                   // 0x8fc231b4: non-zero while shift is held
+typedef void (*ScreenCtorFn)(void* obj, int id, const char* name);         // 0x8fc26398: Screen::Screen, registers the object by id
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc25cc0: 0 when optional and missing
+typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);               // 0x8c03dbbe
+typedef int (*ShiftFn)();                                                   // 0x8fc24ca4: non-zero while shift is held
 typedef int (*ScreenIdFn)(void* self);                                      // the controllers' screen-id virtuals
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_SCREEN_CTOR ((ScreenCtorFn)0x8fc248a8u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03db96u)
-#define STOCK_SHIFT ((ShiftFn)0x8fc231b4u)
-#define STOCK_SYNTH_SCREEN_ID ((ScreenIdFn)0x8c0d4fbcu)
-#define STOCK_DRUM_SCREEN_ID ((ScreenIdFn)0x8c0b6404u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_SCREEN_CTOR ((ScreenCtorFn)0x8fc26398u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03dbbeu)
+#define STOCK_SHIFT ((ShiftFn)0x8fc24ca4u)
+#define STOCK_SYNTH_SCREEN_ID ((ScreenIdFn)0x8c0d5b24u)
+#define STOCK_DRUM_SCREEN_ID ((ScreenIdFn)0x8c0b6d3cu)
 #define RD32(a) (*(volatile u32*)(a))
 
 // I6 (analysis/lfo_train_study.md section 18): the LFO train on T4 is this screen with other cargo; build_i_lfo4.cpp says what its wagons carry
@@ -96,7 +97,7 @@ extern "C" int __attribute__((weak)) op1f_chain_train_open(int host) asm("op1f_c
 extern "C" int __attribute__((weak)) op1f_chain_screen_wanted(int host) asm("op1f_chain_screen_wanted");
 
 static const char LOG_FILE[] = "../src/main/op1f_train.cpp";
-static const u32 MODE_GUI = 0x84d20bc4u;
+static const u32 MODE_GUI = 0x84d21088u;
 
 enum { TRAIN_SCREEN_ID = 77, HOSTS = 2, WAGONS = OP1F_CHAIN_WAGONS, TYPES = 11, LFO_KINDS = 6, CARGOS = TYPES + LFO_KINDS, NONE_INDEX = CARGOS, LABEL_DARK0 = 4, LABEL_RED = 8, LABEL_VARIANTS = 9 };   // a label's variants: the four knob colours, their four dark steps (a parked wagon, H3b), red
 // The names and the card's words are CARGOS things: the eleven effects (the firmware's enumeration), then the six LFO kinds (stock's numbering). I6 put the kinds on wagons; since I7 they ride under the UFOs' glass.
@@ -117,13 +118,13 @@ enum { PH025_STEP = 25423, PH08_STEP = 7945, PH1_STEP = 6355, PH2_STEP = 3178, P
 
 typedef char lfo_kinds_are_the_lfo_units[((int)LFO_KINDS == (int)OP1F_LFO_KINDS && (int)WAGONS == (int)OP1F_LFO_WAGONS) ? 1 : -1];
 // The names of what a wagon or a UFO carries are stock's own and are read where stock keeps them (packs L3; until then
-// this unit carried the seventeen, in stock's order): the eleven effects' in the table 0x8490de4c and the six LFO
-// kinds' in the table 0x84d251fc, each of eight-byte entries, the name's address and the number. The second is not in
+// this unit carried the seventeen, in stock's order): the eleven effects' in the table 0x8490e288 and the six LFO
+// kinds' in the table 0x84d256c4, each of eight-byte entries, the name's address and the number. The second is not in
 // the image: one of the constructors the start code runs before main fills it (0x8fca6224). This table says where
 // each name's address stands; find_fmt and find_copy read the name through it. The ids of this page's picture are made
 // with the same names (tools/fx_train_svg.py). "none" is this unit's own word.
-#define FX_NAME_ENTRY(type) ((const char* const*)(0x8490de4cu + 8u * (type)))
-#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d251fcu + 8u * (kind)))
+#define FX_NAME_ENTRY(type) ((const char* const*)(0x8490e288u + 8u * (type)))
+#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d256c4u + 8u * (kind)))
 static const char* const NONE_NAME = "none";
 static const char* const* const NAMES[CARGOS + 1] = { FX_NAME_ENTRY(0), FX_NAME_ENTRY(1), FX_NAME_ENTRY(2), FX_NAME_ENTRY(3), FX_NAME_ENTRY(4), FX_NAME_ENTRY(5),
                                                       FX_NAME_ENTRY(6), FX_NAME_ENTRY(7), FX_NAME_ENTRY(8), FX_NAME_ENTRY(9), FX_NAME_ENTRY(10),

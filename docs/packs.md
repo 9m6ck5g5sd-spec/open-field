@@ -6,7 +6,7 @@ A **pack** is one file that holds a feature: our own compiled code and, as the p
 
 This page says what a pack file is made of and what the loader does with it, step by step, with the lines it writes into the log. If you have not built a pack yet, start with [a first pack](first-pack.md).
 
-Everything here is for OS 1.7.0 and the loader of this repository (`module/build_m4_loader.cpp`).
+Everything here is for OS 1.7.3 and the loader of this repository (`module/build_m4_loader.cpp`).
 
 ## Where pack files lie
 
@@ -117,7 +117,7 @@ The loader runs once, early in the start-up, on the main thread, right after the
 **1. It looks at itself.** It checks its own three changes and tries a write of code on a function of its own. Its first line names it, M4.
 
 ```
-loader: M4 at the load point: control 0x00000207, packs are loaded from 0x8d2f36cc, room 2031616 bytes; 3 of its own 3 changes of stock pass their check, 3 by a checksum
+loader: M4 at the load point: control 0x00000207, packs are loaded from 0x8d2f4234, room 2031616 bytes; 3 of its own 3 changes of stock pass their check, 3 by a checksum
 loader: self-test of a code write in DDR: 1 before, 2 after
 ```
 
@@ -126,7 +126,7 @@ If that write does not work, nothing of the firmware is changed and the unit sta
 **2. The safe start.** It asks the keyboard controller which keys are down. With the help key held, no pack is read ([below](#the-safe-start)).
 
 ```
-loader: keys at the start 00000000 00000000 (answer 0x42, 8 bytes, 2118001 cycles): the help key is not held
+loader: keys at the start 00000000 00000000 (answer 0x42, 8 bytes, 2079803 cycles): the help key is not held
 ```
 
 **3. It lists the folder** and reads the header of each pack file.
@@ -137,13 +137,13 @@ loader: the folder user/pk listed: 8 pack(s) of the new kind and 0 of the old in
 
 `of the old` counts files in an earlier pack format. This repository does not build that format. The loader still reads it, and such a file runs only when no pack file of today's format does.
 
-**4. It places the packs.** Packs stand one behind the other in a room of 2,031,616 bytes that begins at `0x8d2f36cc`, in the order of their files' names. Each pack is read from its file straight into its place, body and lists. Its CRC-32 is taken there and held against the header's.
+**4. It places the packs.** Packs stand one behind the other in a room of 2,031,616 bytes that begins at `0x8d2f4234`, in the order of their files' names. Each pack is read from its file straight into its place, body and lists. Its CRC-32 is taken there and held against the header's.
 
 A pack is linked for the room's first byte and stands somewhere else. So the loader **moves** it: at every place of the pack's own, it writes the address the pack was linked with, further on by the distance. A pack stands at the next address that is a multiple of 32 bytes away from where it was linked.
 
 ```
-loader: user/pk/base.pack 'base' version 17 is placed at 0x8d361b2c, 451680 from where it was linked: 2683 places of its own moved
-loader: its 107396 bytes read in 3096896 cycles, checksum f7da971d ok in 1439761 cycles
+loader: user/pk/base.pack 'base' version 17 is placed at 0x8d3626b4, 451712 from where it was linked: 2683 places of its own moved
+loader: its 107396 bytes read in 3155090 cycles, checksum 6309e0a3 ok in 1440202 cycles
 ```
 
 Of two files that hold the same pack, the one with the higher version is placed, and the other stands by with a line that ends `stands by and is not read: ... holds this pack, version 2`. A newer file of a pack that cannot run is still the one placed: it shadows an older file that would run.
@@ -153,7 +153,7 @@ Of two files that hold the same pack, the one with the higher version is placed,
 **6. It joins the packs, and hands the cards over.** For every name a pack wants, the loader writes the address of the pack that offers it into the wanting pack's places. A wanted name that is optional and that nobody offers gets the address 0. Then each pack's zeroed data is cleared, and the loader writes the cards of the packs that run into the list the base offers, in the order of the files' names. Then each pack's memory is written out of the processor's cache, so that the processor runs what was just loaded.
 
 ```
-loader: 3 card(s) handed to 'base', its list at 0x8d374988; 0 more than the list holds
+loader: 3 card(s) handed to 'base', its list at 0x8d375510; 0 more than the list holds
 ```
 
 **7. It makes the changes.** First its own, then each pack's table. A pack's table is written after the tables of the packs that lean on it: those that need it, or need a name it offers. So the base comes last. For every entry the loader reads the place again, takes the checksum again, makes the trampoline if the entry has one, writes, and reads back what it wrote.
@@ -171,7 +171,7 @@ loader: done: 8 pack(s) run, 0 left out, control 0x00000207, 49158269 cycles
 
 ```
 loader: the start screen's version text is followed by ' - open-field 0.3': 1 in DDR code written and read back, 0 already there
-loader: the start screen says '1.7.0 - open-field 0.3'
+loader: the start screen says '1.7.3 - open-field 0.3'
 ```
 
 A change that passed its check and then does not go in, or a place that changed between the check and the write, **stops the start-up** with a line that begins `loader: STOPPED`. The firmware would otherwise run with half of a pack's changes. This has not happened on a unit.
@@ -232,7 +232,7 @@ A pack's table says where the running firmware is changed and which function of 
 
 *L1 code* is the fast memory inside the processor, `0x11a00000` to `0x11a10000`, where the audio code runs. *DDR* is the main memory, `0x80000000` to `0x90000000`. A table names the kind of memory because the loader writes the two in different ways.
 
-**The checksum is the pack's safety.** The loader takes the CRC-32 of what stands at the place in the unit's memory. Only when it is the entry's does anything go in. So a pack made for OS 1.7.0 does nothing on a unit with another firmware, and a wrong address is caught before it does harm. No profile, table or pack holds the firmware's bytes themselves. `tools/place_sum.py` works a checksum out from your own firmware file ([methods](methods.md)).
+**The checksum is the pack's safety.** The loader takes the CRC-32 of what stands at the place in the unit's memory. Only when it is the entry's does anything go in. So a pack made for OS 1.7.3 does nothing on a unit with another firmware, and a wrong address is caught before it does harm. No profile, table or pack holds the firmware's bytes themselves. `tools/place_sum.py` works a checksum out from your own firmware file ([methods](methods.md)).
 
 **A trampoline** is how a function of the firmware goes on after a jump of ours at its first instruction. The jump takes the place of the function's first eight bytes, and those instructions are still needed. The loader copies them from the running firmware into a **room**, some bytes of the pack's zeroed data, and puts a jump back behind them. The pack's routine does its work and ends in a jump to the room. So no pack holds a copy of the firmware's instructions.
 
@@ -268,15 +268,15 @@ The loader adds its words behind the firmware's own version text on the start sc
 
 | The screen reads | When |
 | --- | --- |
-| `1.7.0 - open-field 0.3` | Pack files run, and none is left out. `0.3` is the base's release |
-| `1.7.0 - open-field 0.3 (1 left out)` | One pack file is there and does not run. The log says why |
-| `1.7.0 - open-field 0.3 (1 needs foo)` | A file is left out because it needs the pack `foo`, and no file of the folder holds `foo` |
-| `1.7.0 - open-field` | Pack files run, and none offers a release: `base.pack` is not among them |
-| `1.7.0 stock (no pack)` | No pack file: the unit runs as the original firmware |
-| `1.7.0 stock (4 need base)` | Four pack files are there, and none runs because `base.pack` is not: copy it |
-| `1.7.0 stock (2 left out)` | Pack files are there and none runs |
-| `1.7.0 stock (help key)` | The safe start |
-| `1.7.0` | The loader could not change the text, or did not run |
+| `1.7.3 - open-field 0.3` | Pack files run, and none is left out. `0.3` is the base's release |
+| `1.7.3 - open-field 0.3 (1 left out)` | One pack file is there and does not run. The log says why |
+| `1.7.3 - open-field 0.3 (1 needs foo)` | A file is left out because it needs the pack `foo`, and no file of the folder holds `foo` |
+| `1.7.3 - open-field` | Pack files run, and none offers a release: `base.pack` is not among them |
+| `1.7.3 stock (no pack)` | No pack file: the unit runs as the original firmware |
+| `1.7.3 stock (4 need base)` | Four pack files are there, and none runs because `base.pack` is not: copy it |
+| `1.7.3 stock (2 left out)` | Pack files are there and none runs |
+| `1.7.3 stock (help key)` | The safe start |
+| `1.7.3` | The loader could not change the text, or did not run |
 
 The names of the packs that run are not shown: the log has them. Where the words would be wider than their share of the screen, the files left out are given as one count, and then the release is left out too.
 
@@ -300,17 +300,17 @@ A pack stands at another address on the unit than it was linked for, so an addre
 The example `trampolines`, alone:
 
 ```bash
-python -I tools/pack_build.py placed --recipe examples/trampolines/recipe.json --folder out/examples --name example
+python -I tools/pack_build.py placed --recipe examples/trampolines/recipe.json --profile examples/trampolines/profile.json --folder out/examples --name example
 ```
 
 The example `wink` behind the base, as on a unit with those two files. Build the two into one folder first:
 
 ```bash
-python -I tools/pack_build.py build3 --recipe packs/base.json --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.0.json --out-dir out/set
+python -I tools/pack_build.py build3 --recipe packs/base.json --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.3.json --out-dir out/set
 ```
 
 ```bash
-python -I tools/pack_build.py placed --recipe packs/base.json --recipe examples/wink/recipe.json --folder out/set --name example
+python -I tools/pack_build.py placed --recipe packs/base.json --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.3.json --folder out/set --name example
 ```
 
 It prints each pack's place and the checksum the loader logs for it (`its sum as linked`): when the log's number is the tool's, the pack in the unit's memory is the one you built, to the byte. On a unit with more pack files, give every one of them, so that each stands where the loader puts it.

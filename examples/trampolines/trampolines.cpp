@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // The example pack `trampolines` (docs/first-pack.md): the one line it writes into the unit's log.
 //
 // The pack's two routines (trampolines.s) stand at the first instructions of two functions of the firmware that the
@@ -10,7 +11,7 @@
 // The line's tag is a file name of our own choosing, "op1f/trampolines.cpp". The firmware's logger prints what
 // stands between the last slash and the dot, so the line begins `trampolines[1]:`.
 //
-// Called on the main thread. One function of the firmware is used, the logger at 0x8c0539f0: a level (3 for a line
+// Called on the main thread. One function of the firmware is used, the logger at 0x8c053a20: a level (3 for a line
 // of information, 2 for a warning, 1 for an error), a file name for the tag, a number that is printed after the
 // tag, a format as printf has it, and the values. It is not to be called from the audio thread.
 
@@ -18,7 +19,7 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
 
 static const char LOG_FILE[] = "op1f/trampolines.cpp";
 enum { DRAW_ROOM_BYTES = 16, FLAG_ROOM_BYTES = 20, LINES = 4 };

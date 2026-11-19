@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M1, the base pack: the measuring unit, whose frame function calls the frame functions of the packs that
 // carry a card (OS 1.7.0+0; docs/base.md). This is the measuring unit of the pack `kit` that went before, with one
 // declaration and one statement added and nothing else changed: once a frame it calls op1f_cards_frame
@@ -120,30 +121,30 @@ extern "C" void __attribute__((weak)) op1f_sums_frame() asm("op1f_sums_frame"); 
 extern "C" void __attribute__((weak)) op1f_cost_frame_in() asm("op1f_cost_frame_in");
 extern "C" void __attribute__((weak)) op1f_cost_frame_out() asm("op1f_cost_frame_out");
 extern "C" void op1f_cards_frame() asm("op1f_cards_frame");                                // Step M1 (module/build_m3_cards.cpp): the frame functions of the packs that carry a card, and the base's clock
-#define CURRENT_MODE (*(volatile int*)0x8400f7d4u)     // the mode switch 0x8c0bc4e8 keeps it: 0 synth, 1 drum, 2 tape, 3 mixer
+#define CURRENT_MODE (*(volatile int*)0x8400f978u)     // the mode switch 0x8c0bce20 keeps it: 0 synth, 1 drum, 2 tape, 3 mixer
 #define MODE_MIXER 3
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
 typedef void (*DrawCharFn)(u16* framebuffer, int character);
 typedef u32 (*HeapFreeFn)(int heap_index);
-#define STOCK_LOG ((LogFn)0x8c0539f0u)              // log(level, file, line, fmt, ...), level 3 = I
-#define STOCK_DRAW_CHAR ((DrawCharFn)0x8c0dc764u)   // bitmapfont draw_char(framebuffer, c) at the cursor
-#define STOCK_HEAP_FREE ((HeapFreeFn)0x8fcc33dc)    // ADI runtime heap_space_unused(index): heap 0 at 0x80000000, 1 at 0x82000000
+#define STOCK_LOG ((LogFn)0x8c053a20u)              // log(level, file, line, fmt, ...), level 3 = I
+#define STOCK_DRAW_CHAR ((DrawCharFn)0x8c0dd2ccu)   // bitmapfont draw_char(framebuffer, c) at the cursor
+#define STOCK_HEAP_FREE ((HeapFreeFn)0x8fcc51fc)    // ADI runtime heap_space_unused(index): heap 0 at 0x80000000, 1 at 0x82000000
 // J5i: the OS's own heap (TE's op1_heap): one dlmalloc space of 20 MiB, made at 0x8d4e36cc with its base at
 // 0x8c0e36cc, from which every new and malloc of OS code comes; when it is empty the OS stops with an error
 // line. The module's reservation is its top 2 MiB (profiles/op1f-1.7.0.json), and the pages' parsed documents,
-// labels and json values of ours live in what is left. [0x080226e0] is the space's state once it is made (the byte
-// 0x080226e4 says so). In the state: +0xc the size of the top chunk (what is free at the space's end), +0x18 that
+// labels and json values of ours live in what is left. [0x080226ec] is the space's state once it is made (the byte
+// 0x080226f0 says so). In the state: +0xc the size of the top chunk (what is free at the space's end), +0x18 that
 // chunk's address, +0x1b0 the space's size: stock's getter 0x8c05967a reads the size there, which places the fields
 // before it as dlmalloc's malloc_state has them [the two others inferred from that until a read-out shows them].
 // Read here, written by nobody of ours.
-#define OS_HEAP_MADE (*(volatile const unsigned char*)0x080226e4u)
-#define OS_HEAP_STATE (*(volatile const u32*)0x080226e0u)
+#define OS_HEAP_MADE (*(volatile const unsigned char*)0x080226f0u)
+#define OS_HEAP_STATE (*(volatile const u32*)0x080226ecu)
 #define OS_HEAP_WORD(offset) (*(volatile const u32*)(OS_HEAP_STATE + (offset)))
 enum { OS_HEAP_TOP_SIZE = 0xc, OS_HEAP_TOP = 0x18, OS_HEAP_SIZE = 0x1b0 };
-#define CURSOR_X (*(volatile int*)0x840146d4u)
-#define CURSOR_Y (*(volatile int*)0x840146d8u)
-#define CORE_CLOCK_OVERRIDE (*(volatile const int*)0x8491b8f8u)   // -1 = use the default below
+#define CURSOR_X (*(volatile int*)0x840148b0u)
+#define CURSOR_Y (*(volatile int*)0x840148b4u)
+#define CORE_CLOCK_OVERRIDE (*(volatile const int*)0x8491bd38u)   // -1 = use the default below
 static const u32 CORE_CLOCK_DEFAULT = 400000000u;   // [0x8490e038]: stock's cycles-per-second default
 static const char LOG_FILE[] = "../src/main/op1f_cfw.cpp";
 

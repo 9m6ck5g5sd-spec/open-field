@@ -1,8 +1,9 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build J image J5b: the base's stub at stock's draw of the version text (analysis/pack_loader_study.md, section 16).
  *
- * The site, 0x8c0b3b14, is the 8-byte load of the word at 0x0801b7f8 into R0 (the frame buffer) in the main thread's start-up,
+ * The site, 0x8c0b43e4, is the 8-byte load of the word at 0x0801b804 into R0 (the frame buffer) in the main thread's start-up,
  * a few hundred instructions after the load point. Stock has just stored the two stack arguments of its one draw of
- * the version text, 0x8c0dc920(frame buffer, 240, 170, text, centred):
+ * the version text, 0x8c0dd488(frame buffer, 240, 170, text, centred):
  *
  *     The text ("1.7.0") and the word that says "centred on x" have just been stored as the call's two
  *     arguments on the stack. The site loads the frame buffer's address as the first argument; behind it the
@@ -34,7 +35,7 @@ op1f_base_text_stub:
     SP += 12;
     RETS = [SP++];
     P1.H = 0x0801;
-    P1.L = 0xb7f8;
+    P1.L = 0xb804;
     R0 = [P1];                          /* the displaced load: the frame buffer */
     RTS;
 .size op1f_base_text_stub, .-op1f_base_text_stub

@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build B, step B2: register-preserving stubs for the record-track hooks (OS 1.7.0+0). Logic in build_b_record.cpp.
  *
  * Two kinds of stub, both installed by profile group "build-b2" (analysis/build_b_design.md, section 8):
@@ -9,8 +10,8 @@
  *    ordinary C call: R0-R3, P0-P2 and RETS are scratch in the Blackfin ABI, so only RETS and the two arguments
  *    are saved around it.
  *
- *      TapeController::on_key_down        0x8c0c3212  -> its room, then 0x8c0c321a
- *      TapeController::on_shift_key_down  0x8c0c3a52  -> its room, then 0x8c0c3a5a
+ *      TapeController::on_key_down        0x8c0c3be2  -> its room, then 0x8c0c321a
+ *      TapeController::on_shift_key_down  0x8c0c4422  -> its room, then 0x8c0c3a5a
  *
  *    The rooms (packs L3, analysis/clean_base_study.md section 16). Until L3 a stub of this kind ran the
  *    instructions its hook displaced itself, as a copy, and jumped to the instruction after them. Now it holds
@@ -26,9 +27,9 @@
  *    four-entry table with it. Each site is inside a LINKed function (RETS is saved in its frame) and the
  *    registers the stub uses as scratch are dead at that site (shown in the design report):
  *
- *      0x11a02b30  the load of the selected track into P0: input monitoring through the selected track's mixer strip (L1 core)
- *      0x11a02d0a  the load of the selected track into P1: the selected track's VU peak word (L1 core)
- *      0x8c0c123e  the load of the selected track into R1: the "track" field written to user/tapeNN.json
+ *      0x11a02b60  the load of the selected track into P0: input monitoring through the selected track's mixer strip (L1 core)
+ *      0x11a02d3a  the load of the selected track into P1: the selected track's VU peak word (L1 core)
+ *      0x8c0c1bee  the load of the selected track into R1: the "track" field written to user/tapeNN.json
  *
  * B2 clamped tracks 4 and 5 to 3 in all three. Since B3a the two L1 stubs instead redirect tracks 4 and 5 to
  * the module's own strip: stock computes the volume as [0x11b01eb0 + 4k], the pan as [0x11b01eb0 + 4(k + 4)],
@@ -44,8 +45,8 @@
  *    track below 4 goes on through the stub's room and continues in stock, any other track tail-jumps to
  *    the module's extension version in build_b_storage.cpp with the registers and the stack untouched.
  *
- *      tape_io_read   0x8fc200ac  -> its room, then 0x8fc200b4
- *      tape_io_write  0x8fc2021c  -> its room, then 0x8fc20224
+ *      tape_io_read   0x8fc21bac  -> its room, then 0x8fc200b4
+ *      tape_io_write  0x8fc21d1c  -> its room, then 0x8fc20224
  */
 .set SELECTED_TRACK,        0x11905a08
 .set STOCK_MIXER_PARAMS,    0x11b01eb0
@@ -96,7 +97,7 @@ op1f_tape_shift_key_down:
     RTS;
 .size op1f_tape_shift_key_down, .-op1f_tape_shift_key_down
 
-/* TapeController::on_encoder(this, index, delta) 0x8c0c24a4 -> its room, then 0x8c0c24ac. The dispatcher
+/* TapeController::on_encoder(this, index, delta) 0x8c0c2e54 -> its room, then 0x8c0c24ac. The dispatcher
  * (0x8c0b145a) ignores the result; the stub returns 0 when the filter swallowed the event (the clip lift that
  * shift + the blue encoder starts on a stopped tape). */
 .global op1f_tape_encoder
@@ -122,7 +123,7 @@ op1f_tape_encoder:
     RTS;
 .size op1f_tape_encoder, .-op1f_tape_encoder
 
-/* Replaces the load of the word at 0x11905a08 into P0 at 0x11a02b30. P1 and CC are dead there (P1 is loaded by the next instruction).
+/* Replaces the load of the word at 0x11905a08 into P0 at 0x11a02b60. P1 and CC are dead there (P1 is loaded by the next instruction).
  * Tracks 0-3: the track itself. Tracks 4-5 (B3a): the index that makes stock's three loads hit the module's
  * volume, pan and mute gain of that track. 6 and above: 3. */
 .global op1f_monitor_track_p0
@@ -154,7 +155,7 @@ op1f_monitor_track_p0:
     RTS;
 .size op1f_monitor_track_p0, .-op1f_monitor_track_p0
 
-/* Replaces the load of the word at 0x11905a08 into P1 at 0x11a02d0a. P0 and CC are dead there (P0 is loaded by the next instruction).
+/* Replaces the load of the word at 0x11905a08 into P1 at 0x11a02d3a. P0 and CC are dead there (P0 is loaded by the next instruction).
  * Tracks 4-5 (B3a): the index that makes stock's `W[0x11905a34 + 2k]` the module's VU word of that track. */
 .global op1f_meter_track_p1
 .type op1f_meter_track_p1, STT_FUNC
@@ -185,7 +186,7 @@ op1f_meter_track_p1:
     RTS;
 .size op1f_meter_track_p1, .-op1f_meter_track_p1
 
-/* Replaces the load of the selected track into R1 at 0x8c0c123e, right before the call that sets a number in a json object.
+/* Replaces the load of the selected track into R1 at 0x8c0c1bee, right before the call that sets a number in a json object.
  * P1 and R2 are dead there. A track index above 3 is written as 3 so a tape file never tells stock firmware to
  * record on a track it does not have. */
 .global op1f_saved_track_r1
@@ -199,7 +200,7 @@ op1f_saved_track_r1:
     RTS;
 .size op1f_saved_track_r1, .-op1f_saved_track_r1
 
-/* Replaces the entry of tape_io_read 0x8fc200ac. Neither stock function reads P2 or CC before setting them. */
+/* Replaces the entry of tape_io_read 0x8fc21bac. Neither stock function reads P2 or CC before setting them. */
 .global op1f_tape_io_read
 .type op1f_tape_io_read, STT_FUNC
 op1f_tape_io_read:
@@ -214,7 +215,7 @@ op1f_tape_io_read:
     JUMP (P2);
 .size op1f_tape_io_read, .-op1f_tape_io_read
 
-/* Replaces the entry of tape_io_write 0x8fc2021c. */
+/* Replaces the entry of tape_io_write 0x8fc21d1c. */
 .global op1f_tape_io_write
 .type op1f_tape_io_write, STT_FUNC
 op1f_tape_io_write:
@@ -231,15 +232,15 @@ op1f_tape_io_write:
 
 /* 4. The clip-edge crossfades. At record stop (and after a drop) stock blends the audio outside a clip's
  *    edges into the clip through tape_c's crossfade writer 0x8f01dec4(track, from, to, padding, direction) or,
- *    when the outside padding is missing, fades the edge in place (0x8f01dce0 / 0x8f01ddf0). B2b let the two
+ *    when the outside padding is missing, fades the edge in place (0x8f01f7d0 / 0x8f01f8e0). B2b let the two
  *    helpers that do this return 0 for tracks 4-5 (their callers ignore the result). Since B3b the writer's
  *    tape I/O and the two fade writers serve six tracks (build_b_xfade.s/.cpp), so tracks 0-5 continue in
  *    stock; only a track of 6 or more still returned 0. Build F image F3 raises
  *    the bound to 8: F2 left it at 6, so the record stops and drops on tracks 7-8 got no clip-edge crossfade
  *    (the F2 log counted eight edge fades, all on 5 and 6). Since packs L3 the way into stock is the stub's room.
  *
- *      0x8f00928c (clip start edge)  -> its room, then 0x8f009294
- *      0x8f009344 (clip stop edge)   -> its room, then 0x8f00934c
+ *      0x8f00a4cc (clip start edge)  -> its room, then 0x8f009294
+ *      0x8f00a584 (clip stop edge)   -> its room, then 0x8f00934c
  */
 .global op1f_xfade_start_edge
 .type op1f_xfade_start_edge, STT_FUNC

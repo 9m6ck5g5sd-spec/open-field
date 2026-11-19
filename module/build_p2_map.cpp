@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Pictures step P2: the geometry of a stretch of a picture moved or scaled, as text (OS 1.7.0+0;
 // analysis/picture_maker_study.md, section 9). `kit`'s picture maker calls this for an `m` instruction: the stretch
 // of the unit's own stock picture goes through here into the picture that is made, with every coordinate mapped:

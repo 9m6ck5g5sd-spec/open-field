@@ -1,22 +1,23 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build D, step D1: lift-all and drop-all over six tracks (OS 1.7.0+0; read in analysis/build_b_design.md,
 // section 16).
 //
 // What stock does (audio_clipboard.cpp / tape_c.cpp in record 307): shift + lift with the byte 0x11905a4d set
 // runs the TapeController's lift-all 0x8c0c1c98, a loop over tracks 0-3 that puts every track with a clip at
 // the cursor (0x8d4ed7b4) into a vector and posts command 4 with it, the cursor and the end 0x8f01ebc4()
-// through 0x8f00aea8 (no per-track check there). The tape thread's handler 0x8f009fec: take_snapshot_ex(0, -1);
-// per track the split 0x8f009f70 at the start and at the end, the clip after the start (0x8d4ed438) and its
-// 28-byte record copied by 0x8d4ecebe into the clipboard state's slot of that track (state + 0x30 + 28 x track:
-// four slots, a fifth would overwrite the length and the content type); the lift region 0x8fc7ee9c(-1, start,
+// through 0x8f00aea8 (no per-track check there). The tape thread's handler 0x8f00b24c: take_snapshot_ex(0, -1);
+// per track the split 0x8f00b1d0 at the start and at the end, the clip after the start (0x8d4edfa0) and its
+// 28-byte record copied by 0x8d4eda26 into the clipboard state's slot of that track (state + 0x30 + 28 x track:
+// four slots, a fifth would overwrite the length and the content type); the lift region 0x8fc809fc(-1, start,
 // end, 1); the four effective volumes (volume x mute gain, Q31) into state + 0x10 and the pans into + 0x20; the
-// vector assigned into the state (0x8f008774), the content type 1, the length, the patch string cleared
-// (0x8c052714); per track the lift worker 0x8f0093ec(track, start, end), whose helper 0x8f01ef00 is hooked
-// since B3c; then 0x8fc7ee6c() and the clipboard JSON 0x8f008c54(). The drop key with a multi-track clipboard
-// posts command 1 (0x8f00b068) with the state's vector and the position; the handler 0x8f009a20 bounds the
+// vector assigned into the state (0x8f0099a4), the content type 1, the length, the patch string cleared
+// (0x8c052744); per track the lift worker 0x8f00a62c(track, start, end), whose helper 0x8f0209f0 is hooked
+// since B3c; then 0x8fc809cc() and the clipboard JSON 0x8f009e94(). The drop key with a multi-track clipboard
+// posts command 1 (0x8f00b068) with the state's vector and the position; the handler 0x8f00ac78 bounds the
 // position and the end (a level-3 line and return), asserts the content type, takes a snapshot of the chunks
-// the drop will touch, runs the drop worker 0x8f009630(record of the track, track, track, pos, end, 0) per
-// track (the drop copy 0x8f01f548 inside is hooked since B3c), clears the region and, with the tape stopped
-// ([0x11905a04] == 0), moves the position to the end (0x8f01e4a4).
+// the drop will touch, runs the drop worker 0x8f00a870(record of the track, track, track, pos, end, 0) per
+// track (the drop copy 0x8f021038 inside is hooked since B3c), clears the region and, with the tape stopped
+// ([0x11905a04] == 0), moves the position to the end (0x8f01ff94).
 //
 // This unit (profile group "build-d"; the trampolines in build_d_clip.s):
 //   * The loop bound of 0x8c0c1c98 becomes 6 (op1f_lift_all_bound), so a clip at the cursor on track 5 or 6
@@ -48,23 +49,23 @@ typedef void (*LiftWorkerFn)(u32 track, i32 start, i32 end);
 typedef void (*DropWorkerFn)(const void* record, u32 source, u32 destination, i32 position, i32 end, i32 mix);
 typedef void (*SetPositionFn)(i32 position);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_SPLIT ((SplitFn)0x8f009f70u)
-#define STOCK_CLIP_AT ((ClipAtFn)0x8d4ed438u)
-#define STOCK_CLIPS ((ClipsFn)0x8d4ecddcu)
-#define STOCK_CLIP_RECORD ((ClipRecordFn)0x8d4ecebeu)
-#define STOCK_LIFT_REGION ((LiftRegionFn)0x8fc7ee9cu)
-#define STOCK_CLEAR_REGION ((VoidFn)0x8fc7ee6cu)
-#define STOCK_WRITE_CLIPBOARD_JSON ((VoidFn)0x8f008c54u)
-#define STOCK_VECTOR_ASSIGN ((VectorAssignFn)0x8f008774u)
-#define STOCK_STRING_CLEAR ((StringClearFn)0x8c052714u)
-#define STOCK_LIFT_WORKER ((LiftWorkerFn)0x8f0093ecu)
-#define STOCK_DROP_WORKER ((DropWorkerFn)0x8f009630u)
-#define STOCK_SET_POSITION ((SetPositionFn)0x8f01e4a4u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_SPLIT ((SplitFn)0x8f00b1d0u)
+#define STOCK_CLIP_AT ((ClipAtFn)0x8d4edfa0u)
+#define STOCK_CLIPS ((ClipsFn)0x8d4ed944u)
+#define STOCK_CLIP_RECORD ((ClipRecordFn)0x8d4eda26u)
+#define STOCK_LIFT_REGION ((LiftRegionFn)0x8fc809fcu)
+#define STOCK_CLEAR_REGION ((VoidFn)0x8fc809ccu)
+#define STOCK_WRITE_CLIPBOARD_JSON ((VoidFn)0x8f009e94u)
+#define STOCK_VECTOR_ASSIGN ((VectorAssignFn)0x8f0099a4u)
+#define STOCK_STRING_CLEAR ((StringClearFn)0x8c052744u)
+#define STOCK_LIFT_WORKER ((LiftWorkerFn)0x8f00a62cu)
+#define STOCK_DROP_WORKER ((DropWorkerFn)0x8f00a870u)
+#define STOCK_SET_POSITION ((SetPositionFn)0x8f01ff94u)
 #define STOCK_VOLUMES ((const volatile i32*)0x11b01eb0u)   // tracks 0-3: volumes, pans at +4 words, mute gains at +8 words
 #define TRANSPORT_MODE (*(volatile i32*)0x11905a04u)        // 0: stopped
 
-#define STATE ((u8*)0x84bdd4b8u)                              // the clipboard state (audio_clipboard.cpp)
+#define STATE ((u8*)0x84bdd944u)                              // the clipboard state (audio_clipboard.cpp)
 #define STATE_VOLUMES ((volatile i32*)(STATE + 0x10))
 #define STATE_PANS ((volatile i32*)(STATE + 0x20))
 #define STATE_RECORDS (STATE + 0x30)                          // four 28-byte clip records, one per stock track
@@ -112,7 +113,7 @@ static void* record_of(u32 track) {
     return track < STOCK_TRACKS ? (void*)(STATE_RECORDS + track * RECORD_BYTES) : (void*)op1f_ext_clip_records[track - STOCK_TRACKS];
 }
 
-// Stock 0x8f009fec(command) for a vector that holds a track of 4 or more, reached through op1f_lift_all. The
+// Stock 0x8f00b24c(command) for a vector that holds a track of 4 or more, reached through op1f_lift_all. The
 // command: the vector's begin at +8 and end at +0xc, the start at +0x14, the end at +0x18.
 extern "C" void op1f_lift_all_ext(const i32* command) asm("op1f_lift_all_ext");
 extern "C" void op1f_lift_all_ext(const i32* command) {
@@ -160,7 +161,7 @@ extern "C" void op1f_lift_all_ext(const i32* command) {
     say(3, 3, "lift all", start, stop, count);
 }
 
-// Stock 0x8f009a20(command) for a vector that holds a track of 4 or more, reached through op1f_drop_all. The
+// Stock 0x8f00ac78(command) for a vector that holds a track of 4 or more, reached through op1f_drop_all. The
 // command: the vector's begin at +8 and end at +0xc, the position at +0x14; the length is the state's.
 extern "C" void op1f_drop_all_ext(const i32* command) asm("op1f_drop_all_ext");
 extern "C" void op1f_drop_all_ext(const i32* command) {

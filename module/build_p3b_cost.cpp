@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Pictures step P3b, the kit: what a frame costs (analysis/picture_maker_study.md, section 13).
 //
 // Why. On 2026-11-15 the UFOs' page drew 29 frames a second where it had drawn 58 the day before, and nothing on
@@ -8,9 +9,9 @@
 // The display thread's frame loop, as far as this unit stands in it (0x8c0b110c to 0x8c0b118e). The loop waits
 // until the display has taken the frame before. Then, for each frame, it
 //
-//   0x8c0b113c  calls 0x8fca4b20, the firmware's own work of a frame before the draw              <- op1f_cost_tick
-//   0x8c0b114c  calls 0x8fc25b88 with the frame buffer, the draw of the screens                    <- op1f_cost_draw
-//   0x8c0b116e  calls 0x11a09d18, which writes the frame buffer out of the cache: the kit's frame hook
+//   0x8c0b1904  calls 0x8fca6940, the firmware's own work of a frame before the draw              <- op1f_cost_tick
+//   0x8c0b1914  calls 0x8fc27678 with the frame buffer, the draw of the screens                    <- op1f_cost_draw
+//   0x8c0b1936  calls 0x11a09d48, which writes the frame buffer out of the cache: the kit's frame hook
 //               (module/m2_measure.s), which runs our own frame work first (op1f_on_frame: every unit's frame
 //               function, the dressing of our pages among them) and then the firmware's function
 //
@@ -22,7 +23,7 @@
 // op1f_cost_frame_in as its first statement and op1f_cost_frame_out as its last (module/m2_measure.cpp, through weak
 // references, so that a kit without this unit links as before).
 //
-// What is kept, for the screen that is shown ([0x848d2138], the GUI's current screen id), over a period of 128
+// What is kept, for the screen that is shown ([0x848d2540], the GUI's current screen id), over a period of 128
 // frames, each as the least, the mean and the most of the period, in microseconds:
 //
 //   work    from the loop's wake (the tick's start) to the end of our own frame work: everything a frame costs but
@@ -67,9 +68,9 @@ static const char LOG_FILE[] = "../src/main/op1f_cost.cpp";
 #ifdef OP1F_HOST
 #include "mock_cost.h"                                 // the PC's stand-ins: a clock, the two stock calls, the screen id, the popup's byte, the logger
 #else
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_TICK ((Call3)0x8fca4b20u)                // (the object 0x84d20f64): the frame loop's call at 0x8c0b113c
-#define STOCK_DRAW ((Call3)0x8fc25b88u)                // (the frame buffer): the frame loop's call at 0x8c0b114c
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_TICK ((Call3)0x8fca6940u)                // (the object 0x84d20f64): the frame loop's call at 0x8c0b1904
+#define STOCK_DRAW ((Call3)0x8fc27678u)                // (the frame buffer): the frame loop's call at 0x8c0b1914
 #define RD32(a) (*(volatile u32*)(a))
 #define RD8(a) (*(volatile u8*)(a))
 extern "C" int __attribute__((weak)) op1f_lfotrain_open() asm("op1f_lfotrain_open");   // module/build_i_lfo4.cpp: the UFOs' page is the open one
@@ -81,8 +82,8 @@ static inline u32 stamp() {
 }
 #endif
 
-static const u32 CURRENT_SCREEN = 0x848d2138u;         // the id of the screen the GUI shows (0x8fc23a1c sets it)
-static const u32 POWER_POPUP_SHOWN = 0x84c9af40u;      // the power popup's byte, 1 while the countdown popup is on the screen
+static const u32 CURRENT_SCREEN = 0x848d2540u;         // the id of the screen the GUI shows (0x8fc23a1c sets it)
+static const u32 POWER_POPUP_SHOWN = 0x84c9b3e4u;      // the power popup's byte, 1 while the countdown popup is on the screen
 enum { PERIOD_FRAMES = 128, PERIOD_SHIFT = 7 };
 enum { ONE_AND_A_HALF = 10273972, TWO_AND_A_HALF = 17123287 };   // of the display's interval, 400,000,000 / 58.4 = 6,849,315 cycles
 enum { HAVE_TICK = 1, HAVE_DRAW = 2, HAVE_IN = 4, HAVE_ALL = 7 };

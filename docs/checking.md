@@ -5,7 +5,7 @@ Nothing of the device's firmware may go into this repository: no byte of its cod
 ## What the tool does
 
 ```bash
-python -I tools/publish_check.py --strict --stock <records of os.ldr> --stock <records of bootloader.ldr> --display <stock pictures> --profile profiles/op1f-1.7.0.json <files or folders>
+python -I tools/publish_check.py --strict --stock <records of your own OS 1.7.3 os.ldr> --stock <records of bootloader.ldr> --display <stock pictures> --profile profiles/op1f-1.7.3.json <files or folders>
 ```
 
 It answers **0** when it found nothing of the firmware in the files, **1** when it found something, **2** when it could not make the check. Each finding names its rule, the file, the line or the byte, and where the same bytes stand in the firmware.
@@ -42,7 +42,7 @@ git config core.hooksPath hooks
 ```
 
 ```bash
-git config --add openfield.stock <the folder of records of os.ldr>
+git config --add openfield.stock <the folder of records of your own OS 1.7.3 os.ldr>
 ```
 
 ```bash
@@ -55,7 +55,7 @@ git config openfield.display <a copy of your unit's content/display folder>
 
 ## The hook
 
-`hooks/pre-commit` runs `tools/commit_check.py`. It takes the tree as it would be committed, runs the tool with `--strict` on every file of it, and lets the commit through only on a 0. It hands the tool the list of places in `profiles/op1f-1.7.0.json` and the list of every example pack that changes places of the firmware (`examples/<name>/profile.json`), so the firmware's bytes of an example's places are searched for too. Without the settings above it refuses every commit: a commit never goes through unchecked. Each run leaves a line in `.git/open-field-check.log`.
+`hooks/pre-commit` runs `tools/commit_check.py`. It takes the tree as it would be committed, runs the tool with `--strict` on every file of it, and lets the commit through only on a 0. It hands the tool the list of places in the profile `build.json` names, `profiles/op1f-1.7.3.json`, and the list of every example pack that changes places of the firmware (`examples/<name>/profile.json`), so the firmware's bytes of an example's places are searched for too. Without the settings above it refuses every commit: a commit never goes through unchecked. Each run leaves a line in `.git/open-field-check.log`.
 
 A change to the check itself is checked by the changed check. Read such a change with care.
 

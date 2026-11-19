@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build G: the duck, a tape-level sidechain (analysis/sidechain_study.md; analysis/build_b_design.md sections 29 to
 // 31). Each track may name the track that ducks it: a hit on the source dips the target's gain by the amount, holds
 // it, and lets it back over the release. The page lives under shift + mixer as a second face of the signal-flow
@@ -17,31 +18,31 @@
 // hits above it, and the divisions in order (1/2, 1/4, 1/8, 1/16).
 //
 // What stock does, as read (sections 29.1, 30.1 and 31.1):
-//   * The key dispatchers call the current controller's vtable: key-down 0x8c0b1320 -> [vtable + 0xc](this, event*)
-//     (event[0] = the key; the knob presses are the keys 54-57, blue to orange), shifted key-down 0x8c0b1390 ->
-//     [+0x10](this, event*), key-up 0x8c0b13c4 -> [+0x14](this, key), the encoders 0x8c0b13f8 -> [+0x18](this,
-//     index + 4 while shift is held (0x8fc231b4), delta); a non-zero return consumes the key, zero sends it to the
+//   * The key dispatchers call the current controller's vtable: key-down 0x8c0b1ae8 -> [vtable + 0xc](this, event*)
+//     (event[0] = the key; the knob presses are the keys 54-57, blue to orange), shifted key-down 0x8c0b1b58 ->
+//     [+0x10](this, event*), key-up 0x8c0b1b8c -> [+0x14](this, key), the encoders 0x8c0b13f8 -> [+0x18](this,
+//     index + 4 while shift is held (0x8fc24ca4), delta); a non-zero return consumes the key, zero sends it to the
 //     fallback. The signal-flow controller's vtable at 0x8401004c holds the base class's return-0 stubs and an empty
 //     encoder handler (0x8c0c1018); the profile's four "word" edits (group build-g1) point those slots at the
-//     handlers below. The fallback's mixer key switches with 0x8c0bc4e8(3) and writes 3 to the main-mode word
-//     0x840122b4; its track keys switch back to the main mode and re-send the key there.
+//     handlers below. The fallback's mixer key switches with 0x8c0bce20(3) and writes 3 to the main-mode word
+//     0x84012458; its track keys switch back to the main mode and re-send the key there.
 //   * The tape block driver writes 0x7fffffff into the four hold-to-solo words at 0x11905aa8 every block (0 for the
 //     tracks a held track key solos out) and read_block's gain section multiplies them into tracks 1-4's ramped gains;
 //     the module's read_block wrapper (build_b_play.cpp) calls op1f_duck_block_gains() before stock's read_block and
 //     op1f_duck_detect() after it, and ext_gain_targets multiplies op1f_duck_gain[] into tracks 5-8.
 //   * The tape's samples are 32-bit fixed point, 1.31 (the gains multiply them as Q31 fractions): 0 dB is 0x7fffffff.
-//   * The tape's tempo is the float at 0x8490c4c0 (the getter 0x8fc9ca18 the JSON writer uses for
+//   * The tape's tempo is the float at 0x8490c8fc (the getter 0x8fc9ca18 the JSON writer uses for
 //     "tempobpmdecimal", bpm x 10 rounded; the loader's default 1200); the tape position in 1/64 frames at
 //     0x11905a18. A track change goes through the selected-track word 0x11905a08 and a tape-model notify
-//     0x8fca00e2(0x8c0c1420()), as build_b_record.cpp does for tracks 5-8, with stock's two conditions (the
-//     transport mode at 0x11905a04 not 1, the clips idle 0x8d4ecb7c()).
+//     0x8fca1ed2(0x8c0c1dd0()), as build_b_record.cpp does for tracks 5-8, with stock's two conditions (the
+//     transport mode at 0x11905a04 not 1, the clips idle 0x8d4ed6e4()).
 //   * An svg node's matrix is nine 22.10 words at node + 4 (x' = m0 x + m3 y + m6, y' = m1 x + m4 y + m7, the third
-//     column 0, 0, 1024; confirmed on the device by G1b's diagnostic lines); 0x8c03db96(node, matrix) stores them;
-//     a node's display byte is at +0x5c; the needle transform comes from 0x8fc2df4c(anchor x, anchor y - 1024, value).
+//     column 0, 0, 1024; confirmed on the device by G1b's diagnostic lines); 0x8c03dbbe(node, matrix) stores them;
+//     a node's display byte is at +0x5c; the needle transform comes from 0x8fc2facc(anchor x, anchor y - 1024, value).
 //   * The tape JSON: the writer's retarget op1f_tape_json_set_mixer (build_b_mixer.cpp) and the loader's continuation
 //     op1f_tape_json_loaded call op1f_duck_json_write / op1f_duck_json_read through weak references; the json API
-//     (12-byte values; from-int 0x8c083aec, a null 0x8c085b78(&v, 0), an array after the first push, push 0x8c085d24, destroy 0x8c0844b0,
-//     the db set 0x8d4f13bc(2, key, &v); has 0x8c085038, get 0x8c084f44, at 0x8c084eb0, int 0x8c084810) as B3d uses it.
+//     (12-byte values; from-int 0x8c083b1c, a null 0x8c085ba8(&v, 0), an array after the first push, push 0x8c085d54, destroy 0x8c0844e0,
+//     the db set 0x8d4f24dc(2, key, &v); has 0x8c085068, get 0x8c084f74, at 0x8c084ee0, int 0x8c084840) as B3d uses it.
 //
 // The artwork (tools/duck_svg.py): the served signalflow.svg carries the stock drawing in the group `flow` and the
 // page in `duck`; the module shows one and hides the other. The page's nodes carry ids with the prefix dk (listed in
@@ -65,29 +66,29 @@ typedef int i32;
 typedef short i16;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc241d0: 0 when optional and missing
-typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);               // 0x8c03db96
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc25cc0: 0 when optional and missing
+typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);               // 0x8c03dbbe
 typedef void (*BoundsFn)(void* node, i32* box);                             // a node's vtable slot 3: min x, max x, min y, max y (22.10)
-typedef int (*ShiftHeldFn)();                                               // 0x8fc231b4: non-zero while shift is held
+typedef int (*ShiftHeldFn)();                                               // 0x8fc24ca4: non-zero while shift is held
 typedef u32 (*FloatAddFn)(u32 a, u32 b);                                    // ROM 0x040218e2
 typedef u32 (*FloatMulFn)(u32 a, u32 b);                                    // ROM 0x04021ac0
 typedef i32 (*FloatToIntFn)(u32 a);                                         // ROM 0x04020fd8
-typedef u32 (*DbToAmpFn)(u32 db);                                           // 0x8f004fe8: 10 ^ (db / 20)
-typedef i32 (*ToFixedFn)(u32 amp);                                          // 0x8fc33b20: ((amp x 1.4) - 1) x 1024
-typedef void (*ModeSwitchFn)(int mode);                                     // 0x8c0bc4e8
+typedef u32 (*DbToAmpFn)(u32 db);                                           // 0x8f0061a8: 10 ^ (db / 20)
+typedef i32 (*ToFixedFn)(u32 amp);                                          // 0x8fc356a0: ((amp x 1.4) - 1) x 1024
+typedef void (*ModeSwitchFn)(int mode);                                     // 0x8c0bce20
 typedef int (*IntFn)();
 typedef void* (*ObjectFn)();
 typedef void (*NotifyFn)(void* object);
-typedef void* (*JsonRootFn)();                                              // 0x8d4f1a60: the tape db's root object
-typedef int (*JsonHasFn)(void* json, const char* key);                      // 0x8c085038
-typedef void* (*JsonGetFn)(void* json, const char* key);                    // 0x8c084f44: the member (a reference)
-typedef void* (*JsonAtFn)(void* json, int index);                           // 0x8c084eb0: the array element (a reference)
-typedef int (*JsonIntFn)(void* json);                                       // 0x8c084810
-typedef void (*JsonCtorFn)(void* json, int kind);                           // 0x8c085b78(json, kind): 0 a null, an array after the first push (kind 6 is an array; H1g)
-typedef void (*JsonFromIntFn)(void* json, int value);                       // 0x8c083aec
-typedef void (*JsonPushFn)(void* array, void* value);                       // 0x8c085d24
-typedef void (*JsonDtorFn)(void* json);                                     // 0x8c0844b0
-typedef void (*DbSetFn)(int db, const char* key, void* value);              // 0x8d4f13bc
+typedef void* (*JsonRootFn)();                                              // 0x8d4f2b80: the tape db's root object
+typedef int (*JsonHasFn)(void* json, const char* key);                      // 0x8c085068
+typedef void* (*JsonGetFn)(void* json, const char* key);                    // 0x8c084f74: the member (a reference)
+typedef void* (*JsonAtFn)(void* json, int index);                           // 0x8c084ee0: the array element (a reference)
+typedef int (*JsonIntFn)(void* json);                                       // 0x8c084840
+typedef void (*JsonCtorFn)(void* json, int kind);                           // 0x8c085ba8(json, kind): 0 a null, an array after the first push (kind 6 is an array; H1g)
+typedef void (*JsonFromIntFn)(void* json, int value);                       // 0x8c083b1c
+typedef void (*JsonPushFn)(void* array, void* value);                       // 0x8c085d54
+typedef void (*JsonDtorFn)(void* json);                                     // 0x8c0844e0
+typedef void (*DbSetFn)(int db, const char* key, void* value);              // 0x8d4f24dc
 
 struct Slot {                 // tape_chunks.cpp slot descriptor (build_b_play.cpp)
     u8 valid;
@@ -101,40 +102,40 @@ struct Slot {                 // tape_chunks.cpp slot descriptor (build_b_play.c
     i32 frame_pos;
     u8* data;
 };
-typedef Slot* (*SlotForLogicalFn)(int logical);                             // 0x8fc1f780
+typedef Slot* (*SlotForLogicalFn)(int logical);                             // 0x8fc21280
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03db96u)
-#define STOCK_SHIFT_HELD ((ShiftHeldFn)0x8fc231b4u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03dbbeu)
+#define STOCK_SHIFT_HELD ((ShiftHeldFn)0x8fc24ca4u)
 #define STOCK_FLOAT_ADD ((FloatAddFn)0x040218e2u)
 #define STOCK_FLOAT_MUL ((FloatMulFn)0x04021ac0u)
 #define STOCK_FLOAT_TO_INT ((FloatToIntFn)0x04020fd8u)
-#define STOCK_DB_TO_AMP ((DbToAmpFn)0x8f004fe8u)
-#define STOCK_METER_FIXED ((ToFixedFn)0x8fc33b20u)
-#define STOCK_SLOT_FOR_LOGICAL ((SlotForLogicalFn)0x8fc1f780u)
-#define STOCK_MODE_SWITCH ((ModeSwitchFn)0x8c0bc4e8u)
-#define STOCK_CLIPS_IDLE ((IntFn)0x8d4ecb7cu)
-#define STOCK_TAPE_MODEL ((ObjectFn)0x8c0c1420u)
-#define STOCK_NOTIFY ((NotifyFn)0x8fca00e2u)
-#define STOCK_JSON_ROOT ((JsonRootFn)0x8d4f1a60u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_DB_SET ((DbSetFn)0x8d4f13bcu)
-#define METER_SMOOTH_GAIN (*(volatile i32*)0x84c9708cu)
-#define MODE_WORD (*(volatile i32*)0x8400f7d4u)
-#define MAIN_MODE_WORD (*(volatile i32*)0x840122b4u)
+#define STOCK_DB_TO_AMP ((DbToAmpFn)0x8f0061a8u)
+#define STOCK_METER_FIXED ((ToFixedFn)0x8fc356a0u)
+#define STOCK_SLOT_FOR_LOGICAL ((SlotForLogicalFn)0x8fc21280u)
+#define STOCK_MODE_SWITCH ((ModeSwitchFn)0x8c0bce20u)
+#define STOCK_CLIPS_IDLE ((IntFn)0x8d4ed6e4u)
+#define STOCK_TAPE_MODEL ((ObjectFn)0x8c0c1dd0u)
+#define STOCK_NOTIFY ((NotifyFn)0x8fca1ed2u)
+#define STOCK_JSON_ROOT ((JsonRootFn)0x8d4f2b80u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_DB_SET ((DbSetFn)0x8d4f24dcu)
+#define METER_SMOOTH_GAIN (*(volatile i32*)0x84c9752cu)
+#define MODE_WORD (*(volatile i32*)0x8400f978u)
+#define MAIN_MODE_WORD (*(volatile i32*)0x84012458u)
 #define SOLO_WORDS ((volatile i32*)0x11905aa8u)
 #define POSITION64 (*(volatile i32*)0x11905a18u)
 #define SELECTED_TRACK (*(volatile i32*)0x11905a08u)
 #define TRANSPORT_MODE (*(volatile i32*)0x11905a04u)
-#define TEMPO_FLOAT (*(volatile u32*)0x8490c4c0u)
+#define TEMPO_FLOAT (*(volatile u32*)0x8490c8fcu)
 
 // The three names the duck takes from the tape's units. Since J5g (analysis/pack_loader_study.md section 22) each is
 // optional: where the units that add tracks 5 to 8 are away (the pack `sidechain` without the pack `8 tracks`), the
@@ -709,7 +710,7 @@ extern "C" int op1f_duck_encoder(void*, int index, int delta) {
 
 // Every frame (from m2_measure.cpp's frame hook): away from the signal-flow screen the next entry lands on the
 // duck face and the mixer key's hold is forgotten; the card's timer runs here; the beat periods come from the
-// tape's tempo (the float at 0x8490c4c0, as the JSON writer rounds it to tenths); a change reaches the tape's JSON
+// tape's tempo (the float at 0x8490c8fc, as the JSON writer rounds it to tenths); a change reaches the tape's JSON
 // through the tape model's notify, at most twice a second.
 extern "C" void op1f_duck_frame() asm("op1f_duck_frame");
 extern "C" void op1f_duck_frame() {

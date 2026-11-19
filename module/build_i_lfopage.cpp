@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build I images I2 to I4: the stock LFO pages whose destination box can stand on an effect wagon
 // (analysis/lfo_train_study.md sections 11 to 13).
 //
@@ -14,11 +15,11 @@
 //     while the page is up, the slot's LFO is the page's type and its destination is the effect. The midi page has
 //     four destination boxes, the continuous controllers 1 to 4, each with four markers and a wagon of its own.
 //
-//   * The parameter's name over the knob picture. Each page's render asks 0x8d51634c(kind, index) for it (the
-//     value page at 0x8fc5a076, the element page at 0x8fc578e8, the random page at 0x8fc58b68, the velocity page
-//     at 0x8fc5b1ec; the kind is the destination's class, 2 the effect, as each page works it out from the
+//   * The parameter's name over the knob picture. Each page's render asks 0x8d51750c(kind, index) for it (the
+//     value page at 0x8fc5bbf6, the element page at 0x8fc59468, the random page at 0x8fc5a6e8, the velocity page
+//     at 0x8fc5cd6c; the kind is the destination's class, 2 the effect, as each page works it out from the
 //     destination's value); for the effect that function reads the slot's effect type (0x11904794 / 0x119047b4 +
-//     4 x slot) and returns the word at 0x840af5dc + 16 x type + 4 x index. The four CALL.a are retargeted to
+//     4 x slot) and returns the word at 0x840af848 + 16 x type + 4 x index. The four CALL.a are retargeted to
 //     op1f_lfo_param_name, which answers the same word for the effect type of the wagon the LFO turns when that is
 //     not the wagon under the lamp, a dash when that wagon is empty, and stock's function for everything else.
 //     The midi page asks for no name: it shows the parameter as a knob picture alone.
@@ -33,10 +34,10 @@ typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);
 typedef u32* (*ScreensFn)();
 typedef const char* (*ParamNameFn)(int kind, int index);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define STOCK_SCREENS ((ScreensFn)0x8fc2470cu)                 // the registry: 86 screen pointers by id (0x84c960f4)
-#define STOCK_PARAM_NAME ((ParamNameFn)0x8d51634cu)            // (kind, index): R0 the kind, R1 the index (the pages' calls; the prologue R7 = R0, R6 = R1)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define STOCK_SCREENS ((ScreensFn)0x8fc261fcu)                 // the registry: 86 screen pointers by id (0x84c960f4)
+#define STOCK_PARAM_NAME ((ParamNameFn)0x8d51750cu)            // (kind, index): R0 the kind, R1 the index (the pages' calls; the prologue R7 = R0, R6 = R1)
 #define RD32(a) (*(volatile u32*)(a))
 
 enum { PAGES = 4, NODE_DISPLAY = 0x5c, WAGONS = 4, FX_TYPES = 11, NAME_KIND_FX = 2, PRINT_FRAMES = 232, PRINT_LINES = 24 };
@@ -44,14 +45,14 @@ enum { MIDI_SCREEN = 35, MIDI_DESTS = 4, MIDI_PRINT_LINES = 8 };   // I4: the mi
 static const int PAGE_SCREEN[PAGES] = { 32, 33, 34, 36 };      // the value, random, element and velocity LFOs' screens
 static const int PAGE_LFO_TYPE[PAGES] = { 1, 2, 3, 5 };        // the LFO type each shows: the screen 31 + type
 // A page's LFO kind by stock's own name, read where stock keeps the six (packs L3; until then this unit carried the
-// four it needs): entries of eight bytes at 0x84d251fc, the name's address and the kind, filled by one of the
+// four it needs): entries of eight bytes at 0x84d256c4, the name's address and the kind, filled by one of the
 // constructors the start code runs before main (0x8fca6224). This table says where each page's name's address stands.
-#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d251fcu + 8u * (kind)))
+#define LFO_NAME_ENTRY(kind) ((const char* const*)(0x84d256c4u + 8u * (kind)))
 static const char* const* const PAGE_NAME[PAGES] = { LFO_NAME_ENTRY(1), LFO_NAME_ENTRY(2), LFO_NAME_ENTRY(3), LFO_NAME_ENTRY(5) };   // PAGE_LFO_TYPE's kinds
-static const u32 CURRENT_SCREEN = 0x848d2138u;                 // the id of the screen the GUI shows (0x8fc23a1c sets it)
-static const u32 GUI_HOST = 0x0802fe98u;                       // 0 the synth, else the drum: what 0x8fc239f4() returns and the name function chooses its arrays by
-static const u32 FX_PARAM_NAMES = 0x840af5dcu;                 // four name pointers per effect type
-static const u32 NAME_DASH = 0x840b0600u;                      // stock's "-"
+static const u32 CURRENT_SCREEN = 0x848d2540u;                 // the id of the screen the GUI shows (0x8fc23a1c sets it)
+static const u32 GUI_HOST = 0x0802fea8u;                       // 0 the synth, else the drum: what 0x8fc239f4() returns and the name function chooses its arrays by
+static const u32 FX_PARAM_NAMES = 0x840af848u;                 // four name pointers per effect type
+static const u32 NAME_DASH = 0x840b086cu;                      // stock's "-"
 static const char LOG_FILE[] = "op1f_lfopage";
 static const char* const MARKER_ID[WAGONS] = { "lfw0", "lfw1", "lfw2", "lfw3" };
 static const char* const MIDI_MARKER_ID[MIDI_DESTS][WAGONS] = {    // by destination box, then by the wagon's knob

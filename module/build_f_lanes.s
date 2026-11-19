@@ -1,8 +1,9 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build F images F4 to F6: the tape screen's clip bars lower (OS 1.7.0+0; analysis/build_b_design.md, sections 23
  * to 25). Three 8-byte CALL.a retargets in record 309, inside TapeScreen.
  *
  * The bar itself (F6). TapeScreen's per-clip draw 0x8fc81e7c, run from the update's loop 0x8fc81c12 for every clip of
- * the window on every track, ends in one call of the rectangle fill 0x11a0a650 at 0x8fc821a0, whichever colour path
+ * the window on every track, ends in one call of the rectangle fill 0x11a0a680 at 0x8fc83d00, whichever colour path
  * the clip took (an ordinary track, the selected track, the highlighted clip): R0 = the drawing context, R1 = x1 and
  * R2 = x2 in 22.10 fixed point, [SP + 0xc] = the top row, [SP + 0x10] = the bottom row (whole pixels, both inclusive:
  * the fill hands them to the span writer 0x11a0a1dc, which clamps them to 0..223 and writes bottom - top + 1 rows of
@@ -12,18 +13,18 @@
  * pitch (F5 result). The lane y is the template line's y plus 0.5, truncated (the TapeScreen's static initialiser
  * 0x8fc82fac writes 0x200 to 0x84c9fb74), so the templates at 168.1 give the lanes 168, 175, ..., 217.
  *
- *      at 0x8fc821a0 the call of the rectangle fill, for the rows y - 3 .. y + 3 -> a call of op1f_clip_rect: the rows y - 2 .. y + 2
+ *      at 0x8fc83d00 the call of the rectangle fill, for the rows y - 3 .. y + 3 -> a call of op1f_clip_rect: the rows y - 2 .. y + 2
  *
  * Five rows per bar, two black rows between the lanes.
  *
  * The shift-held overlay (F4's two hooks, kept with F4's values). 0x8fc80e50, run per clip from the same loop only
  * while the shift byte 0x11905a4d is set and no clip is selected ([0x848d98e0] = -1), draws two stroked shapes through
- * the line helper 0x11a0a26c (its arguments: point 1 and point 2, each (x, y) in 22.10 on the caller's frame, then the
+ * the line helper 0x11a0a29c (its arguments: point 1 and point 2, each (x, y) in 22.10 on the caller's frame, then the
  * half-width and the colour pointer, both on the stack): 3.0 and 2.0 at the lane y, the edges y - 3.0 .. y + 3.0 and
  * y - 2.0 .. y + 2.0. F5 had hooked these two alone, which is why the bars did not change on the device.
  *
- *      at 0x8fc810f4 the call of the line helper with the half-width 3.0 -> a call of op1f_clip_bar_outer: 2.5, both points down half a pixel
- *      at 0x8fc8111e the call of the line helper with the half-width 2.0 -> a call of op1f_clip_bar_inner: 1.5, the same shift
+ *      at 0x8fc82c54 the call of the line helper with the half-width 3.0 -> a call of op1f_clip_bar_outer: 2.5, both points down half a pixel
+ *      at 0x8fc82c7e the call of the line helper with the half-width 2.0 -> a call of op1f_clip_bar_inner: 1.5, the same shift
  *
  * The overlay's edges become y - 2.0 .. y + 3.0 and y - 1.0 .. y + 2.0: whole edges, the rows y - 2 .. y + 2 and
  * y - 1 .. y + 1, the same five rows as the bar with a row of the outer colour above and below the stripe, as stock's
@@ -37,8 +38,8 @@
  * helpers LINK). R3, P0, P1 and P2 are caller-saved and dead at the three sites; R0, R1 and R2 are the helpers' own
  * arguments and are not touched (the line helper reads the points through R1 and R2; the fill reads x1 and x2).
  */
-.set LINE_HELPER, 0x11a0a26c
-.set RECT_FILL, 0x11a0a650
+.set LINE_HELPER, 0x11a0a29c
+.set RECT_FILL, 0x11a0a680
 
 .section .text
 .align 2

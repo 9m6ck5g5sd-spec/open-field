@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Packs L3: Build K's block map unit (module/build_k_maps.cpp, which is kept) with its log lines in this project's own
 // words. Until L3 its lines for a block map file that cannot be read or written were the lines stock's own loader
 // and saver print in the same cases: six format strings were stock's, whole or in their first words, and a seventh
@@ -50,11 +51,11 @@
 // loses the identity section, which K2 gives it again (a new id) at the tape's next load.
 //
 // K2, whose file it is. An extension file can be left behind in a tape's slot and met by another tape: stock's
-// duplicate of a tape (0x8d4fa7b8) copies the tape's json, its map file and the chunks of tracks 1 to 4 itself and
+// duplicate of a tape (0x8d4fb908) copies the tape's json, its map file and the chunks of tracks 1 to 4 itself and
 // formats nothing; a deleted tape's files stay until the slot is used again; and a tape formatted under stock
 // firmware keeps the old file (under ours a format goes through this unit's save and empties it). The one place
 // in stock's files for a mark that goes with the tape is user/tapeNN.json: stock reads that file whole into a
-// document (0x8d4ef84c), sets its own keys in it one by one (0x8d4f13bc) and writes the document whole
+// document (0x8d4ef84c), sets its own keys in it one by one (0x8d4f24dc) and writes the document whole
 // (0x8d4ef760, about a second after a change), so a key of ours is kept through stock's saves, copied by a
 // duplicate and gone after a format, which writes the file anew from a template. So:
 //
@@ -73,11 +74,11 @@
 // A version-2 map file of the first builds is still read (tracks 5 to 8 from the one file), and op1f_xmap_convert
 // rewrites it as the two files; build_b_storage.cpp calls that for every tape once a start.
 //
-// Stock functions used: disk_io's fopen 0x8fc20690, fread 0x8fc2065c, fwrite 0x8fc205c8, fclose 0x8fc205b4 and
-// rename 0x8fc20804, as build_b_storage.cpp has used them since B0b for the same files; the file size 0x8c051f6c;
+// Stock functions used: disk_io's fopen 0x8fc22180, fread 0x8fc2214c, fwrite 0x8fc220b8, fclose 0x8fc220a0 and
+// rename 0x8fc222f4, as build_b_storage.cpp has used them since B0b for the same files; the file size 0x8c051f9c;
 // the logger; and since K2 the json functions as build_b_mixer.cpp has bound them since B3d (a json file read
-// 0x8c0534a0, has 0x8c085038, get 0x8c084f44, as int 0x8c084810, from int 0x8c083aec, a null value 0x8c085b78,
-// destroy 0x8c0844b0), the tape db's set 0x8d4f13bc(2, key, &value) and the mounted tape's index 0x8fc1fea8.
+// 0x8c0534d0, has 0x8c085068, get 0x8c084f74, as int 0x8c084840, from int 0x8c083b1c, a null value 0x8c085ba8,
+// destroy 0x8c0844e0), the tape db's set 0x8d4f24dc(2, key, &value) and the mounted tape's index 0x8fc219a8.
 //
 // The open's answer is a descriptor, an integer: 0 or more when the file is open, negative when it is not (read in
 // stock for K1b: the wrapper returns what the open underneath returns, and -1 for a mode it does not know). It
@@ -111,25 +112,25 @@ typedef void (*DbSetFn)(int db, const char* key, void* value);   // sets the key
 typedef int (*MountedTapeFn)();                                  // the mounted tape's index, -1 for none
 typedef u32 (*FileMtimeFn)(const char* path);                    // the file's modification time, 0 when it is not there; later is larger
 
-#define STOCK_FOPEN ((FopenFn)0x8fc20690u)
-#define STOCK_FREAD ((FreadFn)0x8fc2065cu)
-#define STOCK_FWRITE ((FwriteFn)0x8fc205c8u)
-#define STOCK_FCLOSE ((FcloseFn)0x8fc205b4u)
-#define STOCK_RENAME ((RenameFn)0x8fc20804u)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_DB_SET ((DbSetFn)0x8d4f13bcu)
-#define STOCK_MOUNTED_TAPE ((MountedTapeFn)0x8fc1fea8u)
-#define STOCK_FILE_MTIME ((FileMtimeFn)0x8fcba530u)               // K5: as the preset lists have used it since H6
-#define STOCK_TAPE_DB_DIRTY (*(volatile u8*)0x08023272u)
-#define STOCK_MAP_DIRTY (*(volatile u8*)0x848cfb90u)
+#define STOCK_FOPEN ((FopenFn)0x8fc22180u)
+#define STOCK_FREAD ((FreadFn)0x8fc2214cu)
+#define STOCK_FWRITE ((FwriteFn)0x8fc220b8u)
+#define STOCK_FCLOSE ((FcloseFn)0x8fc220a0u)
+#define STOCK_RENAME ((RenameFn)0x8fc222f4u)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_DB_SET ((DbSetFn)0x8d4f24dcu)
+#define STOCK_MOUNTED_TAPE ((MountedTapeFn)0x8fc219a8u)
+#define STOCK_FILE_MTIME ((FileMtimeFn)0x8fcbc350u)               // K5: as the preset lists have used it since H6
+#define STOCK_TAPE_DB_DIRTY (*(volatile u8*)0x0802327eu)
+#define STOCK_MAP_DIRTY (*(volatile u8*)0x848cff9cu)
 
 #ifdef OP1F_HOST
 u32 op1f_host_cycles();                          // the test's clock
@@ -704,7 +705,7 @@ int op1f_xmap_convert(int tape) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// K4: what the copy of a tape needs of this unit (build_k_copy.cpp). Stock's clone 0x8d4fa7b8 copies the tape's
+// K4: what the copy of a tape needs of this unit (build_k_copy.cpp). Stock's clone 0x8d4fb908 copies the tape's
 // json, its map file and the chunks of tracks 1 to 4; the module copies the chunks of tracks 5 to 8 after it and
 // then gives the copy a file of tracks 5 to 8 of its own.
 

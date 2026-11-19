@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build K, pack K4 (analysis/tape_stock_safe.md, section 8): the clips of tracks 5 to 8 in a list of their own.
 //
 // A tape's clips are kept twice by stock: in the clip store of the current snapshot record (Clips.cpp: 512 records
@@ -7,13 +8,13 @@
 // follows it entry by entry, through four small functions of Clips.cpp that each name the array by its key and
 // call the db (db2.cpp, the tape db is 2):
 //
-//   0x8d4ed7d4  the list cleared                  -> 0x8d4f12d8(2, "clips")             (from the relink 0x8d4edb90)
+//   0x8d4ed7d4  the list cleared                  -> 0x8d4f23f8(2, "clips")             (from the relink 0x8d4ee6f8)
 //   0x8d4ed7ec  a clip added                      -> 0x8d4f15a8(2, "clips", &object)    (from the add and the relink)
 //   0x8d4edbfc  a clip changed                    -> 0x8d4f16ac(2, "clips", id, &object)
 //   0x8d4ee37e  a clip removed                    -> 0x8d4f188c(2, "clips", id)
 //
-// and the loader 0x8d4edf1c(store) fills the store from the document's "clips" when a tape is loaded (its two
-// calls: the start-up at 0x8c0b3d1c and the tape load 0x8c0d611c at 0x8c0d6168, each right after the document
+// and the loader 0x8d4eea84(store) fills the store from the document's "clips" when a tape is loaded (its two
+// calls: the start-up at 0x8c0b4600 and the tape load 0x8c0d611c at 0x8c0d6cd0, each right after the document
 // was read from the tape's file by 0x8d4ef84c, which has no other caller).
 //
 // Until K4 the clips of tracks 5 to 8 stood in "clips" with the others (ch 4 to 7). Stock firmware's loader holds
@@ -22,15 +23,15 @@
 // lost the clips of tracks 5 to 8 of every tape it had loaded there.
 //
 // Since K4 they stand in a second array of the same document, "op1f_clips", with the same objects. The tape
-// document is read whole, set key by key and written whole (0x8d4ef84c, 0x8d4f13bc, 0x8d4ef760: read for K2), so a
+// document is read whole, set key by key and written whole (0x8d4ef84c, 0x8d4f24dc, 0x8d4ef760: read for K2), so a
 // key stock does not know stays through stock's saves, is copied with the file by stock's copy of a tape, and is
 // gone after a format, which writes the file anew from a template: what a tape's clips should do. "clips" then
 // names tracks 1 to 4 only, and stock firmware finds nothing in the file it has to drop.
 //
 // Eight hooks, the profile's group build-k4 (four of them through the stubs of build_k_clips.s):
 //
-//   * the four 8-byte loads of 0x8401ea0c into R1 (the text "clips") in the four functions above, at 0x8d4ed7d8,
-//     0x8d4ed99e, 0x8d4eddb4 and 0x8d4ee384, each replaced by a CALL.a of a stub that leaves in R1 stock's text or
+//   * the four 8-byte loads of 0x8401ebe8 into R1 (the text "clips") in the four functions above, at 0x8d4ee340,
+//     0x8d4ee506, 0x8d4ee91c and 0x8d4eeeec, each replaced by a CALL.a of a stub that leaves in R1 stock's text or
 //     ours: by the "ch" of the object stock has just built (add, change), by the track of the store's record
 //     (remove); the clear's stub clears the list of ours and then hands stock its own key;
 //   * the two calls of stock's loader, retargeted to op1f_clips_load: stock's loader, then the list of ours;
@@ -78,60 +79,60 @@ typedef unsigned int u32;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void (*ClipsLoadFn)(void* store);                              // 0x8d4edf1c: the store filled from the document's "clips"
-typedef void (*ClipFillFn)(i32* record, i32 track, i32 start, i32 stop, const i32* paddings);   // 0x8d4ecc80: paddings 0 for four times -1
-typedef void (*ClipSetFn)(void* store, i32 id, const i32* record, i32 to_document);   // 0x8d4ede24: the record at the id, the bit and the count
-typedef void (*ClipRemoveFn)(void* store, i32 id);                     // 0x8d4ee398: the bit cleared, the entry removed from the document
-typedef void (*ClipsRelinkFn)(void* store);                            // 0x8d4edb90: the document's list cleared and every clip added
-typedef void* (*TapeDocFn)();                                          // 0x8d4f1a60: the tape db's document
-typedef void (*DbSetFn)(int db, const char* key, void* value);         // 0x8d4f13bc: the member made or found, assigned, the db marked
-typedef int (*DbClearFn)(int db, const char* key);                     // 0x8d4f12d8: the member, an array, made empty
-typedef int (*MountedTapeFn)();                                        // 0x8fc1fea8: the mounted tape's index, -1 for none
-typedef void (*JsonCtorFn)(void* json, int kind);                      // 0x8c085b78: 0 a null, 6 an array
-typedef void (*JsonDtorFn)(void* json);                                // 0x8c0844b0
-typedef int (*JsonHasFn)(void* json, const char* key);                 // 0x8c085038, of an object
-typedef void* (*JsonGetFn)(void* json, const char* key);               // 0x8c084f44: the member
-typedef void* (*JsonAtFn)(void* json, int index);                      // 0x8c084eb0: the array's element
-typedef int (*JsonSizeFn)(void* json);                                 // 0x8c084bf2, of an array
-typedef int (*JsonIntFn)(void* json);                                  // 0x8c084810: the three number kinds
-typedef int (*JsonReadFileFn)(const char* path, void* json);           // 0x8c0534a0: non-zero when the file was read and parsed
-typedef void* (*JsonLookupFn)(void* json, const char* key);            // 0x8c085e54: the member, made when it is not there
-typedef void (*JsonAssignFn)(void* target, void* value);               // 0x8c084588
-typedef void (*JsonPushFn)(void* array, void* value);                  // 0x8c085d24: a copy of the value at the array's end
-typedef int (*JsonWriteFileFn)(void* path_string, void* json);         // 0x8c053138: a temporary, then a rename; 0 when that fails
-typedef void (*StringCtorFn)(void* out, const char* text);             // 0x8c03e40c: a stock string object from text
-typedef void (*FreeFn)(void* block);                                   // 0x8d4e5864: the match of the allocator stock's strings use
-typedef i32 (*FileSizeFn)(const char* path);                           // 0x8c051f6c: the bytes, -1 when there is no such file
+typedef void (*ClipsLoadFn)(void* store);                              // 0x8d4eea84: the store filled from the document's "clips"
+typedef void (*ClipFillFn)(i32* record, i32 track, i32 start, i32 stop, const i32* paddings);   // 0x8d4ed7e8: paddings 0 for four times -1
+typedef void (*ClipSetFn)(void* store, i32 id, const i32* record, i32 to_document);   // 0x8d4ee98c: the record at the id, the bit and the count
+typedef void (*ClipRemoveFn)(void* store, i32 id);                     // 0x8d4eef00: the bit cleared, the entry removed from the document
+typedef void (*ClipsRelinkFn)(void* store);                            // 0x8d4ee6f8: the document's list cleared and every clip added
+typedef void* (*TapeDocFn)();                                          // 0x8d4f2b80: the tape db's document
+typedef void (*DbSetFn)(int db, const char* key, void* value);         // 0x8d4f24dc: the member made or found, assigned, the db marked
+typedef int (*DbClearFn)(int db, const char* key);                     // 0x8d4f23f8: the member, an array, made empty
+typedef int (*MountedTapeFn)();                                        // 0x8fc219a8: the mounted tape's index, -1 for none
+typedef void (*JsonCtorFn)(void* json, int kind);                      // 0x8c085ba8: 0 a null, 6 an array
+typedef void (*JsonDtorFn)(void* json);                                // 0x8c0844e0
+typedef int (*JsonHasFn)(void* json, const char* key);                 // 0x8c085068, of an object
+typedef void* (*JsonGetFn)(void* json, const char* key);               // 0x8c084f74: the member
+typedef void* (*JsonAtFn)(void* json, int index);                      // 0x8c084ee0: the array's element
+typedef int (*JsonSizeFn)(void* json);                                 // 0x8c084c22, of an array
+typedef int (*JsonIntFn)(void* json);                                  // 0x8c084840: the three number kinds
+typedef int (*JsonReadFileFn)(const char* path, void* json);           // 0x8c0534d0: non-zero when the file was read and parsed
+typedef void* (*JsonLookupFn)(void* json, const char* key);            // 0x8c085e84: the member, made when it is not there
+typedef void (*JsonAssignFn)(void* target, void* value);               // 0x8c0845b8
+typedef void (*JsonPushFn)(void* array, void* value);                  // 0x8c085d54: a copy of the value at the array's end
+typedef int (*JsonWriteFileFn)(void* path_string, void* json);         // 0x8c053168: a temporary, then a rename; 0 when that fails
+typedef void (*StringCtorFn)(void* out, const char* text);             // 0x8c03e434: a stock string object from text
+typedef void (*FreeFn)(void* block);                                   // 0x8d4e63cc: the match of the allocator stock's strings use
+typedef i32 (*FileSizeFn)(const char* path);                           // 0x8c051f9c: the bytes, -1 when there is no such file
 typedef u32 (*FloatFromIntFn)(i32 value);                              // ROM 0x04021854: the float of an int, as bits
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_CLIPS_LOAD ((ClipsLoadFn)0x8d4edf1cu)
-#define STOCK_CLIP_FILL ((ClipFillFn)0x8d4ecc80u)
-#define STOCK_CLIP_SET ((ClipSetFn)0x8d4ede24u)
-#define STOCK_CLIP_REMOVE ((ClipRemoveFn)0x8d4ee398u)
-#define STOCK_CLIPS_RELINK ((ClipsRelinkFn)0x8d4edb90u)
-#define STOCK_TAPE_DOC ((TapeDocFn)0x8d4f1a60u)
-#define STOCK_DB_SET ((DbSetFn)0x8d4f13bcu)
-#define STOCK_DB_CLEAR ((DbClearFn)0x8d4f12d8u)
-#define STOCK_MOUNTED_TAPE ((MountedTapeFn)0x8fc1fea8u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084bf2u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e54u)
-#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c084588u)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
-#define STOCK_FREE ((FreeFn)0x8d4e5864u)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_CLIPS_LOAD ((ClipsLoadFn)0x8d4eea84u)
+#define STOCK_CLIP_FILL ((ClipFillFn)0x8d4ed7e8u)
+#define STOCK_CLIP_SET ((ClipSetFn)0x8d4ee98cu)
+#define STOCK_CLIP_REMOVE ((ClipRemoveFn)0x8d4eef00u)
+#define STOCK_CLIPS_RELINK ((ClipsRelinkFn)0x8d4ee6f8u)
+#define STOCK_TAPE_DOC ((TapeDocFn)0x8d4f2b80u)
+#define STOCK_DB_SET ((DbSetFn)0x8d4f24dcu)
+#define STOCK_DB_CLEAR ((DbClearFn)0x8d4f23f8u)
+#define STOCK_MOUNTED_TAPE ((MountedTapeFn)0x8fc219a8u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084c22u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e84u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
+#define STOCK_FREE ((FreeFn)0x8d4e63ccu)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
 #define STOCK_FLOAT_FROM_INT ((FloatFromIntFn)0x04021854u)
-#define STOCK_CLIPS_KEY ((const char*)0x8401ea0cu)                     // stock's own text "clips", the pointer its four functions pass
-#define STOCK_STORE (*(u8* volatile*)0x8401ea08u)                      // s_clips_instance: the current snapshot's store, 0 before the first
+#define STOCK_CLIPS_KEY ((const char*)0x8401ebe8u)                     // stock's own text "clips", the pointer its four functions pass
+#define STOCK_STORE (*(u8* volatile*)0x8401ebe4u)                      // s_clips_instance: the current snapshot's store, 0 before the first
 
 enum {
     STOCK_TRACKS = 4,
@@ -214,7 +215,7 @@ const char* op1f_clips_key_of_object(void* object) {
     return STOCK_CLIPS_KEY;
 }
 
-// For stock's remove, which has the id alone: the store's record still names the track (the remove 0x8d4ee398
+// For stock's remove, which has the id alone: the store's record still names the track (the remove 0x8d4eef00
 // clears the clip's bit and leaves its record).
 const char* op1f_clips_key_of_id(i32 id) {
     const u8* store = STOCK_STORE;

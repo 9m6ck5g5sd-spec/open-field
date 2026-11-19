@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M2, the second example pack, yoyo (docs/base.md, level 2): a page of its own, with keys
 // and a knob, through level 2 of the base's interface (module/build_m2_card.h). It changes no place of the firmware
 // and names no address of it.

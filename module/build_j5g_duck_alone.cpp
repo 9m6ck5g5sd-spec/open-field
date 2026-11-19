@@ -1,16 +1,17 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build J packs J5g: the sidechain without the pack `8 tracks` (OS 1.7.0+0; analysis/pack_loader_study.md
 // section 22).
 //
 // The duck (build_g_duck.cpp) is driven from four places of stock, and since G1 and G2 the tape's units have had
 // those four sites and called the duck from their own functions there, through weak references:
 //
-//   the tape driver's call of read_block, 0x11a0822e (L1)   op1f_read_block_ext (build_b_play.cpp): the duck's gains
+//   the tape driver's call of read_block, 0x11a0825e (L1)   op1f_read_block_ext (build_b_play.cpp): the duck's gains
 //                                                           before stock's read_block, the detector after it
 //   the signal flow screen's call for its VU vector,        op1f_signalflow_vu (build_e_screens): stock's vector, the
-//   0x8fc33bb8                                              meters of tracks 5 to 8, then the duck's page
-//   the tape json's writer, 0x8c0c1408                      op1f_tape_json_set_mixer (build_b_mixer.cpp): stock's set,
+//   0x8fc35738                                              meters of tracks 5 to 8, then the duck's page
+//   the tape json's writer, 0x8c0c1db8                      op1f_tape_json_set_mixer (build_b_mixer.cpp): stock's set,
 //                                                           the tape units' own keys, then the duck's settings
-//   the tape json's loader, 0x8c0c2adc                      op1f_tape_json_load / op1f_tape_json_loaded: after stock's
+//   the tape json's loader, 0x8c0c348c                      op1f_tape_json_load / op1f_tape_json_loaded: after stock's
 //                                                           loader the tape units' keys, and the duck's settings
 //
 // Where the tape's units are away (the pack `sidechain` on a unit without the pack `8 tracks`), this unit has the
@@ -31,16 +32,16 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef int (*ReadBlockFn)(int speed, void* state, int rolling);   // 0x8f01d144: fills the four window buffers, answers the window's first frame
-typedef void* (*VuVectorFn)();                                     // 0x8d515ad0: ReadInterface's four-float VU vector, in dB
-typedef void (*DbSetFn)(int db, const char* key, void* value);     // 0x8d4f13bc
-typedef void* (*JsonRootFn)();                                     // 0x8d4f1a60: the tape db's root object
+typedef int (*ReadBlockFn)(int speed, void* state, int rolling);   // 0x8f01ec34: fills the four window buffers, answers the window's first frame
+typedef void* (*VuVectorFn)();                                     // 0x8d516c90: ReadInterface's four-float VU vector, in dB
+typedef void (*DbSetFn)(int db, const char* key, void* value);     // 0x8d4f24dc
+typedef void* (*JsonRootFn)();                                     // 0x8d4f2b80: the tape db's root object
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_READ_BLOCK ((ReadBlockFn)0x8f01d144u)
-#define STOCK_VU_VALUES ((VuVectorFn)0x8d515ad0u)
-#define STOCK_DB_SET ((DbSetFn)0x8d4f13bcu)
-#define STOCK_JSON_ROOT ((JsonRootFn)0x8d4f1a60u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_READ_BLOCK ((ReadBlockFn)0x8f01ec34u)
+#define STOCK_VU_VALUES ((VuVectorFn)0x8d516c90u)
+#define STOCK_DB_SET ((DbSetFn)0x8d4f24dcu)
+#define STOCK_JSON_ROOT ((JsonRootFn)0x8d4f2b80u)
 
 static const char LOG_FILE[] = "../src/gui/op1f_duck_alone.cpp";
 enum { LOG_BUDGET = 4 };
@@ -67,7 +68,7 @@ u32 op1f_duck_alone_blocks, op1f_duck_alone_updates, op1f_duck_alone_saves, op1f
 static u32 load_log_budget = LOG_BUDGET;
 static u32 save_log_budget = LOG_BUDGET;
 
-// In place of the driver's call of 0x8f01d144 at 0x11a0822e: this block's duck gains into the hold-to-solo words
+// In place of the driver's call of 0x8f01ec34 at 0x11a0825e: this block's duck gains into the hold-to-solo words
 // before stock reads them, stock's read_block, the detector over this block's frames. What op1f_read_block_ext does
 // for the duck, in its order.
 extern "C" int op1f_duck_read_block(int speed, void* state, int rolling) asm("op1f_duck_read_block");
@@ -79,7 +80,7 @@ extern "C" int op1f_duck_read_block(int speed, void* state, int rolling) {
     return w0;
 }
 
-// From op1f_duck_vu (the stub at the signal flow screen's call of 0x8d515ad0, 0x8fc33bb8): stock's vector for
+// From op1f_duck_vu (the stub at the signal flow screen's call of 0x8d516c90, 0x8fc35738): stock's vector for
 // stock's own loop, and the duck's page drawn from it. There are no levels of tracks 5 to 8 to hand over.
 extern "C" void* op1f_duck_vu_ext(u8* screen) asm("op1f_duck_vu_ext");
 extern "C" void* op1f_duck_vu_ext(u8* screen) {
@@ -89,7 +90,7 @@ extern "C" void* op1f_duck_vu_ext(u8* screen) {
     return vector;
 }
 
-// In place of the writer's call of 0x8d4f13bc at 0x8c0c1408 (db 2, "mixer_params", the eight-float array): stock's
+// In place of the writer's call of 0x8d4f24dc at 0x8c0c1db8 (db 2, "mixer_params", the eight-float array): stock's
 // own set, then the duck's settings as "op1f_duck".
 extern "C" void op1f_duck_json_set(int db, const char* key, void* array) asm("op1f_duck_json_set");
 extern "C" void op1f_duck_json_set(int db, const char* key, void* array) {
@@ -102,7 +103,7 @@ extern "C" void op1f_duck_json_set(int db, const char* key, void* array) {
     }
 }
 
-// After stock's loader 0x8c0c2adc(this, flag) returned (the trampoline op1f_duck_json_load comes here with the flag
+// After stock's loader 0x8c0c348c(this, flag) returned (the trampoline op1f_duck_json_load comes here with the flag
 // it saw at entry): the tape's ducks, or the defaults; flag != 0 is stock's defaults path.
 extern "C" void op1f_duck_json_loaded(int flag) asm("op1f_duck_json_loaded");
 extern "C" void op1f_duck_json_loaded(int flag) {

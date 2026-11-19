@@ -9,11 +9,11 @@ Two things it does not do, on purpose:
 - **It does not say how the firmware works inside.** This repository holds what our code needs where it meets the firmware, and the methods to find more. A write-up of the firmware's inner workings is not published here ([CONTRIBUTING.md](../CONTRIBUTING.md), "Writing about the firmware").
 - **It holds nothing of the firmware.** What these tools print is the firmware's own code and data. Read it on your screen, and keep it out of this repository: no listing in a file, no bytes in a comment. The check before a commit refuses them ([checking](checking.md)).
 
-Every address on this page is for OS 1.7.0.
+Every address on this page is for OS 1.7.3.
 
 ## 1. Your own firmware file
 
-The firmware file is `os.ldr`. Your unit keeps a copy on its disk, in the folder `upgrade/firmware/blackfin/bin`. The install's helper copies it off for you, into the folder `open-field` in your user folder, as `os-1.7.0-yours.ldr` ([the guide](guide.md), "The install, once"). Take that one, not an `os.ldr` at the top of the disk: that is whatever an install put there.
+The firmware file is `os.ldr`. Your unit keeps a copy on its disk, in the folder `upgrade/firmware/blackfin/bin`. The install's helper copies it off for you, into the folder `open-field` in your user folder, as `os-1.7.3-yours.ldr` ([the guide](guide.md), "The install, once"). Take that one, not an `os.ldr` at the top of the disk: that is whatever an install put there.
 
 Keep it **outside the repository**. Many tools take its path from the environment, so set it once:
 
@@ -26,7 +26,7 @@ export OPEN_FIELD_STOCK=<the path of your own os.ldr>
 Is it the file everything here was made for? This prints its size and SHA-256 and holds every place of the profile against it:
 
 ```bash
-python -I tools/place_sum.py --stock <your own os.ldr> --profile profiles/op1f-1.7.0.json
+python -I tools/place_sum.py --stock <your own os.ldr> --profile profiles/op1f-1.7.3.json
 ```
 
 The file is not encrypted. It is a row of **records**: each says "put these bytes at this address", and the processor's loader does that at every start. This lists them:
@@ -68,7 +68,7 @@ open-xy/local/toolchain/bin/bfin-elf-objdump -D -b binary -m bfin --adjust-vma=0
 **Use the sweep instead.** It walks the bytes one instruction at a time, decodes those forms itself and asks the disassembler only for the rest:
 
 ```bash
-python -I tools/bfin_sweep.py <the records folder> 0x8c053a6c 0x8c053a7c
+python -I tools/bfin_sweep.py <the records folder> 0x8c053a9c 0x8c053aac
 ```
 
 How to read what it prints:
@@ -98,7 +98,7 @@ A message that is a format, with `%d` or `%s` in it, is logged with values: the 
 Once you have an address, of a function or of data, this lists what reaches it:
 
 ```bash
-python -I tools/bfin_callers.py <the records folder> 0x8c0dc920
+python -I tools/bfin_callers.py <the records folder> 0x8c0dd488
 ```
 
 It finds calls and jumps, loads of the address into a register, loads and stores of a variable at the address, and words of data that hold it. For the address above it finds one call, in the start-up: that function is called from one place in the whole firmware, which is why the example `trampolines` can stand there and run once a start.
@@ -112,7 +112,7 @@ What the answer tells you:
 To look at data, as words, as bytes or as a text:
 
 ```bash
-python -I tools/ldrmem.py <the records folder> str 0x848daa84
+python -I tools/ldrmem.py <the records folder> str 0x848daec0
 ```
 
 ## 6. Reading a caller before you bind a function
@@ -132,10 +132,10 @@ Bind it in two lines, with a type of your own:
 
 ```cpp
 typedef int (*FileSizeFn)(const char* path);
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
 ```
 
-[The firmware's functions our code uses](firmware-interfaces.md) lists what is bound already. When you add one, add its words to `profiles/op1f-1.7.0-interfaces.json` and make the page again:
+[The firmware's functions our code uses](firmware-interfaces.md) lists what is bound already. When you add one, add its words to `profiles/op1f-1.7.3-interfaces.json` and make the page again:
 
 ```bash
 python -I tools/interfaces.py
@@ -166,7 +166,7 @@ What to check for any place:
 For each place, your profile needs its address, its length and a checksum of the firmware's own bytes there. The tool takes them from your file and prints the lines for the profile:
 
 ```bash
-python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dc920 0x8c053a6c
+python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dd488 0x8c053a9c
 ```
 
 For a place in code it also says where the instructions under the eight bytes end, 8, 10, 12 or 14 bytes in: that is what a trampoline copies, and a room is that many bytes and eight more. With `--word` it treats the addresses as words of data.
@@ -253,7 +253,7 @@ When you report what you tried, say what you did on the unit, with which pack fi
 
 Everything here is tied to one firmware file by addresses: the places of the profiles, and every function and variable the sources bind. Another version of the firmware has the same code at other addresses, and some of it changed.
 
-**Today only OS 1.7.0 is supported.** A unit on a later version cannot use open-field yet.
+**Today only OS 1.7.3 is supported** (the original, `1.7.3+0`). The release before it was for OS 1.7.0: it stays in the history of this repository, at the commit `b6501e4`, and the install page keeps its page for a unit that was never updated. Every source of `module/` was moved from 1.7.0 to 1.7.3 address by address, with the method below, and each one says so on its first line. A unit on a later version cannot use open-field yet.
 
 A port needs the plain `os.ldr` of both versions, each copied off a unit that runs it. This looks, for every place of a profile and every address the sources name, for the same bytes in the other file:
 

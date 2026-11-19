@@ -5,7 +5,7 @@ open-field is looked after by one person, in spare time. Help is welcome: a fix,
 ## Three rules
 
 1. **No firmware in this repository, ever.** No firmware file or part of one, no copy of a unit's storage, no log of a unit, no listing of the firmware's code, no picture, font or sound of the device. Where you need to say what stands at a place in the firmware, say it in your own words. Code copied from the firmware, or written by following a listing of it line by line, cannot be taken. Neither can anything that needs the maker's keys or gets around a check of the device.
-2. **Everything here is for OS 1.7.0.** An address, a length and a checksum belong to that one firmware file.
+2. **Everything here is for OS 1.7.3**, the original (`1.7.3+0`). An address, a length and a checksum belong to that one firmware file. The release for OS 1.7.0 is in the history (commit `b6501e4`).
 3. **Say what you tried.** A change that has only been built is welcome, as long as it says so. Nobody can see from the code alone whether a unit still starts.
 
 ## Writing about the firmware
@@ -24,7 +24,7 @@ A fix to a page, a clearer sentence in the guide, a report of what you saw: send
 
 ## What you need for a change to the code
 
-- Your own OP-1 Field on OS 1.7.0, to try the change on.
+- Your own OP-1 Field on OS 1.7.3, to try the change on.
 - Python 3, Node, and the compiler. [docs/build.md](docs/build.md) has the two commands that fetch the compiler.
 - For the check before a commit: the firmware file, the bootloader file and the pictures folder of your own unit, kept **outside** this repository. [docs/checking.md](docs/checking.md) says how to set that up, once, in a few commands.
 
@@ -71,11 +71,11 @@ python -I tools/build_all.py --out out-new --update
 
 | What | Where |
 | --- | --- |
-| A place where the firmware is changed | `profiles/op1f-1.7.0.json`. The tables in `module/` and the page `docs/changes.md` are made from it, never written by hand |
+| A place where the firmware is changed | `profiles/op1f-1.7.3.json`. The tables in `module/` and the page `docs/changes.md` are made from it, never written by hand |
 | A feature's code | `module/`, built by its recipe in `packs/` |
 | A small pack to learn from | `examples/wink/`, `examples/yoyo/` and `examples/list/`, one for each level of the base; `examples/trampolines/` for a pack that changes places of the firmware |
 | What the base offers a pack | `module/build_m3_card.h`, and [docs/base.md](docs/base.md) |
-| A function of the firmware our code calls | Bound in the source that calls it; listed in `docs/firmware-interfaces.md`, which is made from the sources and `profiles/op1f-1.7.0-interfaces.json` |
+| A function of the firmware our code calls | Bound in the source that calls it; listed in `docs/firmware-interfaces.md`, which is made from the sources and `profiles/op1f-1.7.3-interfaces.json` |
 | A screen of ours | The instructions in `pictures/`. A pack carries instructions, never a picture made from the device's own |
 | The tools for reading your own firmware file | `tools/`, used as [docs/methods.md](docs/methods.md) says |
 | The install pages | `builder/` |

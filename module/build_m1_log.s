@@ -1,8 +1,9 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Step M1, the base pack: op1f_log, the log for a pack with a card (OS 1.7.0+0; module/build_m1_card.h).
  *
  *      void op1f_log(int level, const char* file, int line, const char* format, ...)
  *
- * is stock's own logger, 0x8c0539f0, which every unit of ours calls by its address: the level (1 an error, 2 a
+ * is stock's own logger, 0x8c053a20, which every unit of ours calls by its address: the level (1 an error, 2 a
  * warning, 3 for information), a source path of which the log shows the name between the last slash and the dot, a
  * number shown with that name, a format and what it takes. A pack with a card names no address of the firmware, so
  * the base offers the logger under a name.
@@ -13,7 +14,7 @@
  * is a register a call may change and that carries no argument. Nothing is called here, so no argument space is
  * owed and nothing is saved.
  */
-.set STOCK_LOG, 0x8c0539f0
+.set STOCK_LOG, 0x8c053a20
 
 .section .text
 .align 2

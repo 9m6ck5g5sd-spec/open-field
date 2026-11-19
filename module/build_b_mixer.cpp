@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3d: the persistence of tracks 5-8's volume and pan in the tape's JSON, and the mixer screen's
 // page for tracks 5-8 while the mixer key is held (OS 1.7.0+0; read in analysis/build_b_design.md, section 12).
 //
@@ -5,25 +6,25 @@
 //   * The TapeController writes user/tapeNN.json through the tape db (0x8c0c116c): loop, loop_in, loop_out, pos,
 //     track, tape_type, the tempo fields and "mixer_params", a JSON array of eight floats built from the Q31
 //     words 0x11b01eb0 (four volumes, four pans) with the ROM int-to-float 0x04021854 and an exponent shift;
-//     each field is set with 0x8d4f13bc(2, key, &value) / 0x8d4f1428. Its loader (0x8c0c2adc(this, flag)) reads
-//     the fields back by name (0x8c085038 has, 0x8c084f44 get, 0x8c084eb0 at, 0x8c084810 as int, 0x8c084ac0 as
+//     each field is set with 0x8d4f24dc(2, key, &value) / 0x8d4f1428. Its loader (0x8c0c348c(this, flag)) reads
+//     the fields back by name (0x8c085068 has, 0x8c084f74 get, 0x8c084ee0 at, 0x8c084840 as int, 0x8c084ac0 as
 //     float) and converts "mixer_params" with the ROM float-to-Q31 0x040212cc into the eight words; with the flag
 //     set it writes the defaults instead (1.0 and centre) and never reads them. Unknown keys are ignored. The
 //     mutes are not saved by stock.
 //   * The MixerController (vtable 0x8400f100, mode 3): in mixer mode the mixer key and track key 1 select the
 //     levels page (at 0x8c0bb61a the page word 0x849a856c is cleared), track keys 2-4 the EQ, drive and master pages; shift + track
 //     key on the levels page toggles the track's mute byte 0x11902e34 + k (0x8c0bb04e); the knobs (on_encoder
-//     0x8c0ba95c, index 0-3, 4-7 with shift) adjust the Q31 word 0x11b01eb0 + 4 x index through 0x8d510b64 and
-//     notify the screen (0x8fca00e2(this + 8)). The mixer key's release reaches nothing (the MixerController's
+//     0x8c0bb294, index 0-3, 4-7 with shift) adjust the Q31 word 0x11b01eb0 + 4 x index through 0x8d510b64 and
+//     notify the screen (0x8fca1ed2(this + 8)). The mixer key's release reaches nothing (the MixerController's
 //     key-up handles 19 and 20 only; the fallback's entry for key 5 is the default).
 //   * The MixerScreen (singleton 0x84c96c20, update 0x8fc2e6a4) draws the four pan needles from the float vector
-//     of ReadInterface 0x8d515734 (eight floats: volumes then pans), the four level numbers straight from the
-//     words at 0x11b01eb0 (an 8-byte P4 load at 0x8fc2e7c0), the mute colours from 0x8d5156c4(0..3) and the VU
-//     circles from the vector of 0x8d515ad0 (four floats: 20 log10(peak / 32768) of W[0x11905a34 + 2k], the
+//     of ReadInterface 0x8d5168f4 (eight floats: volumes then pans), the four level numbers straight from the
+//     words at 0x11b01eb0 (an 8-byte P4 load at 0x8fc30340), the mute colours from 0x8d516884(0..3) and the VU
+//     circles from the vector of 0x8d516c90 (four floats: 20 log10(peak / 32768) of W[0x11905a34 + 2k], the
 //     words cleared after reading).
 //
 // This unit (profile group "build-b3d", with the trampolines and stubs in build_b_mixer.s):
-//   * op1f_tape_json_set_mixer replaces the writer's CALL.a of 0x8d4f13bc for "mixer_params": it makes that
+//   * op1f_tape_json_set_mixer replaces the writer's CALL.a of 0x8d4f24dc for "mixer_params": it makes that
 //     call, then adds "op1f_mixer_ext", an array of eight ints, the Q31 volumes and pans of tracks 5-8 from
 //     op1f_ext_params (build_b_mix.cpp). op1f_tape_json_loaded runs after the loader (the entry trampoline
 //     returns through it): with the loader's flag set it restores the defaults, as stock does for its own words;
@@ -52,41 +53,41 @@ typedef unsigned short u16;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void* (*JsonRootFn)();                                    // 0x8d4f1a60: the tape db's root object
-typedef int (*JsonHasFn)(void* json, const char* key);            // 0x8c085038
-typedef void* (*JsonGetFn)(void* json, const char* key);          // 0x8c084f44: the member (a reference)
-typedef void* (*JsonAtFn)(void* json, int index);                 // 0x8c084eb0: the array element (a reference)
-typedef int (*JsonIntFn)(void* json);                             // 0x8c084810
-typedef void (*JsonCtorFn)(void* json, int kind);                 // 0x8c085b78(json, kind): 0 a null, an array after the first push (kind 6 is an array; H1g)
-typedef void (*JsonFromIntFn)(void* json, int value);             // 0x8c083aec
-typedef void (*JsonPushFn)(void* array, void* value);             // 0x8c085d24
-typedef void (*JsonDtorFn)(void* json);                           // 0x8c0844b0
-typedef void (*DbSetFn)(int db, const char* key, void* value);    // 0x8d4f13bc
-typedef void* (*VectorFn)();                                      // 0x8d515734 / 0x8d515ad0: &std::vector<float>
+typedef void* (*JsonRootFn)();                                    // 0x8d4f2b80: the tape db's root object
+typedef int (*JsonHasFn)(void* json, const char* key);            // 0x8c085068
+typedef void* (*JsonGetFn)(void* json, const char* key);          // 0x8c084f74: the member (a reference)
+typedef void* (*JsonAtFn)(void* json, int index);                 // 0x8c084ee0: the array element (a reference)
+typedef int (*JsonIntFn)(void* json);                             // 0x8c084840
+typedef void (*JsonCtorFn)(void* json, int kind);                 // 0x8c085ba8(json, kind): 0 a null, an array after the first push (kind 6 is an array; H1g)
+typedef void (*JsonFromIntFn)(void* json, int value);             // 0x8c083b1c
+typedef void (*JsonPushFn)(void* array, void* value);             // 0x8c085d54
+typedef void (*JsonDtorFn)(void* json);                           // 0x8c0844e0
+typedef void (*DbSetFn)(int db, const char* key, void* value);    // 0x8d4f24dc
+typedef void* (*VectorFn)();                                      // 0x8d5168f4 / 0x8d516c90: &std::vector<float>
 typedef u32 (*FloatFromIntFn)(i32 value);                         // ROM 0x04021854: the float of an int
 typedef u32 (*FloatDivFn)(u32 a, u32 b);                          // ROM 0x040219e4: a / b
-typedef u32 (*FloatCurveFn)(u32 x);                               // 0x8f005014: 20 log10(x), stock's VU law
-typedef void (*NotifyFn)(void* observable);                       // 0x8fca00e2: the observers redraw
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc241d0: 0 when optional and missing
+typedef u32 (*FloatCurveFn)(u32 x);                               // 0x8f0061d4: 20 log10(x), stock's VU law
+typedef void (*NotifyFn)(void* observable);                       // 0x8fca1ed2: the observers redraw
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc25cc0: 0 when optional and missing
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_JSON_ROOT ((JsonRootFn)0x8d4f1a60u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_DB_SET ((DbSetFn)0x8d4f13bcu)
-#define STOCK_MIXER_VALUES ((VectorFn)0x8d515734u)
-#define STOCK_VU_VALUES ((VectorFn)0x8d515ad0u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_JSON_ROOT ((JsonRootFn)0x8d4f2b80u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_DB_SET ((DbSetFn)0x8d4f24dcu)
+#define STOCK_MIXER_VALUES ((VectorFn)0x8d5168f4u)
+#define STOCK_VU_VALUES ((VectorFn)0x8d516c90u)
 #define STOCK_FLOAT_FROM_INT ((FloatFromIntFn)0x04021854u)
 #define STOCK_FLOAT_DIV ((FloatDivFn)0x040219e4u)
-#define STOCK_VU_CURVE ((FloatCurveFn)0x8f005014u)
-#define STOCK_NOTIFY ((NotifyFn)0x8fca00e2u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
+#define STOCK_VU_CURVE ((FloatCurveFn)0x8f0061d4u)
+#define STOCK_NOTIFY ((NotifyFn)0x8fca1ed2u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
 #define SELECTED_TRACK (*(volatile i32*)0x11905a08u)
 
 enum {
@@ -192,7 +193,7 @@ static u32 cycles() {
 // ---------------------------------------------------------------------------------------------------------
 // Persistence.
 
-// Replaces the writer's call of 0x8d4f13bc at 0x8c0c1408 (db 2, "mixer_params", the eight-float array): stock's
+// Replaces the writer's call of 0x8d4f24dc at 0x8c0c1db8 (db 2, "mixer_params", the eight-float array): stock's
 // own set, then the extension strip as "op1f_mixer_ext": [v5, v6, v7, v8, p5, p6, p7, p8], Q31 ints.
 extern "C" void op1f_tape_json_set_mixer(int db, const char* key, void* array) asm("op1f_tape_json_set_mixer");
 extern "C" void op1f_tape_json_set_mixer(int db, const char* key, void* array) {
@@ -226,7 +227,7 @@ extern "C" void op1f_tape_json_set_mixer(int db, const char* key, void* array) {
     }
 }
 
-// After stock's loader 0x8c0c2adc(this, flag) returned (the trampoline op1f_tape_json_load in build_b_mixer.s
+// After stock's loader 0x8c0c348c(this, flag) returned (the trampoline op1f_tape_json_load in build_b_mixer.s
 // comes here with the flag it saw at entry). flag != 0 is stock's defaults path.
 extern "C" void op1f_tape_json_loaded(int flag) asm("op1f_tape_json_loaded");
 extern "C" void op1f_tape_json_loaded(int flag) {
@@ -377,7 +378,7 @@ static void apply_page_nodes(void* screen) {
     for (int i = NODE_TRACKNO5; i <= NODE_TRACKNO8; ++i) set_shown(i, held);
 }
 
-// Replaces the MixerScreen's call of 0x8d515734 (0x8fc2e6ba): the eight floats of tracks 5-8 while the page is held.
+// Replaces the MixerScreen's call of 0x8d5168f4 (0x8fc3023a): the eight floats of tracks 5-8 while the page is held.
 // R0 still holds the screen object at the site (P5 = R0 and a spill of R0 precede it, nothing writes R0).
 extern "C" void* op1f_mixer_values(void* screen) asm("op1f_mixer_values");
 extern "C" void* op1f_mixer_values(void* screen) {
@@ -387,7 +388,7 @@ extern "C" void* op1f_mixer_values(void* screen) {
     return &ext_values_vector;
 }
 
-// Replaces the call of 0x8d515ad0 (0x8fc2e948): stock's VU law on the peaks of tracks 5-8, which are cleared as
+// Replaces the call of 0x8d516c90 (0x8fc304c8): stock's VU law on the peaks of tracks 5-8, which are cleared as
 // stock clears its own words.
 extern "C" void* op1f_mixer_vu() asm("op1f_mixer_vu");
 extern "C" void* op1f_mixer_vu() {
@@ -400,7 +401,7 @@ extern "C" void* op1f_mixer_vu() {
     return &ext_vu_vector;
 }
 
-// Replaces the four calls of 0x8d5156c4(0..3) of the update: the mute colour of track 4 + k while the page is held
+// Replaces the four calls of 0x8d516884(0..3) of the update: the mute colour of track 4 + k while the page is held
 // (tracks 7-8 show as unmuted).
 extern "C" int op1f_mixer_track_unmuted(int track) asm("op1f_mixer_track_unmuted");
 extern "C" int op1f_mixer_track_unmuted(int track) {

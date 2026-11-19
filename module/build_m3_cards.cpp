@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M3, the base pack: the cards at level 3 (OS 1.7.0+0; docs/base.md). A sibling of M2's cards unit, base.pack
 // 15's, which this tree does not hold: levels 1 and 2 are that unit's text, with what M2 left for this base mended,
 // and level 3's part of the cards is added:
@@ -7,7 +8,7 @@
 //   folders unit's (module/build_m3_folders.cpp), which the frame call asks once, at the first frame, before any
 //   card's frame function, and which asks this unit which cards are in use (op1f_cards_used) and whose frame function
 //   is being called (op1f_cards_calling). A frame function is handed 36 bytes: level 2's 32 and `disk`, not 0 while
-//   the firmware's word [0x84d25704] says the disk mode is open (mtp::init writes it, mtp::shutdown clears it).
+//   the firmware's word [0x84d25bcc] says the disk mode is open (mtp::init writes it, mtp::shutdown clears it).
 //   The documents a card made through op1f_picture (module/build_m3_art.cpp tells this unit, op1f_cards_made) are
 //   kept, eight a card: op1f_page_open takes only one of the card's own, and the text unit (module/build_m3_text.cpp)
 //   only one of a card's (op1f_cards_document). An open asked from a frame function while the train's or the UFOs'
@@ -74,18 +75,18 @@
 //   The helpers. op1f_log (module/build_m1_log.s), op1f_ms, op1f_screen, op1f_node, op1f_show, op1f_move as M1's
 //   unit has them, and level 2's op1f_page_open and op1f_page_close. Each wraps a call or a fact our own units have
 //   used on the unit since H2 and I2:
-//     the registry 0x8fc2470c() answers the table of 86 screens by their numbers (0x84c960f4), 0 for a number no
+//     the registry 0x8fc261fc() answers the table of 86 screens by their numbers (0x84c960f4), 0 for a number no
 //       screen has; stock's own registration holds a number against no bound, so this unit takes 1 to 85 and
 //       answers 0 for any other. A screen's document is the word at its +4, 0 until stock has loaded it. The
 //       firmware reads that word at every draw, on the display thread.
-//     the lookup 0x8fc241d0(screen, id, optional) reads the document at the screen's +4 and nothing else of the
+//     the lookup 0x8fc25cc0(screen, id, optional) reads the document at the screen's +4 and nothing else of the
 //       screen, and stops the unit for a screen without a document or for no id, so
 //       both are held here before it is called. It is handed the screen of the 85 that holds the document, which is
 //       the call our units make; for a document no screen holds (a pack's own picture) it is handed four words of
 //       which the second is the document.
-//     a part's display byte stands at its +0x5c; 0x8c03db96(part, matrix) sets its matrix from nine words.
-//     the base constructor 0x8fc248a8(object, number, name) registers a screen of the base class (the train's unit
-//       makes its own the same way); the screen request 0x8c0b1d8c() asks the current controller and our call.
+//     a part's display byte stands at its +0x5c; 0x8c03dbbe(part, matrix) sets its matrix from nine words.
+//     the base constructor 0x8fc26398(object, number, name) registers a screen of the base class (the train's unit
+//       makes its own the same way); the screen request 0x8c0b2554() asks the current controller and our call.
 //
 // The clock is the core's cycle counter summed up frame by frame, 400,000 cycles a millisecond: it counts from the
 // base's first frame and moves once a frame. Nothing is divided (the module links no runtime). Nothing here runs on
@@ -101,12 +102,12 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef u32* (*ScreensFn)();                                                // 0x8fc2470c: the table of the screens by their numbers
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);    // 0x8fc241d0: 0 when optional and missing
-typedef void (*ApplyMatrixFn)(void* node, const int* matrix);               // 0x8c03db96
-typedef int (*ShiftFn)();                                                   // 0x8fc231b4: non-zero while shift is held
-typedef void (*ScreenCtorFn)(void* object, int number, const char* name);  // 0x8fc248a8: Screen::Screen, registers the object by its number
-typedef void (*RequestScreenFn)();                                          // 0x8c0b1d8c: the GUI asks the current controller which screen, and queues it
+typedef u32* (*ScreensFn)();                                                // 0x8fc261fc: the table of the screens by their numbers
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);    // 0x8fc25cc0: 0 when optional and missing
+typedef void (*ApplyMatrixFn)(void* node, const int* matrix);               // 0x8c03dbbe
+typedef int (*ShiftFn)();                                                   // 0x8fc24ca4: non-zero while shift is held
+typedef void (*ScreenCtorFn)(void* object, int number, const char* name);  // 0x8fc26398: Screen::Screen, registers the object by its number
+typedef void (*RequestScreenFn)();                                          // 0x8c0b2554: the GUI asks the current controller which screen, and queues it
 
 static const char LOG_FILE[] = "../src/main/op1f_cards.cpp";
 
@@ -119,13 +120,13 @@ static inline u32 stack_here() { return (u32)_AddressOfReturnAddress(); }   // M
 #define MASK_OFF(mask) ((void)(mask = 0))
 #define MASK_ON(mask) ((void)(mask))
 #else
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_SCREENS ((ScreensFn)0x8fc2470cu)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03db96u)
-#define STOCK_SHIFT ((ShiftFn)0x8fc231b4u)
-#define STOCK_SCREEN_CTOR ((ScreenCtorFn)0x8fc248a8u)
-#define STOCK_REQUEST_SCREEN ((RequestScreenFn)0x8c0b1d8cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_SCREENS ((ScreensFn)0x8fc261fcu)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03dbbeu)
+#define STOCK_SHIFT ((ShiftFn)0x8fc24ca4u)
+#define STOCK_SCREEN_CTOR ((ScreenCtorFn)0x8fc26398u)
+#define STOCK_REQUEST_SCREEN ((RequestScreenFn)0x8c0b2554u)
 #define RD32(a) (*(volatile u32*)(a))
 #define RD8(a) (*(volatile u8*)(a))
 #define OP1F_APART __attribute__((noinline))
@@ -149,10 +150,10 @@ static inline u32 stack_here() {
 }
 #endif
 
-static const u32 CURRENT_MODE = 0x8400f7d4u;           // the mode: 0 synth, 1 drum, 2 tape, 3 mixer (the mode switch 0x8c0bc4e8 keeps it)
-static const u32 CURRENT_SCREEN = 0x848d2138u;         // the id of the screen the GUI shows (0x8fc23a1c sets it)
-static const u32 POWER_POPUP_SHOWN = 0x84c9af40u;      // the power popup's byte, 1 while the countdown popup is on the screen
-static const u32 DISK_OPEN = 0x84d25704u;              // M3: not 0 while the disk mode is open (mtp::init 0x8fcba168 writes it, mtp::shutdown 0x8fcba1c8 clears it, through 0x8fcba5f8)
+static const u32 CURRENT_MODE = 0x8400f978u;           // the mode: 0 synth, 1 drum, 2 tape, 3 mixer (the mode switch 0x8c0bce20 keeps it)
+static const u32 CURRENT_SCREEN = 0x848d2540u;         // the id of the screen the GUI shows (0x8fc23a1c sets it)
+static const u32 POWER_POPUP_SHOWN = 0x84c9b3e4u;      // the power popup's byte, 1 while the countdown popup is on the screen
+static const u32 DISK_OPEN = 0x84d25bccu;              // M3: not 0 while the disk mode is open (mtp::init 0x8fcba168 writes it, mtp::shutdown 0x8fcba1c8 clears it, through 0x8fcba5f8)
 enum { CARD_3_BYTES = OP1F_CARD_LEVEL_3_BYTES, FOLDER_BYTES = 36, FOLDERS_MOST = OP1F_FOLDERS_MOST, DOCS = 8 };   // M3
 enum { CALLING_REACH = 8192 };                         // M3: how far below the frame call's stack a call from inside a frame function may stand (a task's stack is 32 KB)
 enum { FIRST_SCREEN = 1, LAST_SCREEN = 85, SCREEN_DOCUMENT = 1, NODE_DISPLAY = 0x5c, PAGE_SCREEN = 77, SCREEN_WORDS = 16 };

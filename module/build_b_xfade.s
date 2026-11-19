@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build B, step B3b: entry trampolines for the two clip-edge fade writers of tape_c.cpp (OS 1.7.0+0).
  * Logic in build_b_xfade.cpp.
  *
@@ -7,8 +8,8 @@
  * and the stack untouched. Stock's bodies assert track < 4 a little further on (0x8f01dd00, 0x8f01de0e,
  * fatal), which the module versions never reach; they refuse a bad range with a log line instead.
  *
- *      fade out  0x8f01dce0  -> its room, then 0x8f01dce8
- *      fade in   0x8f01ddf0  -> its room, then 0x8f01ddf8
+ *      fade out  0x8f01f7d0  -> its room, then 0x8f01dce8
+ *      fade in   0x8f01f8e0  -> its room, then 0x8f01ddf8
  *
  * The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 each stub ran the instructions its hook
  * displaced itself, as a copy. Now it holds none of them and ends in a jump to its room, sixteen bytes of the

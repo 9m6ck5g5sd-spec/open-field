@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build L, packs L4: the 16-tap filter of tracks 5 to 8, written from what it computes (OS 1.7.0+0).
  * analysis/clean_base_study.md, section 17. Its elder is op1f_fir_ext in build_b_play.s, which every pack before L4
  * has and which is kept as it is; the caller, build_b_play.cpp, is as it was.

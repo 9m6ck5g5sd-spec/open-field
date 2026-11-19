@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build I image I9: an instrument carries its train and its LFOs (analysis/lfo_train_study.md section 22).
 // What the patch unit (build_i_patch.cpp, the hooks in stock's patch loads and its save) and the chain unit
 // (build_h_chain.cpp, the store) tell each other. Plain integers only.

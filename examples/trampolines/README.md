@@ -2,7 +2,7 @@
 
 The smallest pack that changes the firmware, kept here as the model for a pack that has to stand in the firmware's own code. [A first pack](../../docs/first-pack.md), "A pack that changes the firmware", walks through it step by step. A pack that only needs what the base offers is better made like `wink`, `yoyo` or `list`, which name no address of the firmware ([the base](../../docs/base.md)).
 
-It adds nothing you can see or hear. It stands at the first instruction of two functions of the firmware that the start-up calls once each, counts, and writes one line into the unit's log. It needs no other pack, the base neither. It has run on a unit.
+It adds nothing you can see or hear. It stands at the first instruction of two functions of the firmware that the start-up calls once each, counts, and writes one line into the unit's log. It needs no other pack, the base neither. It has run on a unit under OS 1.7.0 only: its form for 1.7.3 is built and checked on a computer, and has not run on a unit yet.
 
 | File | What it is |
 | --- | --- |

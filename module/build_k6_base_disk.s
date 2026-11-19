@@ -1,7 +1,8 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build K image K6: the base's stub in the disk mode's tree builder (analysis/tape_stock_safe.md, section 11).
  *
  * The same site and the same shape as the pack's stub (build_h_disk.s, proven since J3b): the eight bytes at
- * 0x8fcaddea in the disk mode's tree builder 0x8fcadd64 are the call that makes the mixdown folder, with the move of
+ * 0x8fcafc0a in the disk mode's tree builder 0x8fcadd64 are the call that makes the mixdown folder, with the move of
  * its argument before it (R7 the root folder, a callee-saved register), and the first instruction of the epilogue.
  * The base writes a CALL.a to this stub there only when no pack runs (build_k6_base.cpp, build_k6_base_table.s);
  * a pack that runs writes its own stub to the same site. The stub makes the mixdown folder as stock did, then the
@@ -9,12 +10,12 @@
  * step that gives twelve bytes of stack back before returning to 0x8fcaddf2.
  *
  * The twelve bytes of argument space are made before the first call and dropped after the second: a callee may
- * write the words at [SP + 0] to [SP + 11] of its caller, and stock's add-file function 0x8fcacf48, which
+ * write the words at [SP + 0] to [SP + 11] of its caller, and stock's add-file function 0x8fcaed68, which
  * op1f_base_populate may reach by a tail call, keeps a word at [SP + 0x30], the first word above its own frame
  * (the J3 freeze; tools/stub_calls.py and its test hold every hand-written call to this).
  */
 
-.set STOCK_MIXDOWN_FOLDER, 0x8fcada10
+.set STOCK_MIXDOWN_FOLDER, 0x8fcaf830
 
 .section .text
 .align 2

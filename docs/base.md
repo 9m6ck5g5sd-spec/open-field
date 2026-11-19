@@ -2,13 +2,13 @@
 
 **The base** is the shared pack every other pack relies on: the file `base.pack`, in the folder `user/pk` of the unit like any pack file. It holds what our four features share, and the interface any pack can use: a call every frame, pictures, a page of its own with keys and knobs, folders and files on the unit's disk, and text on its page. This page says what it offers, how a pack asks for it, and what it does not offer yet.
 
-The base is a pack like any other ([packs](packs.md)), built from `packs/base.json`. Two things set it apart: **every unit with open-field needs it**, and its release is what the start screen shows. Without `base.pack` no feature runs, and the start screen says `1.7.0 stock (4 need base)`.
+The base is a pack like any other ([packs](packs.md)), built from `packs/base.json`. Two things set it apart: **every unit with open-field needs it**, and its release is what the start screen shows. Without `base.pack` no feature runs, and the start screen says `1.7.3 stock (4 need base)`.
 
 | | |
 | --- | --- |
 | Name | `base` |
 | Version | 17 |
-| Release | `0.3`: the start screen reads `1.7.0 - open-field 0.3` |
+| Release | `0.3`: the start screen reads `1.7.3 - open-field 0.3` |
 | Interface number | 2 |
 | On the start screen | Not named: its release is shown |
 | Its changes of the firmware | Fourteen: [the change list](changes.md), "The base, `base.pack`" |
@@ -389,7 +389,7 @@ These are lines from a unit with the three examples on it:
 cards: 3 card(s) from the loader, 3 in use, 0 not used, 0 more than the list holds
 cards: 'list' version 1, level 3: a frame call yes, 1 picture(s), a choice among them no, an input function yes
 artwork list.svg: put together on the unit, 1694 bytes: 378 from 1 of the unit's own picture(s) and 1316 from user/pk/list.pack, in 2706450 cycles
-page: 'list' opened in mode 2, its document at 0x8cb5a4d8 under screen 77, the train's
+page: 'list' opened in mode 4, its document at 0x8cb5b0c8 under screen 77, the train's
 text: 'list' made a text of the part list_title of its picture
 page: 'list' closed: the pack closed it; 1 opened since the start
 input: 'list' took 3 down, 3 up, 0 turns since the start

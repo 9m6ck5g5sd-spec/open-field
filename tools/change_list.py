@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Write the change list, docs/changes.md, from the profile.
 
-  python -I tools/change_list.py --profile profiles/op1f-1.7.0.json [--out docs/changes.md]
-  python -I tools/change_list.py --profile profiles/op1f-1.7.0.json --check
+  python -I tools/change_list.py --profile profiles/op1f-1.7.3.json [--out docs/changes.md]
+  python -I tools/change_list.py --profile profiles/op1f-1.7.3.json --check
 
 The change list says, for every place where open-field changes the firmware, where it is, what stands there and
 what our code does there: in our own words, with no instruction of the firmware quoted and none of its bytes given.
@@ -43,8 +43,8 @@ def render(profile, image_uses=None):
     lines = [
         "# The change list",
         "",
-        "Every place where open-field changes OS %s of the %s, and nothing else. This page is made from `profiles/op1f-1.7.0.json` by `tools/change_list.py`; change the profile, not the page."
-        % (profile["firmware_version"], profile["device"]),
+        "Every place where open-field changes OS %s of the %s, and nothing else. This page is made from `profiles/%s.json` by `tools/change_list.py`; change the profile, not the page."
+        % (profile["firmware_version"], profile["device"], profile["id"]),
         "",
         "It holds addresses and our own words. It quotes no instruction of the firmware and gives none of its bytes. For each place the profile keeps a checksum of the firmware's own bytes there, so that the loader can tell the place before it changes it; a unit with another firmware is left as it is.",
         "",

@@ -1,15 +1,16 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build K, pack K4 (analysis/tape_stock_safe.md, section 8): the copy of a tape takes tracks 5 to 8 with it.
 //
 // Stock's copy of a tape is shift + T3 in the tape list: 0x8c0d7824 finds a free slot, ejects the mounted tape,
-// names the copy and calls the clone 0x8d4fa7b8(source, destination, progress), then loads the copy. The clone
+// names the copy and calls the clone 0x8d4fb908(source, destination, progress), then loads the copy. The clone
 // (tape_db.cpp) copies user/tapeNN.json as a file, reads the source's map file (magic and version 1 required),
 // marks every chunk its four tables name, copies each marked chunk from the source's partition to the same chunk
-// of the destination's (tapeNN.raw, opened by name through 0x8d4ffea8; 128 KiB pieces through 0x8d4ff528 and
-// 0x8d4ffa28 by way of a heap buffer from 0x8d4e37bc(0x200, 0x20000)), calls the progress function with a
+// of the destination's (tapeNN.raw, opened by name through 0x8d501008; 128 KiB pieces through 0x8d500688 and
+// 0x8d500b88 by way of a heap buffer from 0x8d4e4324(0x200, 0x20000)), calls the progress function with a
 // fraction every sixteen chunks, copies the map file and says 1.0. It knows nothing of tracks 5 to 8: until K4
 // the copy had the original's clips of tracks 5 to 8 in its json and nothing under them (the K2 test).
 //
-// One hook, the profile's group build-k4: the tape list's CALL.a of the clone at 0x8c0d7946, retargeted to
+// One hook, the profile's group build-k4: the tape list's CALL.a of the clone at 0x8c0d84ae, retargeted to
 // op1f_tape_clone. It calls stock's clone with stock's arguments and then, when the source has a file of tracks
 // 5 to 8 that is its own:
 //
@@ -24,7 +25,7 @@
 //      then left out at its load (build_k_clips.cpp).
 //
 // Both partitions are closed again before the function returns, on every path: the copy is loaded next, which
-// opens its partition, and 0x8d4ffea8 asserts on a partition that is open.
+// opens its partition, and 0x8d501008 asserts on a partition that is open.
 //
 // The clips need nothing here: the copy's json is the original's file, with both lists.
 // It runs on the main thread, from the tape list's key handler, with no tape mounted (the handler has ejected it).
@@ -40,21 +41,21 @@ typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
 typedef void (*ProgressFn)(u32 fraction_float_bits);                   // the tape list's 0x8c0d5eb4: the bar, then a tick's sleep
-typedef void (*CloneFn)(int source, int destination, ProgressFn progress, u32 fourth);   // 0x8d4fa7b8; the fourth word is whatever stock had at [SP + 0xc]
-typedef i32 (*OpenPartitionFn)(const char* name);                      // 0x8d4ffea8: a handle, or -1 (stock logs the failure)
+typedef void (*CloneFn)(int source, int destination, ProgressFn progress, u32 fourth);   // 0x8d4fb908; the fourth word is whatever stock had at [SP + 0xc]
+typedef i32 (*OpenPartitionFn)(const char* name);                      // 0x8d501008: a handle, or -1 (stock logs the failure)
 typedef i32 (*PartitionIoFn)(i32 handle, u32 byte_offset, u32 length, void* buffer);   // negative on error
 typedef void (*ClosePartitionFn)(i32 handle);
-typedef void* (*AllocAlignedFn)(u32 alignment, u32 bytes);             // 0x8d4e37bc: 0 when there is no room
-typedef void (*FreeAlignedFn)(void* block);                            // 0x8d4e383c
+typedef void* (*AllocAlignedFn)(u32 alignment, u32 bytes);             // 0x8d4e4324: 0 when there is no room
+typedef void (*FreeAlignedFn)(void* block);                            // 0x8d4e43a4
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_CLONE ((CloneFn)0x8d4fa7b8u)
-#define STOCK_OPEN_PARTITION ((OpenPartitionFn)0x8d4ffea8u)            // as the clone calls it at 0x8d4faa04 and 0x8d4faa3c
-#define STOCK_PARTITION_READ ((PartitionIoFn)0x8d4ff528u)              // at 0x8d4fac08
-#define STOCK_PARTITION_WRITE ((PartitionIoFn)0x8d4ffa28u)             // at 0x8d4fac24
-#define STOCK_CLOSE_PARTITION ((ClosePartitionFn)0x8d4ff2d8u)          // at 0x8d4fab32 and 0x8d4fab38
-#define STOCK_ALLOC_ALIGNED ((AllocAlignedFn)0x8d4e37bcu)              // at 0x8d4faa58
-#define STOCK_FREE_ALIGNED ((FreeAlignedFn)0x8d4e383cu)                // at 0x8d4fab2c
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_CLONE ((CloneFn)0x8d4fb908u)
+#define STOCK_OPEN_PARTITION ((OpenPartitionFn)0x8d501008u)            // as the clone calls it at 0x8d4faa04 and 0x8d4faa3c
+#define STOCK_PARTITION_READ ((PartitionIoFn)0x8d500688u)              // at 0x8d4fac08
+#define STOCK_PARTITION_WRITE ((PartitionIoFn)0x8d500b88u)             // at 0x8d4fac24
+#define STOCK_CLOSE_PARTITION ((ClosePartitionFn)0x8d500438u)          // at 0x8d4fab32 and 0x8d4fab38
+#define STOCK_ALLOC_ALIGNED ((AllocAlignedFn)0x8d4e4324u)              // at 0x8d4faa58
+#define STOCK_FREE_ALIGNED ((FreeAlignedFn)0x8d4e43a4u)                // at 0x8d4fab2c
 
 enum {
     TAPES = 8,

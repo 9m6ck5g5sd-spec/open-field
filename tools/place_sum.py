@@ -2,7 +2,7 @@
 """What a place of the firmware needs in a profile, worked out from your own firmware file.
 
   python -I tools/place_sum.py --stock <your own os.ldr> 0xADDRESS [0xADDRESS ...] [--word]
-  python -I tools/place_sum.py --stock <your own os.ldr> --profile profiles/op1f-1.7.0.json
+  python -I tools/place_sum.py --stock <your own os.ldr> --profile profiles/op1f-1.7.3.json
 
 A profile names each place where the running firmware is changed by its address, its length and a checksum of the
 firmware's own bytes there (`sum`: their CRC-32). The loader takes the same checksum from the unit's memory before it

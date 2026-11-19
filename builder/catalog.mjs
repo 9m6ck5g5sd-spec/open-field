@@ -44,7 +44,7 @@ export function rawLink(entry) {
 // The name the pack's file takes in the folder's packs and on the unit.
 export const fileName = (entry) => entry.id + ".pack";
 
-// What the page offers from a listing, for the unit's firmware (the loader's manifest names it, "1.7.0"):
+// What the page offers from a listing, for the unit's firmware (the loader's manifest names it, "1.7.3"):
 // {base, offered: Map id -> entry, categories: [{key, label, entries}], ours: Set, otherFirmware, problems}.
 // Only `listed` entries are offered, each once, under its first category; `bundled` base.pack is shown apart, as it
 // goes on every unit. An entry the page cannot use (a field out of form) is left out and named in `problems`.

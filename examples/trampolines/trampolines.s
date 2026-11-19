@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* The example pack `trampolines` (docs/first-pack.md): two small routines of ours, each entered where a function
  * of the firmware begins. Neither holds an instruction of the firmware.
  *
@@ -9,9 +10,9 @@
  *
  * Both functions are called once at every start, by the main thread, shortly after the loader has run:
  *
- *   0x8c0dc920  draws a text with the bitmap font: here, the version text on the start screen. The instructions
+ *   0x8c0dd488  draws a text with the bitmap font: here, the version text on the start screen. The instructions
  *               under the jump end eight bytes in, so the trampoline copies eight.
- *   0x8c053a6c  a small function with one argument, called right after that draw. The instructions under the
+ *   0x8c053a9c  a small function with one argument, called right after that draw. The instructions under the
  *               jump end twelve bytes in: the trampoline copies twelve and comes back four bytes behind the jump.
  *
  * At a function's first instruction the registers a call may change hold nothing but the arguments (R0 to R2),
@@ -22,7 +23,7 @@
 .text
 .align 2
 
-/* Entered by the jump the loader writes at 0x8c0dc920. Counts, and goes on through the room. */
+/* Entered by the jump the loader writes at 0x8c0dd488. Counts, and goes on through the room. */
 .global op1f_tramp_draw
 .type op1f_tramp_draw, STT_FUNC
 op1f_tramp_draw:
@@ -36,7 +37,7 @@ op1f_tramp_draw:
     JUMP (P1);                          /* the displaced instructions, then 0x8c0dc928 */
 .size op1f_tramp_draw, .-op1f_tramp_draw
 
-/* Entered by the jump the loader writes at 0x8c053a6c. Says in the log what came through, and goes on through the room. */
+/* Entered by the jump the loader writes at 0x8c053a9c. Says in the log what came through, and goes on through the room. */
 .global op1f_tramp_flag
 .type op1f_tramp_flag, STT_FUNC
 op1f_tramp_flag:

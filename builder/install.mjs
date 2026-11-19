@@ -22,7 +22,7 @@ export const HELPER_VERSION = 1;
 // The files of the shared folder. The owner's own firmware file and the new one have names of their own, so that
 // they cannot be mixed up; only on the unit is the new one called os.ldr.
 export const NAMES = Object.freeze({
-  stock: "os-1.7.0-yours.ldr",      // the helper's name for the owner's own file (another if one with other bytes is there)
+  stock: "os-1.7.3-yours.ldr",      // the helper's name for the owner's own file (another if one with other bytes is there)
   image: "open-field-os.ldr",       // the new firmware file, written by the page
   helper: "helper.json",            // the helper's state, written by the helper
   before: "listing-before.json",    // the disk as the helper found it, after the log files were taken off

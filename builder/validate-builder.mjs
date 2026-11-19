@@ -5,8 +5,8 @@
 //   OPEN_FIELD_STOCK=<your own os.ldr> node builder/validate-builder.mjs
 //
 // Without --loader the manifest is loader.json: the version the page offers by itself. With it, a version by its
-// name: --loader 1.7.0-v4 takes loader-1.7.0-v4.json, the manifest of a version kept beside that one, as
-// index.html?loader=1.7.0-v4 does; or loader.json, when that is the version it names. The builder's file is the
+// name: --loader 1.7.3-v2 takes loader-1.7.3-v2.json, the manifest of a version kept beside that one, as
+// index.html?loader=1.7.3-v2 does; or loader.json, when that is the version it names. The builder's file is the
 // loader, our small piece of code inside the firmware file.
 //
 // The main check: your os.ldr, the manifest and the loader's file must give the image whose SHA-256 the
@@ -113,7 +113,7 @@ try {
   const bent = stock.slice(); bent[1000] ^= 1;
   await buildImage(bent, manifest, loader);
   bad("a changed firmware file was NOT refused");
-} catch { ok("refuses a firmware file that is not the exact 1.7.0 file"); }
+} catch { ok("refuses a firmware file that is not the exact 1.7.3 file"); }
 
 // 10. a firmware file cut short must be refused
 try {

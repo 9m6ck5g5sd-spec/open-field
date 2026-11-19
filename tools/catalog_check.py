@@ -30,8 +30,9 @@ that names a repository names one of them, and an entry in one of them has `open
 page shows the warning on a pack that is not ours on every other entry.
 
 With `--before`, the listing before the change: no entry is taken out, no status moves back, an id is never changed,
-a new file comes with a higher version, and `ours` stays as it was. With `--fetch`, only the entries that changed are
-downloaded then.
+a new file comes with a higher version, and `ours` stays as it was. One new file may keep its version: the same pack
+built for another firmware, when the entry's `firmware` changed too and this repository has a profile for the new one
+(the version never goes down). With `--fetch`, only the entries that changed are downloaded then.
 
 What it does not hold, and the review does: that the source at the commit is what the author says, and that the
 pack does what its description says on a unit. It answers 0 when every entry is in order, 1 otherwise.
@@ -303,8 +304,18 @@ def file_faults(entry, data, known_firmwares):
     return faults
 
 
-def before_faults(listing, before):
-    """What a change to the listing may not do, held against the listing before it: {id: faults}."""
+def moved_firmware(new, old, known_firmwares):
+    """Whether an entry's new file is the same pack built for another firmware: its firmware changed to one this
+    repository has a profile for, and its version did not go down."""
+    return (known_firmwares is not None and isinstance(new.get("firmware"), str) and new.get("firmware") != old.get("firmware")
+            and new["firmware"] in known_firmwares.values()
+            and is_int(new.get("version")) and is_int(old.get("version")) and new["version"] >= old["version"])
+
+
+def before_faults(listing, before, known_firmwares=None):
+    """What a change to the listing may not do, held against the listing before it: {id: faults}. A file may change
+    at the same version only with its firmware (`moved_firmware`); `known_firmwares` are those this repository has a
+    profile for, and without them no such move is let through."""
     out = {}
     now = {entry.get("id", "").casefold(): entry for entry in listing["packs"] if isinstance(entry, dict) and isinstance(entry.get("id"), str)}
     for old in before.get("packs", []):
@@ -320,8 +331,10 @@ def before_faults(listing, before):
         if new.get("status") in STATUSES and old.get("status") in STATUSES and STATUSES.index(new["status"]) < STATUSES.index(old["status"]):
             faults.append("its status moved back, from %s to %s" % (old["status"], new["status"]))
         if (old.get("sha256") and new.get("sha256") and new["sha256"] != old["sha256"]
-                and not (is_int(new.get("version")) and is_int(old.get("version")) and new["version"] > old["version"])):
-            faults.append("its file changed and its version did not grow past %s" % old.get("version"))
+                and not (is_int(new.get("version")) and is_int(old.get("version")) and new["version"] > old["version"])
+                and not moved_firmware(new, old, known_firmwares)):
+            faults.append("its file changed and its version did not grow past %s (the same version is kept only by the "
+                          "same pack built for another firmware this repository has a profile for)" % old.get("version"))
         if faults:
             out[new["id"]] = faults
     return out
@@ -375,7 +388,7 @@ def check(listing, known_firmwares, before=None, folders=(), download=False, get
     whole, each = listing_faults(listing, known_firmwares)
     lines = ["REFUSED: the listing: %s" % fault for fault in whole]
     packs = listing.get("packs", []) if isinstance(listing, dict) and isinstance(listing.get("packs"), list) else []
-    earlier = before_faults(listing, before) if before is not None else {}
+    earlier = before_faults(listing, before, known_firmwares) if before is not None else {}
     for gone, faults in earlier.items():                        # an entry taken out has no place among today's
         if not any(isinstance(e, dict) and e.get("id") == gone for e in packs):
             lines += ["REFUSED: %s: %s" % (gone, fault) for fault in faults]

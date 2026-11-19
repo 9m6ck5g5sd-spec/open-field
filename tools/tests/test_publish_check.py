@@ -28,6 +28,8 @@ profile, so that nothing in this file is the stock firmware's:
   picture of pixels is not judged, and `--strict` counts it;
 - the command: its three answers, the list of files, the record it writes and does not overwrite, the part that
   needs no stock image, the same bytes met twice;
+- two firmwares in one run: each profile's places are read in its own firmware's records, so that a file with the
+  newer firmware's bytes of a place is refused, which it would not be were the place read in the older records;
 - the tree as it stands (skipped where the stock image is not there): today's pack files are refused for their
   tables and for nothing of a stock picture; the base passes; sources; this step's own three files pass; and the
   dev-mode page's reused code computes the table it carried until 2026-11-16, which is the firmware's.
@@ -700,6 +702,71 @@ class TheCommand(WithAStock):
         shown = "device-logs/notes.txt"
         self.assertEqual(self.check().file(path, shown)["counts"], {"name": 1})
         self.assertEqual(self.check(deep=True).file(path, shown)["counts"], {"name": 1, "site": 1})
+
+
+# ---------------------------------------------------------------- two firmwares in one run
+
+
+def make_firmware(folder, size, code):
+    """A folder of memory records of a made-up firmware whose index names `size` and two records, with `code` at
+    CODE_AT."""
+    records = []
+    for number, (address, data) in enumerate(((CODE_AT, code), (TEXT_AT, TEXT))):
+        name = "%03d_%08x.bin" % (number, address)
+        write(os.path.join(folder, name), data)
+        records.append({"index": number, "target": address, "count": len(data), "argument": 0, "fill": False, "stored": len(data), "file": name})
+    write(os.path.join(folder, "index.json"), json.dumps({"source": "a test", "bytes": size, "records": records}))
+    return folder
+
+
+class TwoFirmwares(unittest.TestCase):
+    """The records of two firmwares in one run: the same address holds other bytes in each. A profile that names its
+    firmware's size and record count is read in that firmware's records, wherever they stand in the list; read in the
+    first image that holds the place, a newer firmware's place would hold the older one's bytes, and a file with the
+    newer bytes would pass."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.folder = tempfile.mkdtemp(prefix="publish-two-")
+        newer = random.Random(20261119)
+        cls.newer_code = bytes(newer.randrange(1, 255) for _ in range(0x200))
+        cls.older = make_firmware(os.path.join(cls.folder, "older"), 1000, CODE)
+        cls.newer = make_firmware(os.path.join(cls.folder, "newer"), 2000, cls.newer_code)
+        site = {"address": "0x%08x" % SITE_AT, "length": 8, "group": "g1"}
+        cls.profiles = {name: write(os.path.join(cls.folder, name + ".json"), json.dumps(dict(named, patches=[site])))
+                        for name, named in (("older", {"stock_bytes": 1000, "stock_records": 2}),
+                                            ("newer", {"stock_bytes": 2000, "stock_records": 2}),
+                                            ("sized", {"stock_bytes": 2000}), ("unnamed", {}),
+                                            ("elsewhere", {"stock_bytes": 3000, "stock_records": 2}))}
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.folder, ignore_errors=True)
+
+    def site_bytes(self, sources, *names):
+        images = pc.Images(sources)
+        return [data for _address, data, _group in pc.read_places([self.profiles[name] for name in names], images)[1]]
+
+    def test_each_profile_reads_its_own_firmware(self):
+        newer_site = self.newer_code[0x40:0x48]
+        self.assertNotEqual(newer_site, SITE)
+        for sources in ([self.older, self.newer], [self.newer, self.older]):
+            self.assertEqual(self.site_bytes(sources, "older"), [SITE])
+            self.assertEqual(self.site_bytes(sources, "newer"), [newer_site])
+            self.assertEqual(self.site_bytes(sources, "sized"), [newer_site])      # a size alone matches too
+
+    def test_a_profile_no_image_matches_is_read_in_the_first_that_holds_the_place(self):
+        self.assertEqual(self.site_bytes([self.older, self.newer], "unnamed"), [SITE])
+        self.assertEqual(self.site_bytes([self.newer, self.older], "elsewhere"), [self.newer_code[0x40:0x48]])
+
+    def test_a_file_with_the_newer_firmwares_place_is_refused(self):
+        """Eight bytes in a binary are fewer than a run, so only the place tells them."""
+        path = write(os.path.join(self.folder, "files", "ours.bin"), beside(self.newer_code, 0x40, 8))
+        images = pc.Images([self.older, self.newer])
+        held = pc.Check(images, pc.read_places([self.profiles["older"], self.profiles["newer"]], images), None).file(path, "ours.bin")
+        self.assertEqual((held["verdict"], held["counts"]), ("refused", {"site": 1}))
+        waved = pc.Check(images, pc.read_places([self.profiles["unnamed"]], images), None).file(path, "ours.bin")
+        self.assertEqual((waved["verdict"], waved["counts"]), ("passed", {}))      # read in the older records only
 
 
 # ---------------------------------------------------------------- the tree as it stands

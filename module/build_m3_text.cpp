@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M3, the base pack: text on a pack's page (OS 1.7.0+0; docs/base.md). A unit of
 // its own, new at M3.
 //
@@ -7,7 +8,7 @@
 // firmware's at its first use, and the label's text is set when it changes.
 //
 // The firmware's calls, each as it was read at its callers (and as our presets' list has used them since H5):
-//   the lookup 0x8fc241d0(screen, id, 1) and the label maker 0x8fc23fcc(screen, node, align) read the screen at +4
+//   the lookup 0x8fc25cc0(screen, id, 1) and the label maker 0x8fc25abc(screen, node, align) read the screen at +4
 //     and nowhere else and do not keep it, so a document no screen holds is handed in four words of which the second
 //     is the document, as op1f_node does since M1. The label maker reads the node's bounds (its table's +0xc) and its
 //     paint (its table's +0x14), stops the unit for a paint of 0 (the assert at 0x8fc241a0) and for a paint past the
@@ -15,7 +16,7 @@
 //     a label of 0xb4 bytes at the bounds' top-left and puts it in the node's place in the document. So the paint is
 //     asked here first, through the same function of the node's table, and a part whose paint would stop the unit is
 //     not handed on: op1f_text answers 0 and one line says so;
-//   the text 0x8fc38ebc(label, text, width) lays the glyphs out from the firmware's font, shortened with a mark while
+//   the text 0x8fc3aa3c(label, text, width) lays the glyphs out from the firmware's font, shortened with a mark while
 //     wider than `width` pixels. It allocates, so it is called only when the text changed. The font's capitals stand
 //     under the small letters' codes (H5): a text is handed on in small letters. The font's lookup (0x8fc29e02) takes
 //     a character as a signed byte and stops the unit for one past its table, which a byte from 0x80 up is (the
@@ -33,18 +34,18 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);    // 0x8fc241d0: 0 when optional and missing
-typedef void* (*LabelFromNodeFn)(void* screen, void* node, int align);      // 0x8fc23fcc: the node replaced by a label object in the document, the label returned
-typedef void (*LabelTextFn)(void* label, const char* text, int width);      // 0x8fc38ebc: the text laid out, shortened with a mark while wider than `width` pixels
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);    // 0x8fc25cc0: 0 when optional and missing
+typedef void* (*LabelFromNodeFn)(void* screen, void* node, int align);      // 0x8fc25abc: the node replaced by a label object in the document, the label returned
+typedef void (*LabelTextFn)(void* label, const char* text, int width);      // 0x8fc3aa3c: the text laid out, shortened with a mark while wider than `width` pixels
 typedef u32 (*PaintFn)(void* node);                                         // the node's table +0x14: its paint, an index into the document's paints from 1
 
 #ifdef OP1F_HOST
 #include "mock_files_m3.h"                             // the PC's stand-ins: the logger, a model of the documents, their parts and the labels
 #else
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define STOCK_LABEL_FROM_NODE ((LabelFromNodeFn)0x8fc23fccu)
-#define STOCK_LABEL_TEXT ((LabelTextFn)0x8fc38ebcu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define STOCK_LABEL_FROM_NODE ((LabelFromNodeFn)0x8fc25abcu)
+#define STOCK_LABEL_TEXT ((LabelTextFn)0x8fc3aa3cu)
 #define RD32(a) (*(volatile u32*)(a))
 #endif
 

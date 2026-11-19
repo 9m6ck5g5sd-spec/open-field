@@ -1,8 +1,9 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build J image J1: stock code changed by the module itself at start-up (analysis/pack_loader_study.md, section 9).
  * Profile group "build-j1": one CALL.a stub. The rest of this file is what the patcher (build_j_boot.cpp) calls to
  * write eight bytes of code, in DDR and in L1, and the small function its self-test rewrites.
  *
- * The site, 0x8c0b3a88, is the 8-byte load of 0x8c0b23a4 into R0 in the main thread's start-up, right after the step-3
+ * The site, 0x8c0b4358, is the 8-byte load of 0x8c0b2b84 into R0 in the main thread's start-up, right after the step-3
  * line `[init filesystem (3)]` is logged: the disk is mounted, the log runs, and nothing of the database, the tape,
  * the sound engine, the screens or the sound slots has been set up. The next stock instruction is a CALL that takes
  * R0, and the site is reached both straight on and from a cold path that has just made calls, so nothing is live in
@@ -24,7 +25,7 @@
 .text
 .align 2
 
-/* Replaces the load of 0x8c0b23a4 into R0 at 0x8c0b3a88. The patcher is compiled code: it gets the twelve bytes of argument space. */
+/* Replaces the load of 0x8c0b2b84 into R0 at 0x8c0b4358. The patcher is compiled code: it gets the twelve bytes of argument space. */
 .global op1f_boot_stub
 .type op1f_boot_stub, STT_FUNC
 op1f_boot_stub:
@@ -34,7 +35,7 @@ op1f_boot_stub:
     SP += 12;
     RETS = [SP++];
     R0.H = 0x8c0b;
-    R0.L = 0x23a4;                      /* the displaced load */
+    R0.L = 0x2b84;                      /* the displaced load */
     RTS;
 .size op1f_boot_stub, .-op1f_boot_stub
 

@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M3, the base pack: the folders of the disk mode that the base answers the loader for. This is H6's unit,
 // which every base before M3 carries, with two calls added and nothing else changed: the root's child maker asks
 // the folders unit (module/build_m3_folders.cpp, op1f_folders_child) for a name that is not fx or lfo before it
@@ -10,14 +11,14 @@
 //
 // What this unit uses of the firmware's disk mode (docs/methods.md says how such things are found):
 //   * The disk mode shows a tree of folders and files that the firmware builds when the mode starts; it is no copy
-//     of the disk's folders. 0x8fcaccf0(parent, name) makes a folder in the tree and 0x8fcacf48(folder, name) adds a
+//     of the disk's folders. 0x8fcaeb10(parent, name) makes a folder in the tree and 0x8fcaed68(folder, name) adds a
 //     file to one. What a folder does is an object beside it, its behaviour, with six functions in this order: two
 //     that take it away (and free nothing when the object is static), one with nothing to do, one that answers 0,
 //     one that answers a folder inside it by its name (a behaviour, or 0 for none), and one that answers a file by
 //     its name (a file object, or 0 to refuse the name). The root folder's function for a folder's name is
-//     0x8fcab080, and the word that holds its address is 0x8490f810.
-//   * A file object for a file that lies on the disk is made by 0x8fcb8d98(obj, path) in 0x40 bytes of the
-//     firmware's allocator (0x8d4e5854), with the path as a C text; the firmware's own tape folders use it for a
+//     0x8fcacea0, and the word that holds its address is 0x8490fc4c.
+//   * A file object for a file that lies on the disk is made by 0x8fcbabb8(obj, path) in 0x40 bytes of the
+//     firmware's allocator (0x8d4e63bc), with the path as a C text; the firmware's own tape folders use it for a
 //     tape's settings file. Reading, writing through a spare file and a rename, the size and the time are the
 //     class's own. Its function for a delete from the computer, the eighth of its table, does nothing, so this unit
 //     gives its file objects a table of their own with that one function replaced (K6b).
@@ -26,8 +27,8 @@
 // that slot in the module's folder user/fx/ (the chain unit writes and reads them: build_h_chain.cpp), served by
 // stock's filesystem-backed file class, so the host reads a preset as a small JSON text, writes one over a slot's
 // file (the chain unit re-reads a changed file when the list opens) and sees the names it knows from the list.
-// Two edits (group build-h6): the root behaviour's +0x10 slot (a `word` edit at 0x8490f810) -> op1f_mtp_root_child,
-// and a CALL.a at 0x8fcaddea -> op1f_mtp_populate_stub (build_h_disk.s), which makes the "fx" folder after the
+// Two edits (group build-h6): the root behaviour's +0x10 slot (a `word` edit at 0x8490fc4c) -> op1f_mtp_root_child,
+// and a CALL.a at 0x8fcafc0a -> op1f_mtp_populate_stub (build_h_disk.s), which makes the "fx" folder after the
 // stock folders. The chain unit makes the folder user/fx/ itself (with the trailing slash createFolderRecursive
 // needs: H6 passed user/fx and only user was made, so every file write failed its rename). The tree's build logs nothing; the chain unit prints the
 // counters from the frame hook. Since K6b a delete logs a line (stock's own folder maker logs on this thread).
@@ -36,22 +37,22 @@
 typedef unsigned int u32;
 typedef unsigned char u8;
 
-typedef void* (*MakeFolderFn)(void* parent, const char* name);              // 0x8fcaccf0
-typedef void* (*AddFileFn)(void* folder, const char* name);                  // 0x8fcacf48
-typedef void* (*HeapAllocFn)(u32 bytes);                                     // 0x8d4e5854
-typedef void (*FsFileCtorFn)(void* obj, const char* path);                   // 0x8fcb8d98: the filesystem-backed file object (0x40 bytes)
-typedef void* (*RootChildFn)(void* behaviour, const char* name);             // 0x8fcab080: stock's root child maker
+typedef void* (*MakeFolderFn)(void* parent, const char* name);              // 0x8fcaeb10
+typedef void* (*AddFileFn)(void* folder, const char* name);                  // 0x8fcaed68
+typedef void* (*HeapAllocFn)(u32 bytes);                                     // 0x8d4e63bc
+typedef void (*FsFileCtorFn)(void* obj, const char* path);                   // 0x8fcbabb8: the filesystem-backed file object (0x40 bytes)
+typedef void* (*RootChildFn)(void* behaviour, const char* name);             // 0x8fcacea0: stock's root child maker
 
-#define STOCK_MAKE_FOLDER ((MakeFolderFn)0x8fcaccf0u)
-#define STOCK_ADD_FILE ((AddFileFn)0x8fcacf48u)
-#define STOCK_HEAP_ALLOC ((HeapAllocFn)0x8d4e5854u)
-#define STOCK_FS_FILE_CTOR ((FsFileCtorFn)0x8fcb8d98u)
-#define STOCK_ROOT_CHILD ((RootChildFn)0x8fcab080u)
+#define STOCK_MAKE_FOLDER ((MakeFolderFn)0x8fcaeb10u)
+#define STOCK_ADD_FILE ((AddFileFn)0x8fcaed68u)
+#define STOCK_HEAP_ALLOC ((HeapAllocFn)0x8d4e63bcu)
+#define STOCK_FS_FILE_CTOR ((FsFileCtorFn)0x8fcbabb8u)
+#define STOCK_ROOT_CHILD ((RootChildFn)0x8fcacea0u)
 
 enum { SLOTS = 64, FS_FILE_BYTES = 0x40 };                                  // 64 slots (H6b)
 
 // K6b: a delete that works. The disk mode's delete calls the file object's function at +0x1c and then takes the
-// node away. For the firmware's filesystem-backed class that function does nothing (0x8fcb8a74), so a delete of a
+// node away. For the firmware's filesystem-backed class that function does nothing (0x8fcba894), so a delete of a
 // preset or a pack hid the file until the next visit and left it on the disk. Here every file object of ours gets
 // a copy of the class's twelve functions with the delete ours: the file is written anew as an empty slot's file, {}
 // from the firmware's json writer, which is what the preset units and the slot maker write for an empty slot. The
@@ -62,12 +63,12 @@ typedef void (*JsonDtorFn)(void* json);
 typedef int (*JsonWriteFileFn)(void* path_string, void* json);
 typedef void (*StringCtorFn)(void* out, const char* text);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
-#define STOCK_FS_EMPTY_DELETE ((u32)0x8fcb8a74u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
+#define STOCK_FS_EMPTY_DELETE ((u32)0x8fcba894u)
 
 enum { FS_FILE_SLOTS = 12, FS_DELETE_SLOT = 7, FS_PATH_OWN = 8, FS_PATH_ROOM = 0x1c, JSON_OBJECT_KIND = 7, DELETE_LINES = 16 };
 static const char LOG_FILE[] = "../src/main/op1f_disk.cpp";

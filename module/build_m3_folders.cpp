@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M3, the base pack: the packs' folders and files (OS 1.7.0+0; docs/base.md).
 // A unit of its own, new at M3.
 //
@@ -24,15 +25,15 @@
 //     its own; it is refused while the disk mode is open; and it is held by the file's size afterwards, since the
 //     firmware's own close of such a file answers 1 whatever its rename answered.
 //
-// The firmware's calls, each as it was read at its callers: the disk mode's folder maker 0x8fcaccf0 and its file
-// adder 0x8fcacf48; the heap 0x8d4e5854; the file class's constructor 0x8fcb8d98, whose twelve virtuals a file of
-// ours takes with the delete ours; stock's removal 0x8fcbd194; the size 0x8c051f6c (-1 for no file, no line);
-// createFolderRecursive 0x8c05203c (1 when every part is there); 0x8c052024 (1 for a path that opens as a folder);
-// the folder listing 0x8c051df8, 0x8c0a4820 (an entry's name at +11), 0x8c0a5424; the small file calls the file class
-// uses, open 0x8fcb8b68(path, mode) (a handle, -1 with a line), read 0x8fcb8b34 and write 0x8fcb8aa0 (buffer, size,
+// The firmware's calls, each as it was read at its callers: the disk mode's folder maker 0x8fcaeb10 and its file
+// adder 0x8fcaed68; the heap 0x8d4e63bc; the file class's constructor 0x8fcbabb8, whose twelve virtuals a file of
+// ours takes with the delete ours; stock's removal 0x8fcbefb4; the size 0x8c051f9c (-1 for no file, no line);
+// createFolderRecursive 0x8c05206c (1 when every part is there); 0x8c052054 (1 for a path that opens as a folder);
+// the folder listing 0x8c051e28, 0x8c0a4bd0 (an entry's name at +11), 0x8c0a57d4; the small file calls the file class
+// uses, open 0x8fcba988(path, mode) (a handle, -1 with a line), read 0x8fcba954 and write 0x8fcba8c0 (buffer, size,
 // count, the handle as the fourth argument; the count done; the write's failure line is the firmware's own `write
-// error: %s`), close 0x8fcb8a8c; rename 0x8c051f58(from, to) (1 when it
-// was made); and the word [0x84d25704], not 0 while the disk mode is open. Each takes a C string: no stock string is
+// error: %s`), close 0x8fcba8ac; rename 0x8c051f88(from, to) (1 when it
+// was made); and the word [0x84d25bcc], not 0 while the disk mode is open. Each takes a C string: no stock string is
 // made here, so none has to be given back. Nothing is divided (the module links no runtime). Compiled for the PC as
 // it is, with OP1F_HOST defined, for tests this tree does not hold: the stand-ins come in through mock_files_m3.h.
 
@@ -42,51 +43,51 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void* (*MakeFolderFn)(void* parent, const char* name);              // 0x8fcaccf0: a folder of the disk mode's tree
-typedef void* (*AddFileFn)(void* folder, const char* name);                  // 0x8fcacf48: a file of the disk mode's tree
-typedef void* (*HeapAllocFn)(u32 bytes);                                     // 0x8d4e5854
-typedef void (*FsFileCtorFn)(void* obj, const char* path);                   // 0x8fcb8d98: the filesystem-backed file object (0x40 bytes)
-typedef int (*FileSizeFn)(const char* path);                                 // 0x8c051f6c: -1 when there is no file
-typedef int (*FileRemoveFn)(const char* path);                               // 0x8fcbd194
-typedef int (*MakeFoldersFn)(const char* path);                              // 0x8c05203c: createFolderRecursive
-typedef int (*IsFolderFn)(const char* path);                                 // 0x8c052024: 1 when the path opens as a folder
-typedef void* (*DirOpenFn)(const char* path);                                // 0x8c051df8
-typedef void* (*DirNextFn)(void* handle);                                    // 0x8c0a4820: an entry, its name at +11; 0 at the end
-typedef int (*DirCloseFn)(void* handle);                                     // 0x8c0a5424
-typedef int (*OpenFn)(const char* path, const char* mode);                   // 0x8fcb8b68: a handle, -1 when it cannot be opened
-typedef int (*ReadFn)(void* buffer, u32 size, u32 count, int handle);        // 0x8fcb8b34: the count read (on to the file system's read, 0x8c0a4c10, 0x8c0a49e8)
-typedef int (*WriteFn)(const void* data, u32 size, u32 count, int handle);   // 0x8fcb8aa0: the count written (on to its write, 0x8c0a4e54, 0x8c0a4c28)
-typedef void (*CloseFn)(int handle);                                         // 0x8fcb8a8c
-typedef int (*RenameFn)(const char* from, const char* to);                   // 0x8c051f58: 1 when it was made
+typedef void* (*MakeFolderFn)(void* parent, const char* name);              // 0x8fcaeb10: a folder of the disk mode's tree
+typedef void* (*AddFileFn)(void* folder, const char* name);                  // 0x8fcaed68: a file of the disk mode's tree
+typedef void* (*HeapAllocFn)(u32 bytes);                                     // 0x8d4e63bc
+typedef void (*FsFileCtorFn)(void* obj, const char* path);                   // 0x8fcbabb8: the filesystem-backed file object (0x40 bytes)
+typedef int (*FileSizeFn)(const char* path);                                 // 0x8c051f9c: -1 when there is no file
+typedef int (*FileRemoveFn)(const char* path);                               // 0x8fcbefb4
+typedef int (*MakeFoldersFn)(const char* path);                              // 0x8c05206c: createFolderRecursive
+typedef int (*IsFolderFn)(const char* path);                                 // 0x8c052054: 1 when the path opens as a folder
+typedef void* (*DirOpenFn)(const char* path);                                // 0x8c051e28
+typedef void* (*DirNextFn)(void* handle);                                    // 0x8c0a4bd0: an entry, its name at +11; 0 at the end
+typedef int (*DirCloseFn)(void* handle);                                     // 0x8c0a57d4
+typedef int (*OpenFn)(const char* path, const char* mode);                   // 0x8fcba988: a handle, -1 when it cannot be opened
+typedef int (*ReadFn)(void* buffer, u32 size, u32 count, int handle);        // 0x8fcba954: the count read (on to the file system's read, 0x8c0a4c10, 0x8c0a49e8)
+typedef int (*WriteFn)(const void* data, u32 size, u32 count, int handle);   // 0x8fcba8c0: the count written (on to its write, 0x8c0a4e54, 0x8c0a4c28)
+typedef void (*CloseFn)(int handle);                                         // 0x8fcba8ac
+typedef int (*RenameFn)(const char* from, const char* to);                   // 0x8c051f88: 1 when it was made
 
 #ifdef OP1F_HOST
 #include "mock_files_m3.h"                             // the PC's stand-ins: the logger, a model of the disk and of the disk mode's tree, the word read
 #define BARRIER() ((void)0)                            // the PC's run is one thread
 #else
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_MAKE_FOLDER ((MakeFolderFn)0x8fcaccf0u)
-#define STOCK_ADD_FILE ((AddFileFn)0x8fcacf48u)
-#define STOCK_HEAP_ALLOC ((HeapAllocFn)0x8d4e5854u)
-#define STOCK_FS_FILE_CTOR ((FsFileCtorFn)0x8fcb8d98u)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_FILE_REMOVE ((FileRemoveFn)0x8fcbd194u)
-#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05203cu)
-#define STOCK_IS_FOLDER ((IsFolderFn)0x8c052024u)
-#define STOCK_DIR_OPEN ((DirOpenFn)0x8c051df8u)
-#define STOCK_DIR_NEXT ((DirNextFn)0x8c0a4820u)
-#define STOCK_DIR_CLOSE ((DirCloseFn)0x8c0a5424u)
-#define STOCK_OPEN ((OpenFn)0x8fcb8b68u)
-#define STOCK_READ ((ReadFn)0x8fcb8b34u)                // the visit of M3 found the two swapped in the build before: the write read
-#define STOCK_WRITE ((WriteFn)0x8fcb8aa0u)              // the empty temporary file and answered 0
-#define STOCK_CLOSE ((CloseFn)0x8fcb8a8cu)
-#define STOCK_RENAME ((RenameFn)0x8c051f58u)
-#define STOCK_FS_EMPTY_DELETE ((u32)0x8fcb8a74u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_MAKE_FOLDER ((MakeFolderFn)0x8fcaeb10u)
+#define STOCK_ADD_FILE ((AddFileFn)0x8fcaed68u)
+#define STOCK_HEAP_ALLOC ((HeapAllocFn)0x8d4e63bcu)
+#define STOCK_FS_FILE_CTOR ((FsFileCtorFn)0x8fcbabb8u)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_FILE_REMOVE ((FileRemoveFn)0x8fcbefb4u)
+#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05206cu)
+#define STOCK_IS_FOLDER ((IsFolderFn)0x8c052054u)
+#define STOCK_DIR_OPEN ((DirOpenFn)0x8c051e28u)
+#define STOCK_DIR_NEXT ((DirNextFn)0x8c0a4bd0u)
+#define STOCK_DIR_CLOSE ((DirCloseFn)0x8c0a57d4u)
+#define STOCK_OPEN ((OpenFn)0x8fcba988u)
+#define STOCK_READ ((ReadFn)0x8fcba954u)                // the visit of M3 found the two swapped in the build before: the write read
+#define STOCK_WRITE ((WriteFn)0x8fcba8c0u)              // the empty temporary file and answered 0
+#define STOCK_CLOSE ((CloseFn)0x8fcba8acu)
+#define STOCK_RENAME ((RenameFn)0x8c051f88u)
+#define STOCK_FS_EMPTY_DELETE ((u32)0x8fcba894u)
 #define RD32(a) (*(volatile u32*)(a))
 // The compiler moves no load or store across this: the table is stored before the word that says it was settled.
 #define BARRIER() asm volatile("" : : : "memory")
 #endif
 
-static const u32 DISK_OPEN = 0x84d25704u;              // not 0 while the disk mode is open (mtp::init writes it, mtp::shutdown clears it)
+static const u32 DISK_OPEN = 0x84d25bccu;              // not 0 while the disk mode is open (mtp::init writes it, mtp::shutdown clears it)
 enum { ALL = 64, TEXT = OP1F_FOLDER_TEXT, NAME = OP1F_FILE_NAME, PATH = 64, FILES_MOST = 64, DIR_NAME_AT = 11, FS_FILE_BYTES = 0x40 };
 enum { FS_FILE_SLOTS = 12, FS_DELETE_SLOT = 7, FS_PATH_OWN = 8, FS_PATH_ROOM = 0x1c };
 enum { CARD_3_BYTES = OP1F_CARD_LEVEL_3_BYTES, MOST = OP1F_CARDS_MOST, LARGEST = 1 << 20, LINES_SAID = 16 };
@@ -98,7 +99,7 @@ static const char WRITE_MODE[] = "w+b";                // texts the open compare
 static const char READ_MODE[] = "rb";
 
 // The names a pack's folder is never shown under: the firmware's at the top of the disk mode (its root child maker
-// 0x8fcab080 takes these four), the loader's, the base's.
+// 0x8fcacea0 takes these four), the loader's, the base's.
 static const char* const FIRMWARE_NAMES[] = { "synth", "drum", "tapes", "mixdown" };
 static const char LOADER_NAME[] = "packs";
 static const char* const BASE_NAMES[] = { "fx", "lfo" };

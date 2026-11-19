@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build J packs J5i: J5h's unit (module/build_j5h_lfo_alone.cpp, kept as that step's) with the two mends its
 // read-out asked for (analysis/build_j5h_device_result.md; the study's section 25):
 //   * the own file is written when the chain unit has written its file, not after a time on the clock: the chain
@@ -80,41 +81,41 @@ typedef void (*LogFn)(int level, const char* file, int line, const char* format,
 typedef int (*KeyEventFn)(void* self, const int* event);
 typedef int (*KeyUpFn)(void* self, int key);
 typedef int (*EncoderFn)(void* self, int index, int delta);
-typedef int (*JsonSizeFn)(void* json);                              // 0x8c084bf2
-typedef void* (*JsonAtFn)(void* json, int index);                   // 0x8c084eb0
-typedef int (*JsonIntFn)(void* json);                               // 0x8c084810
-typedef void (*JsonCtorFn)(void* json, int kind);                   // 0x8c085b78(json, kind): 0 is null, which the first push turns into an array
-typedef void (*JsonFromIntFn)(void* json, int value);               // 0x8c083aec
-typedef void (*JsonPushFn)(void* array, void* value);               // 0x8c085d24
-typedef void (*JsonDtorFn)(void* json);                             // 0x8c0844b0
-typedef int (*JsonReadFileFn)(const char* path, void* json);        // 0x8c0534a0: the file parsed into the json, non-zero on success
-typedef int (*JsonWriteFileFn)(void* path_string, void* json);      // 0x8c053138: the json written to the path, a stock string object; 0 when the write did not land
-typedef void (*StringCtorFn)(void* out, const char* text);          // 0x8c03e40c: a stock string object from text
-typedef int (*FileSizeFn)(const char* path);                        // 0x8c051f6c: the file's size, -1 when it is not there (and no line written)
+typedef int (*JsonSizeFn)(void* json);                              // 0x8c084c22
+typedef void* (*JsonAtFn)(void* json, int index);                   // 0x8c084ee0
+typedef int (*JsonIntFn)(void* json);                               // 0x8c084840
+typedef void (*JsonCtorFn)(void* json, int kind);                   // 0x8c085ba8(json, kind): 0 is null, which the first push turns into an array
+typedef void (*JsonFromIntFn)(void* json, int value);               // 0x8c083b1c
+typedef void (*JsonPushFn)(void* array, void* value);               // 0x8c085d54
+typedef void (*JsonDtorFn)(void* json);                             // 0x8c0844e0
+typedef int (*JsonReadFileFn)(const char* path, void* json);        // 0x8c0534d0: the file parsed into the json, non-zero on success
+typedef int (*JsonWriteFileFn)(void* path_string, void* json);      // 0x8c053168: the json written to the path, a stock string object; 0 when the write did not land
+typedef void (*StringCtorFn)(void* out, const char* text);          // 0x8c03e434: a stock string object from text
+typedef int (*FileSizeFn)(const char* path);                        // 0x8c051f9c: the file's size, -1 when it is not there (and no line written)
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_SYNTH_KEY_DOWN ((KeyEventFn)0x8c0cf4ccu)
-#define STOCK_SYNTH_KEY_SHIFT ((KeyEventFn)0x8c0cef50u)
-#define STOCK_SYNTH_KEY_UP ((KeyUpFn)0x8c0ce984u)
-#define STOCK_SYNTH_ENCODER ((EncoderFn)0x8c0d50a8u)
-#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084bf2u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_SYNTH_KEY_DOWN ((KeyEventFn)0x8c0cfe7cu)
+#define STOCK_SYNTH_KEY_SHIFT ((KeyEventFn)0x8c0cf904u)
+#define STOCK_SYNTH_KEY_UP ((KeyUpFn)0x8c0cf364u)
+#define STOCK_SYNTH_ENCODER ((EncoderFn)0x8c0d5c10u)
+#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084c22u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
 #ifdef OP1F_HOST
 extern unsigned char mock_power_popup;                              // the PC run's stand-ins for the three things below that are the hardware's or the linker's
 extern unsigned int mock_cycles;
 extern int mock_chain_there;
 #define POWER_POPUP (mock_power_popup)
 #else
-#define POWER_POPUP (*(volatile u8*)0x84c9af40u)                    // 1 while the shutdown countdown is on the screen
+#define POWER_POPUP (*(volatile u8*)0x84c9b3e4u)                    // 1 while the shutdown countdown is on the screen
 #endif
 
 static const char LOG_FILE[] = "../src/main/op1f_lfo_alone.cpp";

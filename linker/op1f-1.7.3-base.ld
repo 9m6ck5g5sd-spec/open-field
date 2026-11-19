@@ -1,10 +1,10 @@
-/* A pack's layout for stock OP-1 Field OS 1.7.0+0 (Build J, since J4): the module reservation after the base's
- * 64 KiB, [0x8d2f36cc, 0x8d4e36cc). The base (linker/op1f-1.7.0-base.ld) reads the pack file at start-up, puts
- * its bytes here, clears the zeroed data after them and applies the pack's table of stock changes. The address is
- * fixed: the base refuses a pack linked for another one. */
+/* The loader's layout for stock OP-1 Field OS 1.7.3+0: the first 64 KiB of the room for our code,
+ * [0x8d2e4234, 0x8d4e4234) (module_base and reserved_bytes in profiles/op1f-1.7.3.json). The loader is the part of
+ * our code the firmware file carries: the load point's stub, the pack loader and the code that applies a pack's
+ * table of changes. A pack's code is loaded right after it, at 0x8d2f4234 (linker/op1f-1.7.3-pack.ld). */
 OUTPUT_ARCH(bfin)
-ENTRY(field_module_entry)
-MEMORY { MODULE (rwx) : ORIGIN = 0x8d2f36cc, LENGTH = 0x1f0000 }
+ENTRY(op1f_boot_stub)
+MEMORY { MODULE (rwx) : ORIGIN = 0x8d2e4234, LENGTH = 0x10000 }
 SECTIONS {
   __module_reserved_start = ORIGIN(MODULE);
   __module_reserved_end = ORIGIN(MODULE) + LENGTH(MODULE);
@@ -23,5 +23,5 @@ SECTIONS {
   /DISCARD/ : { *(.comment .note* .eh_frame .eh_frame_hdr .gcc_except_table) }
   ASSERT(SIZEOF(.init_array) == 0, "Static constructors are not run by the stock loader")
   ASSERT(SIZEOF(.fini_array) == 0, "Static destructors are not supported")
-  ASSERT(__module_end <= __module_reserved_end, "The pack exceeds the reservation")
+  ASSERT(__module_end <= __module_reserved_end, "The base exceeds its 64 KiB")
 }

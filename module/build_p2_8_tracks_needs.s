@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Pictures step P2 (analysis/picture_maker_study.md, section 9): the pack `8 tracks` carries its eight pictures as
  * instructions of the second kind, by which the unit puts each together from its own stock pictures
  * (module/build_p2_art.cpp and build_p2_map.cpp in `kit`). A kit of before P2 does not know that kind: P1's tells a

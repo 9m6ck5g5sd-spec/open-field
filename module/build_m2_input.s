@@ -1,19 +1,20 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Step M2, the base pack: our calls at the five places of the firmware level 2 stands at (OS 1.7.0+0;
  * module/build_m3_cards.cpp, what they ask). The base's table (module/build_m2_base_table.s) puts a jump to each
  * of the first four at its place, with a
  * trampoline the loader makes in the room named beside it: the stock instructions the jump stands on, copied from
  * the running firmware, and a jump back behind them. The fifth is a call in place of one 8-byte load.
  *
- *   op1f_input_down_entry   the key-down function's entry, 0x8c0b1320; the trampoline copies 8 bytes. R0 is the
+ *   op1f_input_down_entry   the key-down function's entry, 0x8c0b1ae8; the trampoline copies 8 bytes. R0 is the
  *                           firmware's record of the key; RETS the caller's return.
- *   op1f_input_shift_entry  the shifted key-down function's entry, 0x8c0b1390; the trampoline copies 12 bytes. The
+ *   op1f_input_shift_entry  the shifted key-down function's entry, 0x8c0b1b58; the trampoline copies 12 bytes. The
  *                           same registers.
- *   op1f_input_up_entry     the key-up function's entry, 0x8c0b13c4; the trampoline copies 12 bytes. R0 is the
+ *   op1f_input_up_entry     the key-up function's entry, 0x8c0b1b8c; the trampoline copies 12 bytes. R0 is the
  *                           key's number: the firmware hands an up on as a number, not as a record.
- *   op1f_input_turn_place   0x8c0b1438 inside the turn function, after the firmware's own bookkeeping (the keys are on,
+ *   op1f_input_turn_place   0x8c0b1c00 inside the turn function, after the firmware's own bookkeeping (the keys are on,
  *                           the knob's byte for the click is cleared); the trampoline copies 8 bytes. The function
  *                           has made its frame; R0 and R7 hold the knob, R6 the turn, R5 the knob + 4.
- *   op1f_page_screen        0x8c0b1db0 in the screen request, where the firmware loads the word named below: this call
+ *   op1f_page_screen        0x8c0b2578 in the screen request, where the firmware loads the word named below: this call
  *                           makes that load. R0 holds the screen the current controller answered, R6 and R7 the
  *                           function's own words.
  *
@@ -37,9 +38,9 @@
  * it touches is live in the request but R0 and R1, and CC, which the request sets again at once. It calls nothing,
  * so it runs as it is inside a request made with interrupts masked (J5i).
  */
-.set STOCK_MODE, 0x8400f7d4                 /* the mode: 0 synth, 1 drum, 2 tape, 3 mixer */
-.set STOCK_SLOT_WORD, 0x84d20bc4            /* the word the screen request loads at 0x8c0b1db0 */
-.set STOCK_TURN_END, 0x8c0b145c             /* the turn function's own way out: its frame taken down, back to its caller */
+.set STOCK_MODE, 0x8400f978                 /* the mode: 0 synth, 1 drum, 2 tape, 3 mixer */
+.set STOCK_SLOT_WORD, 0x84d21088            /* the word the screen request loads at 0x8c0b2578 */
+.set STOCK_TURN_END, 0x8c0b1c24             /* the turn function's own way out: its frame taken down, back to its caller */
 .set PAGE_SCREEN, 77
 
 .section .text

@@ -1,13 +1,14 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build I image I2: the stock LFO's effect destination on any wagon of the train (analysis/lfo_train_study.md,
  * section 11). Profile group build-i2: two CALL.a stubs in place of 8-byte loads in the L1 second stages.
  *
  * What stock does there, once a block, when the slot's fx-side LFO object is there and the slot's LFO is on:
  *
  *   synth, from 0x11a054ce on: the object's vtable is fetched into P1 (R0 and P0 are the object); then, at
- *          0x11a054d0, the address of the synth's LFO blocks 0x119037e0 is loaded into R1     <- the stub
+ *          0x11a05500, the address of the synth's LFO blocks 0x119037e0 is loaded into R1     <- the stub
  *          and the slot's offset is added to it; R2 gets the class, 2 for the synth's effect; then the vtable's
  *          third entry, the apply, is fetched into P1 and called.
- *   drum,  from 0x11a0401c on: the same steps; the site is 0x11a0401e, the load of the address of the drum's
+ *   drum,  from 0x11a0401c on: the same steps; the site is 0x11a0404e, the load of the address of the drum's
  *          LFO blocks 0x11903ae0 into R1,                                                      <- the stub
  *          and the class is 5.
  *
@@ -20,7 +21,7 @@
 .text
 .align 2
 
-/* Replaces the load of 0x119037e0 into R1 at 0x11a054d0. */
+/* Replaces the load of 0x119037e0 into R1 at 0x11a05500. */
 .global op1f_lfofx_pre_synth
 .type op1f_lfofx_pre_synth, STT_FUNC
 op1f_lfofx_pre_synth:
@@ -31,7 +32,7 @@ op1f_lfofx_pre_synth:
     RTS;
 .size op1f_lfofx_pre_synth, .-op1f_lfofx_pre_synth
 
-/* Replaces the load of 0x11903ae0 into R1 at 0x11a0401e. */
+/* Replaces the load of 0x11903ae0 into R1 at 0x11a0404e. */
 .global op1f_lfofx_pre_drum
 .type op1f_lfofx_pre_drum, STT_FUNC
 op1f_lfofx_pre_drum:

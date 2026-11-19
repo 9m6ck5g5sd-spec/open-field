@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build H image H5: the chain presets list, a screen of the GUI's own (analysis/fx_chain_study.md section 21; the
 // drawing: tools/fx_presets_svg.py). H5b adds the save screen (stock's save page redrawn) and the font's lowercase.
 // The chain unit (build_h_chain.cpp) keeps the presets store, the file and the key grammar and fills Op1fPresetsView
@@ -7,10 +8,10 @@
 // hint rows, the boxes, the clock and the check through display bytes.
 //
 // What this unit uses of the firmware's texts and screens (docs/methods.md says how such things are found):
-//   * A text that changes while the unit runs is a label. 0x8fc23fcc(screen, node, kind) turns a part of the picture
+//   * A text that changes while the unit runs is a label. 0x8fc25abc(screen, node, kind) turns a part of the picture
 //     into one: the part is a placeholder that gives the label its place and its stroke colour, the label takes the
 //     part's place in the document, so that the id finds it no more, and comes back to be kept.
-//     0x8fc38ebc(label, text, max_width) sets its text from a C text: a text wider than max_width pixels is shortened
+//     0x8fc3aa3c(label, text, max_width) sets its text from a C text: a text wider than max_width pixels is shortened
 //     and gets a mark at its end, and an empty text shows nothing. Setting a text asks the heap for memory, and a
 //     text that is the label's already is not laid out again.
 //   * The firmware's font has the letters at the codes of the small letters and the digits at theirs. The codes of
@@ -18,7 +19,7 @@
 //     text this unit sets is in small letters (H5b: H5's capitals came out as signs and question marks).
 //   * A label is a part like any other in its first words (the display byte, the matrix), so it is shown and hidden
 //     as a part is; this unit hides one with an empty text. The word at the label's +0x60 is the x, in pixels, from
-//     which its text is laid out, and 0x8fc3668c(label) gives the box of the laid-out text (left, right, top and
+//     which its text is laid out, and 0x8fc3820c(label) gives the box of the laid-out text (left, right, top and
 //     bottom, each with ten bits behind the point). The box comes back by value: the address for it travels in P0,
 //     which the compiler sets when the function is bound as one that returns the structure (H6d passed it as a
 //     second argument and crashed). The box is that of the shapes without their stroke, so one upright stroke (i, l,
@@ -27,7 +28,7 @@
 //   * The screens are drawn in the order of their numbers, and the power popup has the number 82. H5 to H6c had the
 //     list at 85, and its background covered the shutdown countdown. A screen of ours takes a free number below 82
 //     (37, 38 and 77 are; 85 is not).
-//   * The firmware asks the mode which screen to show after key events. 0x8c0b1d8c() makes it ask again, and the
+//   * The firmware asks the mode which screen to show after key events. 0x8c0b2554() makes it ask again, and the
 //     chain unit calls it after a change made at a key release or by a timer (the save screen shown while shift + T3
 //     is held, the list after a save), so that the page follows at once.
 //
@@ -49,21 +50,21 @@ typedef unsigned char u8;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void (*ScreenCtorFn)(void* obj, int id, const char* name);         // 0x8fc248a8: Screen::Screen, registers the object by id
-typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc241d0: 0 when optional and missing
-typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);               // 0x8c03db96
-typedef void* (*LabelFromNodeFn)(void* screen, void* node, int kind);      // 0x8fc23fcc: the node replaced by a label object in the document, the label returned
-typedef void (*LabelTextFn)(void* label, const char* text, int max_width); // 0x8fc38ebc: the text laid out, shortened with a mark while wider than max_width pixels
+typedef void (*ScreenCtorFn)(void* obj, int id, const char* name);         // 0x8fc26398: Screen::Screen, registers the object by id
+typedef void* (*FindNodeFn)(void* screen, const char* id, int optional);   // 0x8fc25cc0: 0 when optional and missing
+typedef void (*ApplyMatrixFn)(void* node, const u32* matrix);               // 0x8c03dbbe
+typedef void* (*LabelFromNodeFn)(void* screen, void* node, int kind);      // 0x8fc25abc: the node replaced by a label object in the document, the label returned
+typedef void (*LabelTextFn)(void* label, const char* text, int max_width); // 0x8fc3aa3c: the text laid out, shortened with a mark while wider than max_width pixels
 struct LabelBox { i32 x_min, x_max, y_min, y_max; };                       // the laid-out glyphs' box in Q10 (the layout keeps it at label + 0x9c..0xa8)
-typedef LabelBox (*LabelBoundsFn)(void* label);                            // 0x8fc3668c: the box returned by value, so the buffer's address travels in P0, the Blackfin ABI's hidden struct-return pointer (the callee's prologue copies P0 into P4; its callers set P0 before the call, 0x8fc38efe); H6d bound it with the buffer as a second argument and crashed on a null P0 (section 22.15)
+typedef LabelBox (*LabelBoundsFn)(void* label);                            // 0x8fc3820c: the box returned by value, so the buffer's address travels in P0, the Blackfin ABI's hidden struct-return pointer (the callee's prologue copies P0 into P4; its callers set P0 before the call, 0x8fc38efe); H6d bound it with the buffer as a second argument and crashed on a null P0 (section 22.15)
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_SCREEN_CTOR ((ScreenCtorFn)0x8fc248a8u)
-#define STOCK_FIND_NODE ((FindNodeFn)0x8fc241d0u)
-#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03db96u)
-#define STOCK_LABEL_FROM_NODE ((LabelFromNodeFn)0x8fc23fccu)
-#define STOCK_LABEL_TEXT ((LabelTextFn)0x8fc38ebcu)
-#define STOCK_LABEL_BOUNDS ((LabelBoundsFn)0x8fc3668cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_SCREEN_CTOR ((ScreenCtorFn)0x8fc26398u)
+#define STOCK_FIND_NODE ((FindNodeFn)0x8fc25cc0u)
+#define STOCK_APPLY_MATRIX ((ApplyMatrixFn)0x8c03dbbeu)
+#define STOCK_LABEL_FROM_NODE ((LabelFromNodeFn)0x8fc25abcu)
+#define STOCK_LABEL_TEXT ((LabelTextFn)0x8fc3aa3cu)
+#define STOCK_LABEL_BOUNDS ((LabelBoundsFn)0x8fc3820cu)
 #define RD32(a) (*(volatile u32*)(a))
 
 extern "C" void* op1f_svg_embedded(const char* name) asm("op1f_svg_embedded");    // build_b_art.cpp: a document parsed from the module's copy, or 0
@@ -74,7 +75,7 @@ extern "C" void __attribute__((weak)) op1f_lfopresets_view(Op1fPresetsView* out)
 extern "C" void __attribute__((weak)) op1f_presets_view(int host, Op1fPresetsView* out) asm("op1f_presets_view");
 
 static const char LOG_FILE[] = "../src/main/op1f_presets.cpp";
-static const u32 MODE_GUI = 0x84d20bc4u;
+static const u32 MODE_GUI = 0x84d21088u;
 
 enum { LIST_ID = OP1F_PRESETS_SCREEN_ID, SAVE_ID = OP1F_SAVE_SCREEN_ID, HOSTS = 2, WAGONS = OP1F_CHAIN_WAGONS, ROWS = OP1F_PRESET_ROWS, CELLS = OP1F_PRESET_NAME, SPOKES = OP1F_SAVE_SPOKES };
 enum { NODE_DISPLAY = 0x5c, MATRIX_WORDS = 9, Q = 1024, LABEL_KIND = 0, PRINT_FRAMES = 232, TEXT_MAX = 24 };

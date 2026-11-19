@@ -2,7 +2,7 @@
 
 Build a small pack, see what it is made of, put it on your own unit, see it work, read its lines in the log, and change it. The pack is `wink`, in `examples/wink/`. It puts a small red dot of ours on the tempo screen and makes it blink. It changes no place of the firmware and names no address of it: everything it does goes through the base, the shared pack `base.pack` ([the base](base.md)). It is the model for a pack of your own.
 
-You need the tools of [building](build.md) for the first two steps and nothing else. From step 3 on you need a unit with open-field installed and `base.pack` on it ([the guide](guide.md)), on OS 1.7.0.
+You need the tools of [building](build.md) for the first two steps and nothing else. From step 3 on you need a unit with open-field installed and `base.pack` on it ([the guide](guide.md)), on OS 1.7.3.
 
 Read [NOTICE.md](../NOTICE.md) first if you have not: a pack runs inside the firmware of your unit, and a pack that is wrong can stop the unit from starting until it is taken off again. Step 3 says how to take one off.
 
@@ -21,7 +21,7 @@ The build overwrites nothing: the folder `out/` has to be new or empty. Delete i
 To build the example by itself, into a file that is not there yet (the tool does not overwrite one either):
 
 ```bash
-python -I tools/pack_build.py build3 --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.0.json --out out/wink.pack
+python -I tools/pack_build.py build3 --recipe examples/wink/recipe.json --profile profiles/op1f-1.7.3.json --out out/wink.pack
 ```
 
 The profile is there for one thing: the pack's header names the firmware file it is for, by the first four bytes of its SHA-256. `wink` changes nothing in the firmware.
@@ -82,7 +82,7 @@ It finds the dot once, by its name, in the tempo screen's document, and keeps it
 2. Copy `out/examples/wink.pack` into `packs`.
 3. Leave the disk mode. Switch the unit off and on.
 
-The start screen reads `1.7.0 - open-field 0.3`, as before: it names no pack. Press the metronome key: on the tempo screen, a small red dot at the top blinks, half a second on and half a second off.
+The start screen reads `1.7.3 - open-field 0.3`, as before: it names no pack. Press the metronome key: on the tempo screen, a small red dot at the top blinks, half a second on and half a second off.
 
 Without `base.pack` on the unit the example does not run: the start screen counts it as left out, and the log says `nobody offers the name it needs, op1f_level_1`.
 
@@ -102,9 +102,9 @@ The unit writes a log whenever it runs. To get it:
 In the log, the loader says what it did with each pack file, and the base what it did with each card. These lines are from a unit that ran the example beside the base, the four features and the two other examples. Each line of a log begins with a time, a letter for its level and a tag; they are left out here.
 
 ```
-loader: user/pk/wink.pack 'wink' version 1 is placed at 0x8d3ad9cc, 762624 from where it was linked: 38 places of its own moved
+loader: user/pk/wink.pack 'wink' version 1 is placed at 0x8d3ae554, 762656 from where it was linked: 38 places of its own moved
 loader: 'wink' runs: 0 words, 0 in DDR code, 0 in L1 code written and read back, 0 already there, 0 left to another pack
-loader: 'wink' is joined: 5 names of other packs in 6 places, 0 optional names nobody offers; its sum as linked 57204c57
+loader: 'wink' is joined: 5 names of other packs in 6 places, 0 optional names nobody offers; its sum as linked 7c44f9f4
 cards: 'wink' version 1, level 1: a frame call yes, 1 picture(s), a choice among them no, an input function no
 artwork tempo.svg: made on the unit, 44094 bytes: 43996 of the unit's own picture and 98 from user/pk/wink.pack, in 2167384 cycles
 ```
@@ -197,8 +197,8 @@ python -I tools/pack_build.py build3 --recipe examples/trampolines/recipe.json -
 
 **The two places.** Each is the first instruction of a function of the firmware that the start-up calls once:
 
-- `0x8c0dc920` draws a text with the firmware's font. The start-up calls it for the version text on the start screen.
-- `0x8c053a6c` is a small function with one argument, called right after that.
+- `0x8c0dd488` draws a text with the firmware's font. The start-up calls it for the version text on the start screen.
+- `0x8c053a9c` is a small function with one argument, called right after that.
 
 At each, the loader writes a jump to a routine of the pack. That is a **hook**: the firmware's function is entered, and our routine runs first.
 
@@ -210,20 +210,20 @@ At each, the loader writes a jump to a routine of the pack. That is a **hook**: 
 
 ```cpp
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
 ```
 
 [The firmware's functions our code uses](firmware-interfaces.md) lists the ones that are known, with what each takes and gives back.
 
 **The profile** (`profile.json`) has each place once, under `patches`, with a checksum of the firmware's bytes there, and under `tables` the pack's table: for each place the form of the change (`jump`), the pack's function (`target`), the room, and how many bytes the trampoline copies. The second place copies 12 bytes, which is more than the eight the jump replaces, so its entry has a checksum of its own over those twelve.
 
-**Its line in the log**, here as the log has it:
+**Its line in the log**, here as a unit on OS 1.7.0 had it (the example has not run on a unit under 1.7.3 yet):
 
 ```
    1.089.800: I trampolines[1]: trampolines: the draw of the version text came through its trampoline 1 time(s), and this is call 1 through the second; the rooms' sums are 6dc09fde and 096568b4
 ```
 
-The two sums are checksums of the two rooms as the loader filled them. On every unit with OS 1.7.0 they are these two numbers.
+The two sums are checksums of the two rooms as the loader filled them. On every unit with the same firmware they are the same two numbers; under 1.7.3 they are others, since each room ends in a jump back to another address.
 
 **A pack of this kind of your own.** Copy the folder `examples/trampolines` and give the pack a new name: in `recipe.json` the `name`, the `build` name and the paths of the sources; in `profile.json` the `id`, the `group`, the `part` and the table's `file`. Then, in the order you will need them:
 
@@ -231,7 +231,7 @@ The two sums are checksums of the two rooms as the loader filled them. On every 
 2. **Work out its checksum** from your own firmware file. The tool prints the lines for your profile, and says how many bytes a trampoline has to copy there:
 
 ```bash
-python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dc920 0x8c053a6c
+python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dd488 0x8c053a9c
 ```
 
 3. **Write the profile's entries**, in your own words: what stands at the place, and what your function does there. Then let the tool write the table:

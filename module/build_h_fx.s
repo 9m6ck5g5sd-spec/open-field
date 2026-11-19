@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build H images H1a and H1: the four stubs around stock's instrument effect call (analysis/fx_chain_study.md,
  * sections 8 and 9). Profile group "build-h1a". Each replaces one 8-byte instruction inside a LINKed L1 function with
  * a CALL.a (the function's RETS is saved in its frame, so the CALL's RETS write is harmless).
@@ -8,18 +9,18 @@
  * call op1f_fx_chain_run(host) (build_h_chain.cpp), which runs the coupled wagons in order on the two buses, the
  * mirrored wagon through stock's own producer object with stock's ctx, the others through the module's instances.
  *
- *   0x11a05284  the load of the word at 0x84a03844 into R0, in the synth second stage 0x11a04130: the producer's
+ *   0x11a052b4  the load of the word at 0x84a03c84 into R0, in the synth second stage 0x11a04130: the producer's
  *               read before the fx_active test. Dead there: R1-R3, P0-P2, CC (the code after sets them before
  *               use; the vocoder path arrives from a call). -> op1f_fx_synth_t0: CYCLES into op1f_fx_t0[0], and
  *               a zero in R0.
- *   0x11a052b6  the load of 0x84a01114 into P0, the first instruction after the effect call's return
+ *   0x11a052e6  the load of 0x84a01554 into P0, the first instruction after the effect call's return
  *               (0x11a0548a jumps here) or after its skip. Dead there: R0-R3, P0-P2, CC. -> op1f_fx_synth_t1:
  *               op1f_fx_chain_run(0), then the load.
- *   0x11a03e04  the load of the word at 0x84a03844 into R1, in the drum second stage 0x11a03670: the producer's
+ *   0x11a03e34  the load of the word at 0x84a03c84 into R1, in the drum second stage 0x11a03670: the producer's
  *               read. R0 and P0 are LIVE there (the next instruction stores the last bus sample through P0):
  *               the stub touches only R1, R2 and P1, which the code after sets before use.
  *               -> op1f_fx_drum_t0: CYCLES into op1f_fx_t0[1], and a zero in R1.
- *   0x11a03e38  the load of 0x84a01124 into P0, after the drum's effect call (0x11a0401a jumps here) or its skip.
+ *   0x11a03e68  the load of 0x84a01564 into P0, after the drum's effect call (0x11a0401a jumps here) or its skip.
  *               Dead there: R0-R3, P0-P2, CC. -> op1f_fx_drum_t1: op1f_fx_chain_run(1), then the load.
  *
  * The chain call is an ordinary C call, as the stubs of build_b_record.s make them: R0-R3, P0-P2 and RETS are
@@ -36,10 +37,10 @@
 .text
 .align 2
 
-.set SYNTH_SLOT_BASE, 0x84a01114
-.set DRUM_SLOT_BASE, 0x84a01124
+.set SYNTH_SLOT_BASE, 0x84a01554
+.set DRUM_SLOT_BASE, 0x84a01564
 
-/* Replaces the load of the word at 0x84a03844 into R0 at 0x11a05284. */
+/* Replaces the load of the word at 0x84a03c84 into R0 at 0x11a052b4. */
 .global op1f_fx_synth_t0
 .type op1f_fx_synth_t0, STT_FUNC
 op1f_fx_synth_t0:
@@ -51,7 +52,7 @@ op1f_fx_synth_t0:
     RTS;
 .size op1f_fx_synth_t0, .-op1f_fx_synth_t0
 
-/* Replaces the load of 0x84a01114 into P0 at 0x11a052b6. */
+/* Replaces the load of 0x84a01554 into P0 at 0x11a052e6. */
 .global op1f_fx_synth_t1
 .type op1f_fx_synth_t1, STT_FUNC
 op1f_fx_synth_t1:
@@ -66,7 +67,7 @@ op1f_fx_synth_t1:
     RTS;
 .size op1f_fx_synth_t1, .-op1f_fx_synth_t1
 
-/* Replaces the load of the word at 0x84a03844 into R1 at 0x11a03e04. R0 and P0 stay untouched. */
+/* Replaces the load of the word at 0x84a03c84 into R1 at 0x11a03e34. R0 and P0 stay untouched. */
 .global op1f_fx_drum_t0
 .type op1f_fx_drum_t0, STT_FUNC
 op1f_fx_drum_t0:
@@ -78,7 +79,7 @@ op1f_fx_drum_t0:
     RTS;
 .size op1f_fx_drum_t0, .-op1f_fx_drum_t0
 
-/* Replaces the load of 0x84a01124 into P0 at 0x11a03e38. */
+/* Replaces the load of 0x84a01564 into P0 at 0x11a03e68. */
 .global op1f_fx_drum_t1
 .type op1f_fx_drum_t1, STT_FUNC
 op1f_fx_drum_t1:

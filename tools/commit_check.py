@@ -45,6 +45,27 @@ def settings():
     return [line.strip() for line in stock if line.strip()], display
 
 
+def tree_profiles(scratch):
+    """The profiles of the tree to be committed: the one build.json names, which must be there, and every other
+    profiles/op1f-*.json beside it (their words for the firmware's functions are no profile). [] when build.json's
+    is missing."""
+    import json
+    try:
+        with open(os.path.join(scratch, "build.json"), encoding="utf-8") as f:
+            named = os.path.join(scratch, *json.load(f)["profile"].split("/"))
+    except (OSError, ValueError, KeyError):
+        return []
+    if not os.path.isfile(named):
+        return []
+    out = [named]
+    folder = os.path.join(scratch, "profiles")
+    for name in sorted(os.listdir(folder)):
+        path = os.path.join(folder, name)
+        if name.startswith("op1f-") and name.endswith(".json") and not name.endswith("-interfaces.json") and path != named:
+            out.append(path)
+    return out
+
+
 def main():
     top = git("rev-parse", "--show-toplevel")
     os.chdir(top)
@@ -70,15 +91,17 @@ def main():
         git("checkout-index", "--all", "--force", "--prefix=" + scratch.replace("\\", "/") + "/")
         files = sum(len(names) for _folder, _folders, names in os.walk(scratch))
         tool = os.path.join(scratch, "tools", "publish_check.py")
-        profile = os.path.join(scratch, "profiles", "op1f-1.7.0.json")
         if not files:
             print("open-field: nothing is staged")
             return 1
-        if not os.path.isfile(tool) or not os.path.isfile(profile):
-            print("open-field: the commit is refused: the tree to be committed lacks tools/publish_check.py or profiles/op1f-1.7.0.json, so it cannot be checked")
+        profiles = tree_profiles(scratch)
+        if not os.path.isfile(tool) or not profiles:
+            print("open-field: the commit is refused: the tree to be committed lacks tools/publish_check.py or the profile build.json names, so it cannot be checked")
             return 2
         # -B: the check must leave no cache file in the folder it is about to walk
-        command = [sys.executable, "-I", "-B", tool, "--strict", "--profile", profile]
+        command = [sys.executable, "-I", "-B", tool, "--strict"]
+        for profile in profiles:
+            command += ["--profile", profile]
         examples = os.path.join(scratch, "examples")        # an example pack's places are places of change too
         if os.path.isdir(examples):
             for name in sorted(os.listdir(examples)):

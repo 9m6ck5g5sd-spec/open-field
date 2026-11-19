@@ -13,9 +13,10 @@ const bad = (m) => { console.error("  FAIL " + m); fails++; };
 const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 const hex = (a) => Array.from(a, (v) => v.toString(16).padStart(2, "0")).join(" ");
 
-// What te-boot 1000.1.1 said of itself, the two serial numbers made up.
+// What te-boot 1000.1.1 said of itself on a unit with OS 1.7.0, with the OS version this page takes, 1.7.3, in its place;
+// the two serial numbers made up.
 const FIELDS = { mode: "bootloader", serial: "SIMULATED0001", dsp_serial: "000000000000000001", hw_rev: "6", product: "OP-1",
-  sku: "TE002AS002", sw_version: "1.7.0", bl_version: "1000.1.1", os_version: "1.7.0" };
+  sku: "TE002AS002", sw_version: "1.7.3", bl_version: "1000.1.1", os_version: "1.7.3" };
 const metaText = (fields) => Object.entries(fields).map(([k, v]) => k + ":" + v).join(";") + ";";
 const CHROME = ["OP-1", "Teenage Engineering"];                 // the port as Chrome reports it at the te-boot menu
 const WINDOWS = ["OP-1 (Composite)", "Microsoft Corporation"];  // the same port by the Windows multimedia API's name

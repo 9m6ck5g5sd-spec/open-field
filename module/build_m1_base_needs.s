@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Step M1, the base pack: the base serves the packs that carry a card from the list the loader fills (op1f_cards,
  * module/build_m3_cards.cpp). A loader of before M1 hands no cards over: under it this pack would run with an empty
  * list and serve no such pack, with no line that says so. So the pack names the mark of a loader that hands the

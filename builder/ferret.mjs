@@ -146,7 +146,7 @@ export class Session {
     this.#buffer = [];
     return new Promise((resolve, reject) => {
       const finish = (fn, result) => { clearTimeout(timer); this.#pending = null; fn(result); };
-      const timer = setTimeout(() => finish(reject, new Error('No reply. Stay on the te-boot menu, then connect again.')), this.timeout);
+      const timer = setTimeout(() => finish(reject, new Error("No reply. Close other tabs and programs that use the OP-1 over MIDI, or close the browser and open it again; stay on the bootloader's menu; then press Find again.")), this.timeout);
       this.#pending = {type, resolve: value => finish(resolve, value), reject: error => finish(reject, error)};
       try { this.#output.send(sysexFrame(cmd)); } catch (error) { this.#pending.reject(error); }
     });

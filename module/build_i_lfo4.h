@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build I images I6 and I7 (analysis/lfo_train_study.md sections 18 and 20): what the LFO unit (build_i_lfo4.cpp)
 // tells the page (build_h_train.cpp) each frame, and the size of what it keeps in the chain file
 // (build_h_chain.cpp). Plain integers only.

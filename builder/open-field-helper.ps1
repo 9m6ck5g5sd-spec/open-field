@@ -36,9 +36,9 @@ function Start-OpenFieldHelper {
     param([string] $Folder, [string] $Source, [int] $WaitMinutes, [int] $FindSeconds, [string] $Page)
     $ErrorActionPreference = 'Stop'
     $HelperVersion = 1
-    # The original OS 1.7.0 file, as the builder's manifest names it: the only file kept under the name "yours".
-    $OriginalSha = 'f97775d61eda503f28c1712013017c80acd894c5890f57b1f45a680163465833'
-    $Names = @{ stock = 'os-1.7.0-yours.ldr'; image = 'open-field-os.ldr'; helper = 'helper.json'; before = 'listing-before.json';
+    # The original OS 1.7.3 file, as the builder's manifest names it: the only file kept under the name "yours".
+    $OriginalSha = 'd134eb1ac7ad88e8370d988329cd5d7419f016005b1d269034f9cf7166fad0ec'
+    $Names = @{ stock = 'os-1.7.3-yours.ldr'; image = 'open-field-os.ldr'; helper = 'helper.json'; before = 'listing-before.json';
                 after = 'listing-after.json'; plan = 'plan.json'; packs = 'packs' }
     if (-not $Folder) { $Folder = Join-Path $env:USERPROFILE 'open-field' }
     if ($WaitMinutes -le 0) { $WaitMinutes = 60 }
@@ -251,18 +251,18 @@ function Start-OpenFieldHelper {
             $sha = Get-Sha $copy
             $bytes = (Get-Item -LiteralPath $copy).Length
             $original = ($sha -eq $OriginalSha)
-            # The original file is kept as os-1.7.0-yours.ldr, once; another file by a name that says what it is.
+            # The original file is kept as os-1.7.3-yours.ldr, once; another file by a name that says what it is.
             $name = if ($original) { $Names.stock } else { 'os-from-upgrade-folder-' + $run + '.ldr' }
             $kept = Join-Path $Folder $name
             if ((Test-Path -LiteralPath $kept) -and (Get-Sha $kept) -eq $sha) { Remove-Item -LiteralPath $copy -Force }
             else {
-                if (Test-Path -LiteralPath $kept) { $name = 'os-1.7.0-yours-' + $run + '.ldr'; $kept = Join-Path $Folder $name }
+                if (Test-Path -LiteralPath $kept) { $name = 'os-1.7.3-yours-' + $run + '.ldr'; $kept = Join-Path $Folder $name }
                 Move-Item -LiteralPath $copy -Destination $kept
             }
             Remove-Item -LiteralPath $incoming -Recurse -Force
             $state.stock = [ordered]@{ file = $name; bytes = $bytes; sha256 = $sha; original = $original; from = 'upgrade/firmware/blackfin/bin/os.ldr' }
-            if ($original) { Say ('Your own firmware file is copied off: ' + $name + ' (the original OS 1.7.0 file, ' + $bytes + ' bytes).') 'Green' }
-            else { Say ('The unit''s upgrade folder holds another file than the original OS 1.7.0 one (' + $bytes + ' bytes); it is copied off as ' + $name + '. The page takes the original from this folder (' + $Names.stock + ') if it is there, or asks for it.') 'Yellow' }
+            if ($original) { Say ('Your own firmware file is copied off: ' + $name + ' (the original OS 1.7.3 file, ' + $bytes + ' bytes).') 'Green' }
+            else { Say ('The unit''s upgrade folder holds another file than the original OS 1.7.3 one (' + $bytes + ' bytes); it is copied off as ' + $name + '. The page takes the original from this folder (' + $Names.stock + ') if it is there, or asks for it.') 'Yellow' }
         }
 
         # ---- 3. the log files, taken off ----

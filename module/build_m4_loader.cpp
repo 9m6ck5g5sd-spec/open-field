@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Step M4 image M4: the loader of step M1 with the start screen's new words: the main version, a dash, open-field,
 // and the release of the base, "1.7.0 - open-field 0.3".
 //
@@ -101,12 +102,12 @@
 // longer what the check saw. Everything else leaves a pack out and goes on; with no pack left the unit starts as
 // stock firmware.
 //
-// Stock functions used: L1's, none more. Those of J5b, all proven at the load point: the logger 0x8c0539f0, the file
-// size 0x8c051f6c, the open 0x8fc88ac0 with stock's mode text "rb", the read 0x8fc88a90, the close 0x8fc88a7c, the
-// assert 0x8c053a20, the keyboard controller's request 0x8c0567c0. Since J5c, read at their callers (docs/methods.md
-// says how): the folder's open 0x8c051df8(path) (a handle or 0; the path without the slash), its next entry
-// 0x8c0a4820(handle) (0 at the end; the name is the text at the entry's +0xb) and its close 0x8c0a5424(handle). The
-// start screen's text is measured with the bitmap font's table of widths where stock keeps it (0x84019c88: a byte a
+// Stock functions used: L1's, none more. Those of J5b, all proven at the load point: the logger 0x8c053a20, the file
+// size 0x8c051f9c, the open 0x8fc8a9d8 with stock's mode text "rb", the read 0x8fc8a9a8, the close 0x8fc8a994, the
+// assert 0x8c053a50, the keyboard controller's request 0x8c0567f0. Since J5c, read at their callers (docs/methods.md
+// says how): the folder's open 0x8c051e28(path) (a handle or 0; the path without the slash), its next entry
+// 0x8c0a4bd0(handle) (0 at the end; the name is the text at the entry's +0xb) and its close 0x8c0a57d4(handle). The
+// start screen's text is measured with the bitmap font's table of widths where stock keeps it (0x84019e64: a byte a
 // character from 0x20, one column between two characters).
 //
 // The unit runs on the PC whole, in a harness of tests this tree does not hold: the stock memory behind the sites,
@@ -129,19 +130,19 @@ typedef void* (*DirOpenFn)(const char* path);
 typedef void* (*DirNextFn)(void* handle);
 typedef int (*DirCloseFn)(void* handle);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_FILE_OPEN ((FileOpenFn)0x8fc88ac0u)
-#define STOCK_FILE_READ ((FileReadFn)0x8fc88a90u)
-#define STOCK_FILE_CLOSE ((FileCloseFn)0x8fc88a7cu)
-#define STOCK_READ_MODE ((const char*)0x848daa84u)
-#define STOCK_ASSERT ((AssertFn)0x8c053a20u)
-#define STOCK_KB_REQUEST ((KbRequestFn)0x8c0567c0u)
-#define STOCK_KB_LINK ((void*)0x8497d3fcu)
-#define STOCK_KB_LISTENER ((volatile u32*)0x84985374u)
-#define STOCK_DIR_OPEN ((DirOpenFn)0x8c051df8u)
-#define STOCK_DIR_NEXT ((DirNextFn)0x8c0a4820u)
-#define STOCK_DIR_CLOSE ((DirCloseFn)0x8c0a5424u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_FILE_OPEN ((FileOpenFn)0x8fc8a9d8u)
+#define STOCK_FILE_READ ((FileReadFn)0x8fc8a9a8u)
+#define STOCK_FILE_CLOSE ((FileCloseFn)0x8fc8a994u)
+#define STOCK_READ_MODE ((const char*)0x848daec0u)
+#define STOCK_ASSERT ((AssertFn)0x8c053a50u)
+#define STOCK_KB_REQUEST ((KbRequestFn)0x8c0567f0u)
+#define STOCK_KB_LINK ((void*)0x8497d844u)
+#define STOCK_KB_LISTENER ((volatile u32*)0x849857bcu)
+#define STOCK_DIR_OPEN ((DirOpenFn)0x8c051e28u)
+#define STOCK_DIR_NEXT ((DirNextFn)0x8c0a4bd0u)
+#define STOCK_DIR_CLOSE ((DirCloseFn)0x8c0a57d4u)
 
 enum { HEADER_BYTES = 64, PACK_FORMAT = 2, PIECE_BYTES = 16384, ENTRY_BYTES = 20, MAX_ENTRIES = 4096 };
 enum { HEADER3_BYTES = 96, PACK_FORMAT_LINKED = 3, MAX_PACKS = 32, FILE_CHARS = 40, PATH_CHARS = 48, MAX_SKIPS = 64, LIST_COUNTS = 6, PACK_ALIGN = 32 };
@@ -155,13 +156,13 @@ enum { DIR_NAME_AT = 11 };                                  // a folder entry's 
 enum { CARD_MARK = 0x44524143, CARD_LEAST = 8, CARDS_MOST = 32, SLOT_WORDS = 3, CARDS_WORDS = 2 + SLOT_WORDS * CARDS_MOST, RELEASE_BYTES = 16, MISSING_BYTES = 16 };
 
 // The first four bytes of the stock OS image's SHA-256 (f9 77 75 d6 ...), little-endian: the OS a pack is for.
-static const u32 OS_ID = 0xd67577f9u;
+static const u32 OS_ID = 0x1aeb34d1u;
 
 // Where packs are loaded: the reservation's first byte plus the loader's 64 KiB, to the reservation's end
 // (linker/op1f-1.7.0-pack.ld). The loader itself lies in the 64 KiB before it (linker/op1f-1.7.0-base.ld).
-static const u32 PACK_BASE = 0x8d2f36ccu;
+static const u32 PACK_BASE = 0x8d2f4234u;
 static const u32 PACK_ROOM = 0x001f0000u;
-static const u32 BASE_START = 0x8d2e36ccu;
+static const u32 BASE_START = 0x8d2e4234u;
 
 // Where a site may lie (tools/boot_table.py: L1_CODE and DDR).
 static const u32 L1_CODE_START = 0x11a00000u;
@@ -363,7 +364,7 @@ struct Pack {
 enum { KEYS_REQUEST = 0x41, KEYS_TIMEOUT_MS = 100, MESSAGE_BYTES = 253, MAP_BYTES = 8, SAFE_KEY = 0 };
 
 // What the keyboard handler's init leaves in the link's listener word: its key map handler, the object's +0x81f4.
-static const u32 KB_KEY_HANDLER = 0x849855ecu;
+static const u32 KB_KEY_HANDLER = 0x84985a34u;
 
 enum {
     KEYS_OK = 0,            // the map is in low and high
@@ -423,7 +424,7 @@ static u32 folder_other;                                    // names of the fold
 // that follow it are chosen at the load point to fit WORDS_COLUMNS of the screen's 480 columns, which leaves room
 // for a version text of ten characters; the whole is measured again when stock's text is known.
 enum { SCREEN_COLUMNS = 440, WORDS_COLUMNS = 380, SCREEN_STOCK_CHARS = 23, SCREEN_WORDS_BYTES = 88, FONT_FIRST = 0x20, FONT_LAST = 0x7e };
-static const u32 FONT_WIDTHS = 0x84019c88u;                 // bitmapfont.cpp: a byte a character from FONT_FIRST
+static const u32 FONT_WIDTHS = 0x84019e64u;                 // bitmapfont.cpp: a byte a character from FONT_FIRST
 static char screen_words[SCREEN_WORDS_BYTES];               // what follows stock's version text; empty: stock's text alone
 static char screen_text[SCREEN_STOCK_CHARS + SCREEN_WORDS_BYTES + 1];
 

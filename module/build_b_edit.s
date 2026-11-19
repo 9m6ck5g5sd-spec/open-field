@@ -1,3 +1,4 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build B, step B3c: entry trampolines for the lift, drop and clear paths of tape_c.cpp / audio_clipboard.cpp
  * and for the sampler import (OS 1.7.0+0). Logic in build_b_edit.cpp.
  *
@@ -7,14 +8,14 @@
  * registers and the stack untouched. R1-R3, P0-P2 and CC are scratch at a function entry (the functions take at
  * most one argument register beyond the ones the tests read), which the vector walks use.
  *
- *      post_lift     0x8f00ad0c  -> its room, then 0x8f00ad14
+ *      post_lift     0x8f00c00c  -> its room, then 0x8f00ad14
  *                    for a track of 4 to 7: the frame and the moves the range test leaves standing, in this
- *                    file's own order, then 0x8f00ad36, past the assert (see op1f_post_lift)
- *      lift helper   0x8f01ef00  -> its room, then 0x8f01ef08
- *      drop copy     0x8f01f548  -> its room, then 0x8f01f550
- *      drop mix      0x8f01f2a0  -> its room, then 0x8f01f2a8
- *      range clear   0x8f01dc4c  -> its room, then 0x8f01dc54
- *      to sample     0x8f003044  -> its room, then 0x8f003050 (the instructions under the hook end twelve
+ *                    file's own order, then 0x8f00c036, past the assert (see op1f_post_lift)
+ *      lift helper   0x8f0209f0  -> its room, then 0x8f01ef08
+ *      drop copy     0x8f021038  -> its room, then 0x8f01f550
+ *      drop mix      0x8f020d90  -> its room, then 0x8f01f2a8
+ *      range clear   0x8f01f73c  -> its room, then 0x8f01dc54
+ *      to sample     0x8f004204  -> its room, then 0x8f003050 (the instructions under the hook end twelve
  *                    bytes in: the second is eight bytes long and begins inside the hook's eight)
  *
  * The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 each stub ran the instructions its hook
@@ -24,15 +25,15 @@
  * the table entry names the room and how many bytes the instructions take). P2, the register a stub jumps
  * through, is the one it jumped through before.
  */
-.set POST_LIFT_CHECKED,       0x8f00ad36
-.set CLIPBOARD_VECTOR,        0x84bdd4bc   /* the clipboard state's vector: begin, then end at +4 */
+.set POST_LIFT_CHECKED,       0x8f00c036
+.set CLIPBOARD_VECTOR,        0x84bdd948   /* the clipboard state's vector: begin, then end at +4 */
 
 .section .text
 .align 2
 
 /* The lift poster. A track below 4 is stock's from its first instruction on. A track of 4 to 7 cannot go that
  * way: right behind the hook stock tests the track against 4 and stops the OS. So this path does not use the
- * room. It joins stock behind that test, at 0x8f00ad36, and has to bring what stock's code from there on works
+ * room. It joins stock behind that test, at 0x8f00c036, and has to bring what stock's code from there on works
  * with: the frame (its size, the four registers its epilogue takes back, the room for arguments), the track in the
  * caller's argument space, where stock reads it again at 0x8f00ad82 for the command's vector, and start, end and a
  * zero in the registers stock keeps them in. The steps are in this file's own order, the track kept first; none of

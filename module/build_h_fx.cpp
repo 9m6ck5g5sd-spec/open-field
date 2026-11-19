@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build H, images H0, H1a and H1: the effect stage measured (analysis/fx_chain_study.md, sections 6 to 9).
 //
 // H0 (section 7): no hook of its own. The measurement unit's frame hook (m2_measure.cpp) calls op1f_fx_frame() once
@@ -11,27 +12,27 @@
 //
 // What stock does, as read for H0 (the study, section 6):
 //   * The audio block function 0x11a05620 (L1) stamps CYCLES around its stages into a table of twelve records at
-//     0x0801b234 (L2). A record is 44 bytes: start lo/hi, delta lo/hi, max lo/hi, min lo/hi, sum lo/hi, count; the
+//     0x0801b240 (L2). A record is 44 bytes: start lo/hi, delta lo/hi, max lo/hi, min lo/hi, sum lo/hi, count; the
 //     function writes the end stamp over the delta words, subtracts, keeps max and min, adds to the sum and counts.
 //     Record 0 is the whole block (the end stamp at +8); 2 the stage on the main buses (0x8f0041e0); 3 the instrument
 //     stage (the synth second stage 0x11a04130 or the drum second stage 0x11a03670); 6 the record stage (0x11a07a74);
 //     7 the tape block driver (0x11a07fe4); 9 and 10 stages of the tape mix (the L1 code around 0x11a02e90). The synth
-//     second stage keeps four more records at 0x0801b444: 0 the voice loop, 2 the engine render (the engine object's
+//     second stage keeps four more records at 0x0801b450: 0 the voice loop, 2 the engine render (the engine object's
 //     method +8), 3 the stage after it. The effect itself has no record of its own: it runs inside record 3, after the
 //     engine render and before the fade and the sum to the main buses, and is skipped while the instrument is silent.
 //   * The instrument's effect is one producer object per host, built by the producer factory 0x8f00f598(type, index)
 //     into a fixed L1 storage (index 0, the synth's and the drum's: 0x11906918; index 1, the master's: 0x11906af8),
-//     its pointer in the slot 0x84a03844 (the master's 0x84a03848). The second stages call producer->vtable[2](this,
+//     its pointer in the slot 0x84a03c84 (the master's 0x84a03c88). The second stages call producer->vtable[2](this,
 //     L bus 0x11902ba0, R bus 0x11902ca0, ctx 0x11904754 = the slot's eight parameters) on the buses in place, only
-//     while the slot's fx_active byte is set (synth B[0x84a0110c + slot], drum B[0x84a0111c + slot]); the master's
-//     producer runs on the stereo sums 0x119027a0 / 0x119028a0 while B[0x84a0112c] is set.
+//     while the slot's fx_active byte is set (synth B[0x84a0154c + slot], drum B[0x84a0155c + slot]); the master's
+//     producer runs on the stereo sums 0x119027a0 / 0x119028a0 while B[0x84a0156c] is set.
 //   * The type word per slot: 0x11904794[8] (synth), 0x119047b4[8] (drum), in the firmware's own enumeration 0 delay,
 //     1 grid, 2 punch, 3 phone, 4 spring, 5 mother, 6 nitro, 7 cwo, 8 vocoder, 9 terminal, 10 fazer (the name table at
-//     0x8490de4c, eight bytes per entry: the name's pointer, the value). The GUI's slot words 0x11904704 (synth) and
-//     0x11904708 (drum); the audio thread's built slots 0x84a010e4 / 0x84a010e8, the ones the second stages read.
+//     0x8490e288, eight bytes per entry: the name's pointer, the value). The GUI's slot words 0x11904704 (synth) and
+//     0x11904708 (drum); the audio thread's built slots 0x84a01524 / 0x84a01528, the ones the second stages read.
 //   * The fade around a rebuild: the level 0x11902df4 (Q31, applied and stepped per sample by the sum to the main
 //     buses 0x8d503c54), the step 0x11902df8, the step's magnitude 0x11902e00. A slot or mode change fades the level
-//     to zero, rebuilds the engine, the producer and the LFOs once (0x8f00f818, 0x8d5041d0, 0x8d50426c), fades up.
+//     to zero, rebuilds the engine, the producer and the LFOs once (0x8f00f818, 0x8d505390, 0x8d50426c), fades up.
 //
 // The log, every four seconds (about 232 frames): `fx:` the hosts' state, `fx stage a:` the twelve records of the
 // first table as average/maximum cycles per execution over the interval, `fx stage b:` the synth stage's four. (H1a's
@@ -52,23 +53,23 @@ typedef unsigned char u8;
 #include "build_q_quiet.h"
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
 static const char LOG_FILE[] = "../src/main/op1f_fx.cpp";
 
 #define RD32(a) (*(volatile u32*)(a))
 #define RD8(a) (*(volatile u8*)(a))
 
-enum { TABLE_A = 0x0801b234u, TABLE_A_RECORDS = 12, TABLE_B = 0x0801b444u, TABLE_B_RECORDS = 4, RECORD_BYTES = 44 };
+enum { TABLE_A = 0x0801b240u, TABLE_A_RECORDS = 12, TABLE_B = 0x0801b450u, TABLE_B_RECORDS = 4, RECORD_BYTES = 44 };
 enum { FX_TYPES = 11, HOSTS = 2, PRINT_EVERY_FRAMES = 232 };
 
-static const u32 FX_NAME_TABLE = 0x8490de4cu;          // {const char* name; u32 value} x 11, the value its index
+static const u32 FX_NAME_TABLE = 0x8490e288u;          // {const char* name; u32 value} x 11, the value its index
 static const u32 SYNTH_SLOT = 0x11904704u, DRUM_SLOT = 0x11904708u;
 static const u32 SYNTH_FX_TYPE = 0x11904794u, DRUM_FX_TYPE = 0x119047b4u;
-static const u32 SYNTH_FX_ACTIVE = 0x84a0110cu, DRUM_FX_ACTIVE = 0x84a0111cu, MASTER_FX_ACTIVE = 0x84a0112cu;
-static const u32 FX_PRODUCER = 0x84a03844u, MASTER_PRODUCER = 0x84a03848u;
+static const u32 SYNTH_FX_ACTIVE = 0x84a0154cu, DRUM_FX_ACTIVE = 0x84a0155cu, MASTER_FX_ACTIVE = 0x84a0156cu;
+static const u32 FX_PRODUCER = 0x84a03c84u, MASTER_PRODUCER = 0x84a03c88u;
 static const u32 FADE_LEVEL = 0x11902df4u, FADE_STEP = 0x11902df8u, FADE_MAGNITUDE = 0x11902e00u;
-static const u32 MODE_GUI = 0x84d20bc4u, MODE_AUDIO = 0x11902dfcu - 0x58u, BUILT_SYNTH_SLOT = 0x84a010e4u, BUILT_DRUM_SLOT = 0x84a010e8u;
-static const u32 POWER_POPUP_SHOWN = 0x84c9af40u;      // Q1: the power popup's byte, 1 while the countdown popup is on the screen (the chain unit reads it too)
+static const u32 MODE_GUI = 0x84d21088u, MODE_AUDIO = 0x11902dfcu - 0x58u, BUILT_SYNTH_SLOT = 0x84a01524u, BUILT_DRUM_SLOT = 0x84a01528u;
+static const u32 POWER_POPUP_SHOWN = 0x84c9b3e4u;      // Q1: the power popup's byte, 1 while the countdown popup is on the screen (the chain unit reads it too)
 
 struct Seen { u32 sum_lo, sum_hi, count; };
 

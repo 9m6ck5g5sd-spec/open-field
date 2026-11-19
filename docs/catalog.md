@@ -19,7 +19,7 @@ If you have not built a pack yet, start with [a first pack](first-pack.md).
   "sha256": "the file's SHA-256, sixty-four digits of 0-9 and a-f",
   "bytes": 5120,
   "version": 1,
-  "firmware": "1.7.0",
+  "firmware": "1.7.3",
   "places": 0,
   "needs": [],
   "level": 3,
@@ -36,8 +36,8 @@ If you have not built a pack yet, start with [a first pack](first-pack.md).
 | `description` | One line for the install page, up to 140 plain characters |
 | `repository`, `commit`, `path` | Where the file lies: your public repository on GitHub, the full id of a commit in it, and the file's path in the repository at that commit |
 | `sha256`, `bytes` | The file's SHA-256 and its size |
-| `version` | The version in the file's header. It only grows: every new file has a higher one |
-| `firmware` | The firmware version the file is built for: a version this repository has a profile for (`profiles/op1f-<version>.json`) |
+| `version` | The version in the file's header. It only grows: every new file has a higher one, but for a move to another firmware (below) |
+| `firmware` | The firmware version the file is built for: a version this repository has a profile for (`profiles/op1f-<version>.json`). Today that is 1.7.3 |
 | `places` | How many places of the firmware the pack changes: 0 for a pack that only uses the base's card |
 | `needs` | The packs it cannot run without, by their ids: `base` for a pack built as the four features are, none for a pack with a card |
 | `level` | For a pack with a card: the level of the base it needs, 1 to 3 ([the base](base.md)) |
@@ -100,6 +100,20 @@ A ticked file goes into the folder `packs` that the page and the Windows helper 
 6. **The review.** The maintainer reads your source at that commit, tries the file on a unit, and merges or says what stands in the way. Once merged, the pack is on the install page: the next publication of the page carries the listing with your entry.
 
 A new version is the same pull request again: a new commit, the file's new SHA-256 and size, and a higher `version`. The check refuses a new file whose version did not grow.
+
+## One firmware for each entry
+
+An entry is for one firmware, and there is one entry for each id. A pack file is built for one firmware and carries its mark: the loader leaves the pack out on a unit that runs any other firmware, and the start screen counts it as left out.
+
+When this project moves to another firmware, every entry moves with it:
+
+1. Build the same pack again for the new firmware, with the profile of the new firmware.
+2. Commit the new file into your repository. This makes a new commit; the old file stays at its old commit.
+3. Change the entry: the new commit, the new SHA-256 and size, and the new `firmware`. The `version` may stay the same.
+
+The check lets a file change at the same version only in this case: the entry's `firmware` changed too, and this repository has a profile for the new firmware. For anything else, the version has to grow, as above. The version never goes down.
+
+Do not delete or rewrite the commit that holds the old file. A page for the old firmware may still name it, and owners who stay on the old firmware download it from there.
 
 ## The check on this repository's own packs
 

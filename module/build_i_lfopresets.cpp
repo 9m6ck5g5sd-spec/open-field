@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build I image I8: presets for the LFOs (analysis/lfo_train_study.md section 21).
 //
 // The wish after I7: LFO presets that work exactly as the effect presets do, so that an effect preset and
@@ -46,54 +47,54 @@ typedef unsigned char u8;
 typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
-typedef void (*JsonToStringFn)(void* out_string, void* json);     // 0x8c084752: the json's text into a std::string
-typedef int (*JsonBoolFn)(void* json);                              // 0x8c084b64
-typedef int (*JsonSizeFn)(void* json);                              // 0x8c084bf2
-typedef void* (*JsonLookupFn)(void* json, const char* key);          // 0x8c085e54: the member, inserted when missing
-typedef int (*JsonHasFn)(void* json, const char* key);               // 0x8c085038
-typedef void* (*JsonGetFn)(void* json, const char* key);             // 0x8c084f44
-typedef void* (*JsonAtFn)(void* json, int index);                   // 0x8c084eb0
-typedef int (*JsonIntFn)(void* json);                                // 0x8c084810: converts the three number kinds; 0 and a log line for anything else
-typedef void (*JsonCtorFn)(void* json, int kind);                    // 0x8c085b78: a fresh value of that kind; 0 is null, which the first push turns into an array
-typedef void (*JsonFromIntFn)(void* json, int value);                // 0x8c083aec
-typedef void (*JsonFromCstrFn)(void* json, const char* text);        // 0x8c084400: a string copied from the text (the kind 4)
-typedef void (*JsonFromBoolFn)(void* json, int value);               // 0x8c083abc: a bool (the kind 5)
-typedef void (*JsonPushFn)(void* array, void* value);                // 0x8c085d24
-typedef void (*JsonAssignFn)(void* target, void* value);             // 0x8c084588
-typedef void (*JsonDtorFn)(void* json);                              // 0x8c0844b0
-typedef int (*JsonReadFileFn)(const char* path, void* json);         // 0x8c0534a0: the file parsed into the json, non-zero on success
-typedef int (*JsonWriteFileFn)(void* path_string, void* json);       // 0x8c053138: the json written to the path, a stock string object; 0 when the rename over the target fails
-typedef void (*StringCtorFn)(void* out, const char* text);           // 0x8c03e40c: a stock string object from text
-typedef void (*FreeFn)(void* block);                                 // 0x8d4e5864: the match of the allocator stock's strings use
-typedef int (*MakeFoldersFn)(const char* path);                      // 0x8c05203c: createFolderRecursive: a component is made when a slash ends it
-typedef int (*FileSizeFn)(const char* path);                         // 0x8c051f6c: the file's size, -1 when it is not there
-typedef u32 (*FileMtimeFn)(const char* path);                        // 0x8fcba530: the file's modification time, 0 when it is not there
-typedef void (*RequestScreenFn)();                                   // 0x8c0b1d8c: the GUI asks the current controller's screen-id virtual and queues the screen
+typedef void (*JsonToStringFn)(void* out_string, void* json);     // 0x8c084782: the json's text into a std::string
+typedef int (*JsonBoolFn)(void* json);                              // 0x8c084b94
+typedef int (*JsonSizeFn)(void* json);                              // 0x8c084c22
+typedef void* (*JsonLookupFn)(void* json, const char* key);          // 0x8c085e84: the member, inserted when missing
+typedef int (*JsonHasFn)(void* json, const char* key);               // 0x8c085068
+typedef void* (*JsonGetFn)(void* json, const char* key);             // 0x8c084f74
+typedef void* (*JsonAtFn)(void* json, int index);                   // 0x8c084ee0
+typedef int (*JsonIntFn)(void* json);                                // 0x8c084840: converts the three number kinds; 0 and a log line for anything else
+typedef void (*JsonCtorFn)(void* json, int kind);                    // 0x8c085ba8: a fresh value of that kind; 0 is null, which the first push turns into an array
+typedef void (*JsonFromIntFn)(void* json, int value);                // 0x8c083b1c
+typedef void (*JsonFromCstrFn)(void* json, const char* text);        // 0x8c084430: a string copied from the text (the kind 4)
+typedef void (*JsonFromBoolFn)(void* json, int value);               // 0x8c083aec: a bool (the kind 5)
+typedef void (*JsonPushFn)(void* array, void* value);                // 0x8c085d54
+typedef void (*JsonAssignFn)(void* target, void* value);             // 0x8c0845b8
+typedef void (*JsonDtorFn)(void* json);                              // 0x8c0844e0
+typedef int (*JsonReadFileFn)(const char* path, void* json);         // 0x8c0534d0: the file parsed into the json, non-zero on success
+typedef int (*JsonWriteFileFn)(void* path_string, void* json);       // 0x8c053168: the json written to the path, a stock string object; 0 when the rename over the target fails
+typedef void (*StringCtorFn)(void* out, const char* text);           // 0x8c03e434: a stock string object from text
+typedef void (*FreeFn)(void* block);                                 // 0x8d4e63cc: the match of the allocator stock's strings use
+typedef int (*MakeFoldersFn)(const char* path);                      // 0x8c05206c: createFolderRecursive: a component is made when a slash ends it
+typedef int (*FileSizeFn)(const char* path);                         // 0x8c051f9c: the file's size, -1 when it is not there
+typedef u32 (*FileMtimeFn)(const char* path);                        // 0x8fcbc350: the file's modification time, 0 when it is not there
+typedef void (*RequestScreenFn)();                                   // 0x8c0b2554: the GUI asks the current controller's screen-id virtual and queues the screen
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_JSON_TO_STRING ((JsonToStringFn)0x8c084752u)
-#define STOCK_JSON_BOOL ((JsonBoolFn)0x8c084b64u)
-#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084bf2u)
-#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e54u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_AT ((JsonAtFn)0x8c084eb0u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084400u)
-#define STOCK_JSON_FROM_BOOL ((JsonFromBoolFn)0x8c083abcu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c084588u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
-#define STOCK_FREE ((FreeFn)0x8d4e5864u)
-#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05203cu)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_FILE_MTIME ((FileMtimeFn)0x8fcba530u)
-#define STOCK_REQUEST_SCREEN ((RequestScreenFn)0x8c0b1d8cu)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_JSON_TO_STRING ((JsonToStringFn)0x8c084782u)
+#define STOCK_JSON_BOOL ((JsonBoolFn)0x8c084b94u)
+#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084c22u)
+#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e84u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_AT ((JsonAtFn)0x8c084ee0u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084430u)
+#define STOCK_JSON_FROM_BOOL ((JsonFromBoolFn)0x8c083aecu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
+#define STOCK_FREE ((FreeFn)0x8d4e63ccu)
+#define STOCK_MAKE_FOLDERS ((MakeFoldersFn)0x8c05206cu)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_FILE_MTIME ((FileMtimeFn)0x8fcbc350u)
+#define STOCK_REQUEST_SCREEN ((RequestScreenFn)0x8c0b2554u)
 // J5i: the request's queue takes one writer at a time and stops the OS when a second one enters its push; stock
 // makes the request on the key thread. From the frame call, on the display thread, it is made with interrupts
 // masked (build_h_chain.cpp has the note; docs/07, "The screen request's queue").
@@ -111,7 +112,7 @@ enum { HOLD_MS = 400, SWALLOW_MS = 300, FLASH_MS = 1000, SAVE_SHOW_MS = 200, SAV
 enum { FLASH_NONE = 0, FLASH_SAVED = 1, FLASH_DELETED = 2, FLASH_FULL = 3 };
 enum { SAVE_NONE = OP1F_SAVE_NONE, SAVE_SAVING = OP1F_SAVE_SAVING, SAVE_SAVED = OP1F_SAVE_SAVED };
 enum { PRINT_FRAMES = 232, FAILURE_LINES = 4, EVENT_LINES = 200, COUNT_LINES = 120 };
-static const char LFO_FOLDER[] = "user/lf/";                                      // with the trailing slash: createFolderRecursive (0x8c05203c) makes a component when a slash ends it (H6 passed user/fx and only user was made)
+static const char LFO_FOLDER[] = "user/lf/";                                      // with the trailing slash: createFolderRecursive (0x8c05206c) makes a component when a slash ends it (H6 passed user/fx and only user was made)
 static const char LFO_PATH_PREFIX[] = "user/lf/";                                 // + NN.json: 15 characters, inside a stock string's own buffer, nothing to free
 static const char KEY_FORMAT[] = "op1f_lfo_preset", KEY_NAME[] = "name", KEY_ORDER[] = "order", KEY_LFOS[] = "lfos", KEY_LFO[] = "lfo", KEY_ON[] = "on", KEY_PARAMS[] = "params", KEY_FX_KNOB[] = "fx_knob", KEY_MIDI_KNOBS[] = "midi_fx_knobs";
 static const char ALPHABET[] = " abcdefghijklmnopqrstuvwxyz0123456789-.";          // the rename editor's letters, in the font's lowercase (the effect presets' own)
@@ -255,7 +256,7 @@ static int json_number(void* entry, int fallback) {
 }
 
 // a json string's characters: a stock string object has its data inline at +4 up to fifteen characters, else a
-// pointer there; the length at +0x14, the capacity at +0x18 (0x8c03e40c)
+// pointer there; the length at +0x14, the capacity at +0x18 (0x8c03e434)
 static void json_text(void* entry, char* out, int max) {
     u32 str[8];
     for (int i = 0; i < 8; ++i) str[i] = 0;

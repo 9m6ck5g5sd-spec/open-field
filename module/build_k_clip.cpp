@@ -1,11 +1,12 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build K, pack K3 (analysis/tape_stock_safe.md, section 7): the clipboard's file is always one that stock
 // firmware reads.
 //
 // Stock describes the clipboard in user/clipboard.json: the lifted tracks ("channels"), the content's name, the
-// length in frames, four volumes and four pans, a patch's data. Its loader 0x8f00b2d8 puts the channels back into
+// length in frames, four volumes and four pans, a patch's data. Its loader 0x8f00c5e0 puts the channels back into
 // the clipboard's state as they are, and its drop takes each of them for a track of 0 to 3: a channel above that
 // runs into an assert, which is fatal (tape_c.cpp:1746, Sampler.cpp:74). Until K3 a lift of tracks 5 to 8 put
-// their numbers, 4 to 7, into that file, written by stock's own writer 0x8f008c54 from the state's list.
+// their numbers, 4 to 7, into that file, written by stock's own writer 0x8f009e94 from the state's list.
 //
 // Since K3:
 //
@@ -43,11 +44,11 @@
 //
 // Two hooks (the profile's group build-k3):
 //
-//   * 0x8f008c54, stock's writer, replaced by a JUMP.a to
+//   * 0x8f009e94, stock's writer, replaced by a JUMP.a to
 //     op1f_clipboard_write. Its callers: the lift handler (0x8f00961c), the four lifts from the samplers
 //     (0x8f009d16, 0x8f009dc2, 0x8f009e5e, 0x8f009efa), the lift-all handler (0x8f00a120), and the module's own
 //     lift-all (build_d_clip.cpp). None takes an answer.
-//   * 0x8c0b4110, the start-up's CALL.a of stock's loader, right after "[init callbacks (17)]", retargeted to
+//   * 0x8c0b4a04, the start-up's CALL.a of stock's loader, right after "[init callbacks (17)]", retargeted to
 //     op1f_clipboard_load: stock's loader, then the file of ours when it is the clipboard's. A json of before K3
 //     that names a track above four is written anew there, as the two files.
 //
@@ -55,12 +56,12 @@
 // editing code (build_b_edit.cpp, build_d_clip.cpp) reads it as before.
 //
 // Read in stock for it (the sweeps of 2026-11-11): the writer whole (the json built member by member through
-// 0x8c085e54, which makes a member that is not there; an int by 0x8c083aec, a float by 0x8c08434c from the ROM's
-// int-to-float less 31 in the exponent, zero kept zero; the content's name from the table 0x848c58f8; the patch
-// string by 0x8c08445c; the path a stock string object, freed when it is not held in the object itself); the
+// 0x8c085e84, which makes a member that is not there; an int by 0x8c083b1c, a float by 0x8c08437c from the ROM's
+// int-to-float less 31 in the exponent, zero kept zero; the content's name from the table 0x848c5bc0; the patch
+// string by 0x8c08448c; the path a stock string object, freed when it is not held in the object itself); the
 // loader whole (the file read; "channels" walked and pushed; "mixer_volume" asked for by name, the live mixer's
 // words when it is absent; "framecount", "patch_data", "content" by name; nothing else looked at); the drop's
-// poster 0x8f00af54; the list's assign 0x8f008774, which reads its source's two pointers and nothing more.
+// poster 0x8f00af54; the list's assign 0x8f0099a4, which reads its source's two pointers and nothing more.
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -69,59 +70,59 @@ typedef int i32;
 
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
 typedef void (*VoidFn)();
-typedef void* (*VectorAssignFn)(void* target, const void* source);    // 0x8f008774: the list at +4/+8 of the source into the target's
-typedef void (*JsonCtorFn)(void* json, int kind);                      // 0x8c085b78: 0 a null
-typedef void (*JsonDtorFn)(void* json);                                // 0x8c0844b0
-typedef void* (*JsonLookupFn)(void* json, const char* key);            // 0x8c085e54: the member, made when it is not there
-typedef int (*JsonHasFn)(void* json, const char* key);                 // 0x8c085038, of an object
-typedef void* (*JsonGetFn)(void* json, const char* key);               // 0x8c084f44
-typedef int (*JsonIntFn)(void* json);                                  // 0x8c084810: the three number kinds
-typedef void (*JsonFromIntFn)(void* json, int value);                  // 0x8c083aec
-typedef void (*JsonFromFloatFn)(void* json, u32 float_bits);           // 0x8c08434c: the kind 3 from a float's bits
-typedef void (*JsonFromCstrFn)(void* json, const char* text);          // 0x8c084400: a string copied from the text
-typedef void (*JsonFromStringFn)(void* json, const void* string);      // 0x8c08445c: a string copied from a stock string object
-typedef void (*JsonPushFn)(void* array, void* value);                  // 0x8c085d24: a null becomes an array at its first push
-typedef void (*JsonAssignFn)(void* target, void* value);               // 0x8c084588
-typedef int (*JsonReadFileFn)(const char* path, void* json);           // 0x8c0534a0: non-zero when the file was read and parsed
-typedef int (*JsonWriteFileFn)(void* path_string, void* json);         // 0x8c053138: a temporary, then a rename; 0 when that fails
-typedef void (*StringCtorFn)(void* out, const char* text);             // 0x8c03e40c: a stock string object from text
-typedef void (*FreeFn)(void* block);                                   // 0x8d4e5864: the match of the allocator stock's strings use
+typedef void* (*VectorAssignFn)(void* target, const void* source);    // 0x8f0099a4: the list at +4/+8 of the source into the target's
+typedef void (*JsonCtorFn)(void* json, int kind);                      // 0x8c085ba8: 0 a null
+typedef void (*JsonDtorFn)(void* json);                                // 0x8c0844e0
+typedef void* (*JsonLookupFn)(void* json, const char* key);            // 0x8c085e84: the member, made when it is not there
+typedef int (*JsonHasFn)(void* json, const char* key);                 // 0x8c085068, of an object
+typedef void* (*JsonGetFn)(void* json, const char* key);               // 0x8c084f74
+typedef int (*JsonIntFn)(void* json);                                  // 0x8c084840: the three number kinds
+typedef void (*JsonFromIntFn)(void* json, int value);                  // 0x8c083b1c
+typedef void (*JsonFromFloatFn)(void* json, u32 float_bits);           // 0x8c08437c: the kind 3 from a float's bits
+typedef void (*JsonFromCstrFn)(void* json, const char* text);          // 0x8c084430: a string copied from the text
+typedef void (*JsonFromStringFn)(void* json, const void* string);      // 0x8c08448c: a string copied from a stock string object
+typedef void (*JsonPushFn)(void* array, void* value);                  // 0x8c085d54: a null becomes an array at its first push
+typedef void (*JsonAssignFn)(void* target, void* value);               // 0x8c0845b8
+typedef int (*JsonReadFileFn)(const char* path, void* json);           // 0x8c0534d0: non-zero when the file was read and parsed
+typedef int (*JsonWriteFileFn)(void* path_string, void* json);         // 0x8c053168: a temporary, then a rename; 0 when that fails
+typedef void (*StringCtorFn)(void* out, const char* text);             // 0x8c03e434: a stock string object from text
+typedef void (*FreeFn)(void* block);                                   // 0x8d4e63cc: the match of the allocator stock's strings use
 typedef u32 (*FloatFromIntFn)(i32 value);                              // ROM 0x04021854: the float of an int, as bits
-typedef i32 (*FopenFn)(const char* path, const char* mode);            // 0x8fc20690: a descriptor, negative when the open fails
+typedef i32 (*FopenFn)(const char* path, const char* mode);            // 0x8fc22180: a descriptor, negative when the open fails
 typedef i32 (*FwriteFn)(const void* source, i32 size, i32 count, i32 file);
 typedef i32 (*FreadFn)(void* destination, i32 size, i32 count, i32 file);
 typedef void (*FcloseFn)(i32 file);
 typedef void (*RenameFn)(const char* old_path, const char* new_path);
-typedef i32 (*FileSizeFn)(const char* path);                           // 0x8c051f6c: the bytes, -1 when there is no such file; no log line
+typedef i32 (*FileSizeFn)(const char* path);                           // 0x8c051f9c: the bytes, -1 when there is no such file; no log line
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_CLIPBOARD_LOAD ((VoidFn)0x8f00b2d8u)
-#define STOCK_VECTOR_ASSIGN ((VectorAssignFn)0x8f008774u)
-#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085b78u)
-#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844b0u)
-#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e54u)
-#define STOCK_JSON_HAS ((JsonHasFn)0x8c085038u)
-#define STOCK_JSON_GET ((JsonGetFn)0x8c084f44u)
-#define STOCK_JSON_INT ((JsonIntFn)0x8c084810u)
-#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083aecu)
-#define STOCK_JSON_FROM_FLOAT ((JsonFromFloatFn)0x8c08434cu)
-#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084400u)
-#define STOCK_JSON_FROM_STRING ((JsonFromStringFn)0x8c08445cu)
-#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d24u)
-#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c084588u)
-#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534a0u)
-#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053138u)
-#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e40cu)
-#define STOCK_FREE ((FreeFn)0x8d4e5864u)
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_CLIPBOARD_LOAD ((VoidFn)0x8f00c5e0u)
+#define STOCK_VECTOR_ASSIGN ((VectorAssignFn)0x8f0099a4u)
+#define STOCK_JSON_CTOR ((JsonCtorFn)0x8c085ba8u)
+#define STOCK_JSON_DTOR ((JsonDtorFn)0x8c0844e0u)
+#define STOCK_JSON_LOOKUP ((JsonLookupFn)0x8c085e84u)
+#define STOCK_JSON_HAS ((JsonHasFn)0x8c085068u)
+#define STOCK_JSON_GET ((JsonGetFn)0x8c084f74u)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define STOCK_JSON_FROM_INT ((JsonFromIntFn)0x8c083b1cu)
+#define STOCK_JSON_FROM_FLOAT ((JsonFromFloatFn)0x8c08437cu)
+#define STOCK_JSON_FROM_CSTR ((JsonFromCstrFn)0x8c084430u)
+#define STOCK_JSON_FROM_STRING ((JsonFromStringFn)0x8c08448cu)
+#define STOCK_JSON_PUSH ((JsonPushFn)0x8c085d54u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_READ_FILE ((JsonReadFileFn)0x8c0534d0u)
+#define STOCK_JSON_WRITE_FILE ((JsonWriteFileFn)0x8c053168u)
+#define STOCK_STRING_CTOR ((StringCtorFn)0x8c03e434u)
+#define STOCK_FREE ((FreeFn)0x8d4e63ccu)
 #define STOCK_FLOAT_FROM_INT ((FloatFromIntFn)0x04021854u)
-#define STOCK_FOPEN ((FopenFn)0x8fc20690u)
-#define STOCK_FWRITE ((FwriteFn)0x8fc205c8u)
-#define STOCK_FREAD ((FreadFn)0x8fc2065cu)
-#define STOCK_FCLOSE ((FcloseFn)0x8fc205b4u)
-#define STOCK_RENAME ((RenameFn)0x8fc20804u)
-#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f6cu)
-#define STOCK_CLIP_STATE ((u8*)0x84bdd4b8u)                            // the clipboard's state (audio_clipboard.cpp)
-#define STOCK_CONTENT_NAMES ((const char* const*)0x848c58f8u)         // "", tape, drum, sampler, synth, synth_drum
+#define STOCK_FOPEN ((FopenFn)0x8fc22180u)
+#define STOCK_FWRITE ((FwriteFn)0x8fc220b8u)
+#define STOCK_FREAD ((FreadFn)0x8fc2214cu)
+#define STOCK_FCLOSE ((FcloseFn)0x8fc220a0u)
+#define STOCK_RENAME ((RenameFn)0x8fc222f4u)
+#define STOCK_FILE_SIZE ((FileSizeFn)0x8c051f9cu)
+#define STOCK_CLIP_STATE ((u8*)0x84bdd944u)                            // the clipboard's state (audio_clipboard.cpp)
+#define STOCK_CONTENT_NAMES ((const char* const*)0x848c5bc0u)         // "", tape, drum, sampler, synth, synth_drum
 
 // the state: +4/+8 the list of lifted tracks, +0x10 four volumes, +0x20 four pans, +0xa0 the length in frames,
 // +0xa4 the content, +0xa8 the patch's data, a stock string object
@@ -283,7 +284,7 @@ static void set_int(Json* root, const char* key, int value) {
     STOCK_JSON_DTOR(&item);
 }
 
-// Stock's json, call for call as stock's writer 0x8f008c54 builds it, with two differences: a track of 5 to 8 is
+// Stock's json, call for call as stock's writer 0x8f009e94 builds it, with two differences: a track of 5 to 8 is
 // not named, and when the clipboard holds one, the id goes in, and a clipboard with nothing of tracks 1 to 4 is
 // written as an empty one.
 static int write_stock_json(const Clip* c) {

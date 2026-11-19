@@ -1,26 +1,29 @@
 {
  "schema": 2,
- "id": "op1f-1.7.0-example-trampolines",
+ "id": "op1f-1.7.3-example-trampolines",
  "device": "OP-1 Field",
- "firmware_version": "1.7.0+0",
+ "firmware_version": "1.7.3+0",
  "cpu": "bf703",
  "about": [
-  "The two places where the example pack `trampolines` changes OS 1.7.0+0 of the OP-1 Field (docs/first-pack.md). No byte of the firmware is in this file.",
-  "It has the form of profiles/op1f-1.7.0.json, which says what each field means. A pack of your own comes with a file like this one: its places under patches, and under tables which function of yours goes to which place.",
-  "tools/place_sum.py works out a place's sum from your own firmware file and says how many bytes a trampoline has to copy there. tools/table_build.py writes the pack's table, trampolines_table.s, from this file."
+  "The two places where the example pack `trampolines` changes OS 1.7.3+0 of the OP-1 Field (docs/first-pack.md). No byte of the firmware is in this file.",
+  "It has the form of profiles/op1f-1.7.3.json, which says what each field means. A pack of your own comes with a file like this one: its places under patches, and under tables which function of yours goes to which place.",
+  "tools/place_sum.py works out a place's sum from your own firmware file and says how many bytes a trampoline has to copy there. tools/table_build.py writes the pack's table, trampolines_table.s, from this file.",
+  "module_base and reserved_bytes are the room for our code, as the main profile names it: the pack is linked for the room behind the loader."
  ],
- "stock_sha256": "f97775d61eda503f28c1712013017c80acd894c5890f57b1f45a680163465833",
- "stock_bytes": 2070248,
+ "stock_sha256": "d134eb1ac7ad88e8370d988329cd5d7419f016005b1d269034f9cf7166fad0ec",
+ "stock_bytes": 2079016,
+ "module_base": "0x8d2e4234",
+ "reserved_bytes": 2097152,
  "patches": [
   {
-   "address": "0x8c0dc920",
+   "address": "0x8c0dd488",
    "length": 8,
    "sum": "0x2feb443b",
    "group": "trampolines",
    "name": "The entry of the function that draws a text with the bitmap font. The start-up calls it once, for the version text on the start screen."
   },
   {
-   "address": "0x8c053a6c",
+   "address": "0x8c053a9c",
    "length": 8,
    "sum": "0x3c2214a8",
    "group": "trampolines",
@@ -35,7 +38,7 @@
    "symbol": "op1f_boot_table",
    "entries": [
     {
-     "address": "0x8c0dc920",
+     "address": "0x8c0dd488",
      "form": "jump",
      "target": "op1f_tramp_draw",
      "room": "op1f_tramp_draw_room",
@@ -43,7 +46,7 @@
      "does": "Counts the call, then goes on into the firmware's function through a trampoline of eight bytes."
     },
     {
-     "address": "0x8c053a6c",
+     "address": "0x8c053a9c",
      "form": "jump",
      "target": "op1f_tramp_flag",
      "room": "op1f_tramp_flag_room",

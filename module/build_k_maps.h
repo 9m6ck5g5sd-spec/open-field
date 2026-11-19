@@ -1,3 +1,4 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build K: a tape's block map in two files (K1, K1b) and the tape's identity (K2). See build_k_maps.cpp.
 #ifndef OP1F_BUILD_K_MAPS_H
 #define OP1F_BUILD_K_MAPS_H

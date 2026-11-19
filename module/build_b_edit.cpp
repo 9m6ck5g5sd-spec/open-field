@@ -1,20 +1,21 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3c: lift, drop and the range clear on tape tracks 5 and 6 (track indices 4 and 5), and the
 // guard that keeps a lifted track 5/6 out of the sampler import (OS 1.7.0+0; read in
 // analysis/build_b_design.md, section 11).
 //
 // What stock does (tape_c.cpp and audio_clipboard.cpp in record 307): a lift posts command 3 with the track
-// (0x8f00ad0c, which asserts track < 4 at audio_clipboard.cpp:814); the tape thread's handler 0x8f009548 and
-// its worker 0x8f0093ec move the clip records through the Clips store (track-agnostic) and call the helper
-// 0x8f01ef00(track, start, end): it copies the range into the track's own clipboard partition
-// "clipboard/track_<n+1>.raw" (names at 0x84020bc4, 24 bytes apart; the builder 0x8f01ecec asserts track < 4),
-// unmaps every whole chunk of the range from the block map (unmap_chunk 0x8fc20c60) and writes zeros over the
-// partial ones, marks the cache slots covering the range stale (0x8fc1fdf8) and syncs the partition
-// (0x8d4ffe34). When no clip covers the 512 frames before the lift the worker first clears them with
-// 0x8f01dc4c(track, start - 512, start) (zeros only). A drop posts command 0 (copy) or 2 (mix, shift + drop)
-// with the selected track; the handler 0x8f0098b0 and its worker 0x8f009630 add the clip record and call
-// 0x8f01f548(src, dst, pos, frames) (the source partition read in pieces, written to the track) or
-// 0x8f01f2a0(params) (the destination read, every source partition added, written back), both asserting their
-// tracks < 4, then 0x8fc1fdf8(pos, pos + 2 x frames). The sampler import 0x8f003044 renders a tape clipboard
+// (0x8f00c00c, which asserts track < 4 at audio_clipboard.cpp:814); the tape thread's handler 0x8f009548 and
+// its worker 0x8f00a62c move the clip records through the Clips store (track-agnostic) and call the helper
+// 0x8f0209f0(track, start, end): it copies the range into the track's own clipboard partition
+// "clipboard/track_<n+1>.raw" (names at 0x84020e2c, 24 bytes apart; the builder 0x8f01ecec asserts track < 4),
+// unmaps every whole chunk of the range from the block map (unmap_chunk 0x8fc22750) and writes zeros over the
+// partial ones, marks the cache slots covering the range stale (0x8fc218f8) and syncs the partition
+// (0x8d500f94). When no clip covers the 512 frames before the lift the worker first clears them with
+// 0x8f01f73c(track, start - 512, start) (zeros only). A drop posts command 0 (copy) or 2 (mix, shift + drop)
+// with the selected track; the handler 0x8f0098b0 and its worker 0x8f00a870 add the clip record and call
+// 0x8f021038(src, dst, pos, frames) (the source partition read in pieces, written to the track) or
+// 0x8f020d90(params) (the destination read, every source partition added, written back), both asserting their
+// tracks < 4, then 0x8fc218f8(pos, pos + 2 x frames). The sampler import 0x8f004204 renders a tape clipboard
 // into a sample and asserts the lifted track < 4 on both of its paths (Sampler.cpp:74, the mixdown's names).
 //
 // This unit (profile group "build-b3c", with the trampolines in build_b_edit.s and two chunk helpers in
@@ -58,19 +59,19 @@ typedef i32 (*TapeIoFn)(u32 track, u32 byte_offset, u32 length, void* buffer);  
 typedef void (*InvalidateFn)(i32 start, i32 end);
 typedef void* (*MemsetFn)(void* destination, int value, u32 count);
 
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_OPEN_PARTITION ((OpenPartitionFn)0x8d4ffea8u)             // as the lift helper calls it at 0x8f01ef6c
-#define STOCK_PARTITION_READ ((PartitionIoFn)0x8d4ff528u)
-#define STOCK_PARTITION_WRITE ((PartitionIoFn)0x8d4ffa28u)
-#define STOCK_CLOSE_PARTITION ((ClosePartitionFn)0x8d4ff2d8u)
-#define STOCK_PARTITION_SYNC ((VoidFn)0x8d4ffe34u)                     // after the lift's writes, as at 0x8f01f1de
-#define STOCK_TAPE_IO_READ ((TapeIoFn)0x8fc200acu)                      // the hooked entries: 0-3 stock, 4-5 the module
-#define STOCK_TAPE_IO_WRITE ((TapeIoFn)0x8fc2021cu)
-#define STOCK_INVALIDATE_RANGE ((InvalidateFn)0x8fc1fdf8u)              // cache slots overlapping [start, end] become stale
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_OPEN_PARTITION ((OpenPartitionFn)0x8d501008u)             // as the lift helper calls it at 0x8f01ef6c
+#define STOCK_PARTITION_READ ((PartitionIoFn)0x8d500688u)
+#define STOCK_PARTITION_WRITE ((PartitionIoFn)0x8d500b88u)
+#define STOCK_CLOSE_PARTITION ((ClosePartitionFn)0x8d500438u)
+#define STOCK_PARTITION_SYNC ((VoidFn)0x8d500f94u)                     // after the lift's writes, as at 0x8f01f1de
+#define STOCK_TAPE_IO_READ ((TapeIoFn)0x8fc21bacu)                      // the hooked entries: 0-3 stock, 4-5 the module
+#define STOCK_TAPE_IO_WRITE ((TapeIoFn)0x8fc21d1cu)
+#define STOCK_INVALIDATE_RANGE ((InvalidateFn)0x8fc218f8u)              // cache slots overlapping [start, end] become stale
 #define STOCK_MEMSET ((MemsetFn)0x04022ea8u)
-#define STOCK_CLIPBOARD_NAMES ((const char*)0x84020bc4u)                // "clipboard/track_1.raw" .. "_4.raw"
-#define CLIPBOARD_VECTOR_BEGIN (*(i32* volatile*)0x84bdd4bcu)           // the state's vector of lifted tracks
-#define CLIPBOARD_VECTOR_END (*(i32* volatile*)0x84bdd4c0u)
+#define STOCK_CLIPBOARD_NAMES ((const char*)0x84020e2cu)                // "clipboard/track_1.raw" .. "_4.raw"
+#define CLIPBOARD_VECTOR_BEGIN (*(i32* volatile*)0x84bdd948u)           // the state's vector of lifted tracks
+#define CLIPBOARD_VECTOR_END (*(i32* volatile*)0x84bdd94cu)
 
 // Build D: stock's file API (disk_io.h, as build_b_storage.cpp uses it for the map files) and the sample
 // object the sampler import renders into.
@@ -79,14 +80,14 @@ typedef i32 (*FreadFn)(void* destination, i32 size, i32 count, i32 file);   // b
 typedef i32 (*FwriteFn)(const void* source, i32 size, i32 count, i32 file); // map code had been until K1b: a descriptor 0 read as a failure, a
 typedef void (*FcloseFn)(i32 file);                                     // failed open as a file)
 typedef void (*SampleFinalizeFn)(void* sample);
-#define STOCK_FOPEN ((FopenFn)0x8fc20690u)
-#define STOCK_FREAD ((FreadFn)0x8fc2065cu)                              // the item count
-#define STOCK_FWRITE ((FwriteFn)0x8fc205c8u)
-#define STOCK_FCLOSE ((FcloseFn)0x8fc205b4u)
-#define STOCK_SAMPLE_FINALIZE ((SampleFinalizeFn)0x8f0025feu)           // the overview the sampler draws, as both stock renders end
-#define STATE_LENGTH (*(volatile i32*)0x84bdd558u)                      // the clipboard state: the length in frames
-#define STATE_VOLUMES ((const volatile i32*)0x84bdd4c8u)                // its four effective volumes (Q31) and pans
-#define STATE_PANS ((const volatile i32*)0x84bdd4d8u)
+#define STOCK_FOPEN ((FopenFn)0x8fc22180u)
+#define STOCK_FREAD ((FreadFn)0x8fc2214cu)                              // the item count
+#define STOCK_FWRITE ((FwriteFn)0x8fc220b8u)
+#define STOCK_FCLOSE ((FcloseFn)0x8fc220a0u)
+#define STOCK_SAMPLE_FINALIZE ((SampleFinalizeFn)0x8f0037beu)           // the overview the sampler draws, as both stock renders end
+#define STATE_LENGTH (*(volatile i32*)0x84bdd9e4u)                      // the clipboard state: the length in frames
+#define STATE_VOLUMES ((const volatile i32*)0x84bdd954u)                // its four effective volumes (Q31) and pans
+#define STATE_PANS ((const volatile i32*)0x84bdd964u)
 #define SAMPLE_CAPACITY_OFFSET 0xd768                                   // the sample object: +0 the 16-bit data, the capacity in
 #define SAMPLE_STEREO_OFFSET 0xd770                                     // frames, the stereo byte
 
@@ -148,7 +149,7 @@ i32 op1f_ext_clip_vol[EXT_TRACKS] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fff
 i32 op1f_ext_clip_pan[EXT_TRACKS];
 // K4: the four records start as stock's own four do. The clipboard state's constructor 0x8f008690 runs the record's
 // default constructor 0x8d4eccc0 on each of its slots: track 0, the four paddings -1, start and stop 0. Until K4
-// these were zeroed memory, and a drop copies the record's paddings into the new clip (0x8f009630), so the clips
+// these were zeroed memory, and a drop copies the record's paddings into the new clip (0x8f00a870), so the clips
 // of tracks 5 to 8 dropped by a drop of several tracks after a restart carried the paddings 0, 0, 0, 0: a number
 // the crossfade store is then asked for (0x8f00cda4; below 0 is "none"). Found in the K3 read-out.
 i32 op1f_ext_clip_records[EXT_TRACKS][7] = { { 0, -1, -1, -1, -1, 0, 0 }, { 0, -1, -1, -1, -1, 0, 0 },
@@ -293,7 +294,7 @@ static void release_range(u32 track, i32 start, i32 end) {
     }
 }
 
-// Stock 0x8f01ef00(track, start, end) for tracks 4-5, reached through the entry trampoline op1f_lift.
+// Stock 0x8f0209f0(track, start, end) for tracks 4-5, reached through the entry trampoline op1f_lift.
 extern "C" void op1f_lift_ext(u32 track, i32 start, i32 end) asm("op1f_lift_ext");
 extern "C" void op1f_lift_ext(u32 track, i32 start, i32 end) {
     if (!extension_track(track) || start < 0 || !(start < end) || end > MAX_FRAME) {
@@ -326,7 +327,7 @@ extern "C" void op1f_lift_ext(u32 track, i32 start, i32 end) {
     note("lift", track, start, end, track);
 }
 
-// Stock 0x8f01dc4c(track, start, end) for tracks 4-5, reached through op1f_clear_range.
+// Stock 0x8f01f73c(track, start, end) for tracks 4-5, reached through op1f_clear_range.
 extern "C" void op1f_clear_range_ext(u32 track, i32 start, i32 end) asm("op1f_clear_range_ext");
 extern "C" void op1f_clear_range_ext(u32 track, i32 start, i32 end) {
     if (!extension_track(track) || start < 0 || !(start < end) || end > MAX_FRAME) {
@@ -338,7 +339,7 @@ extern "C" void op1f_clear_range_ext(u32 track, i32 start, i32 end) {
     note("clear", track, start, end, track);
 }
 
-// Stock 0x8f01f548(src, dst, pos, frames) when src or dst is 4-5, reached through op1f_drop_copy.
+// Stock 0x8f021038(src, dst, pos, frames) when src or dst is 4-5, reached through op1f_drop_copy.
 extern "C" void op1f_drop_copy_ext(u32 src, u32 dst, i32 pos, i32 frames) asm("op1f_drop_copy_ext");
 extern "C" void op1f_drop_copy_ext(u32 src, u32 dst, i32 pos, i32 frames) {
     if (src >= EIGHT_TRACKS || dst >= EIGHT_TRACKS || pos < 0 || frames <= 0 || pos >= MAX_FRAME) {
@@ -365,7 +366,7 @@ extern "C" void op1f_drop_copy_ext(u32 src, u32 dst, i32 pos, i32 frames) {
     note("drop", dst, pos, pos + frames, src);
 }
 
-// Stock 0x8f01f2a0(params) when the destination or a source is 4-5, reached through op1f_drop_mix. params:
+// Stock 0x8f020d90(params) when the destination or a source is 4-5, reached through op1f_drop_mix. params:
 // +0 the clipboard state (its vector at +4/+8), +4 dst, +8 pos, +0xc frames, +0x10 the volumes, +0x14 the pans.
 extern "C" void op1f_drop_mix_ext(const i32* params) asm("op1f_drop_mix_ext");
 extern "C" void op1f_drop_mix_ext(const i32* params) {
@@ -422,7 +423,7 @@ extern "C" void op1f_drop_mix_ext(const i32* params) {
     note("drop mix", dst, pos, pos + frames, first_source);
 }
 
-// Build D: the sampler import 0x8f003044 with a clipboard that holds a track of 4 or more (op1f_clip_to_sample
+// Build D: the sampler import 0x8f004204 with a clipboard that holds a track of 4 or more (op1f_clip_to_sample
 // found it in the state's vector), stock's two renders in one. The sample object: +0 the 16-bit data, +0xd768
 // the capacity in frames, B[+0xd770] stereo. One lifted track is copied as stock's 0x8f002abc copies it (the
 // high halves of the 32-bit frames; mono = (L >> 1 + R >> 1) saturated, then the high half); several are

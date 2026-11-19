@@ -10,8 +10,8 @@
 .global op1f_boot_table
 .type op1f_boot_table, STT_OBJECT
 op1f_boot_table:
-    .long 0x00080014, 0x8c0dc920, op1f_tramp_draw, 0x2feb443b, op1f_tramp_draw_room    /* Counts the call, then goes on into the firmware's function through a trampoline of eight bytes. */
-    .long 0x000c0014, 0x8c053a6c, op1f_tramp_flag, 0x1fbc106d, op1f_tramp_flag_room    /* Writes one line into the log, then goes on into the firmware's function through a trampoline of twelve bytes. */
+    .long 0x00080014, 0x8c0dd488, op1f_tramp_draw, 0x2feb443b, op1f_tramp_draw_room    /* Counts the call, then goes on into the firmware's function through a trampoline of eight bytes. */
+    .long 0x000c0014, 0x8c053a9c, op1f_tramp_flag, 0x1fbc106d, op1f_tramp_flag_room    /* Writes one line into the log, then goes on into the firmware's function through a trampoline of twelve bytes. */
 .size op1f_boot_table, .-op1f_boot_table
 .global op1f_boot_table_end
 .type op1f_boot_table_end, STT_OBJECT

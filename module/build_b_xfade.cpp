@@ -1,13 +1,14 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3b: the loop crossfade of tape tracks 5 and 6, the crossfade masks for six tracks, and the
 // clip-edge fade writers for tracks 5 and 6 (OS 1.7.0+0; read in analysis/build_b_design.md, section 10).
 //
 // What stock does (tape_xfade.cpp in record 309, tape_c.cpp in record 307):
 //   * Four loop buffers of 594 frames (4,752 bytes each, from the L2 allocator; pointers at 0x0802fe60) hold,
 //     per track, the 297 frames before loop_b followed by the 297 frames from loop_a. The compute
-//     0x8fc21a38(loop_a, loop_b), called from read_block while the loop flag B[0x848d03bc] is set and the valid
-//     mask [0x848d03b4] is not 0xF, needs the cache slots of the chunks at loop_a, loop_a + 297, loop_b - 1 and
+//     0x8fc21a38(loop_a, loop_b), called from read_block while the loop flag B[0x8400129d] is set and the valid
+//     mask [0x848d07c0] is not 0xF, needs the cache slots of the chunks at loop_a, loop_a + 297, loop_b - 1 and
 //     loop_b - 298 (else it logs and keeps the dirty mask); it copies the two halves for every track in the
-//     dirty mask [0x848d03b8] (then cleared; the source frame is clamped at loop_b, so a loop shorter than 297
+//     dirty mask [0x848d07c4] (then cleared; the source frame is clamped at loop_b, so a loop shorter than 297
 //     frames repeats that frame), tests every track's junction (the error of predicting each side from the
 //     other against the signal's own steps plus the jump itself), fades the last 32 frames of the first half
 //     out and the first 32 of the second half in for the dirty tracks whose junction fails the test, and sets
@@ -15,18 +16,18 @@
 //     set: index = frame - (loop_b - 297) from loop_b - 297 on, so frames past loop_b continue into the second
 //     half, i.e. into the loop start; 297 + (frame - loop_a) from loop_a on. With the flag set it also wraps
 //     the window start into [loop_a, loop_b) before reading.
-//   * xfade_mark_loaded_range(start, end, loop_a, loop_b, mask) 0x8fc2188c: when a loop point, or a loop point
+//   * xfade_mark_loaded_range(start, end, loop_a, loop_b, mask) 0x8fc2337c: when a loop point, or a loop point
 //     +-297, lies in [start, end], or the range lies within 297 frames after loop_a or before loop_b,
 //     dirty |= mask; then valid &= ~dirty. Called by chunks_service after a reload (mask 0xF) and by the L1
-//     record function with 1 << track for the recorded range. xfade_mark_dirty(mask) 0x8fc21968: dirty |= mask,
+//     record function with 1 << track for the recorded range. xfade_mark_dirty(mask) 0x8fc23458: dirty |= mask,
 //     valid &= ~dirty, called with 0xF from the loop-point and punch logic (0x8f01e67a, 0x8f01e6f0, 0x8f01e842,
 //     0x8f01e968, 0x8f01eaf8).
-//   * The clip-edge helpers 0x8f00928c / 0x8f009344 (record stop; B2b let them return for tracks 4-5) blend a
+//   * The clip-edge helpers 0x8f00a4cc / 0x8f00a584 (record stop; B2b let them return for tracks 4-5) blend a
 //     new clip's edges with the "outside" paddings of types 2 and 3 through 0x8f01dec4, which is track-agnostic
 //     (malloc, tape_io_read, a linear ramp, tape_io_write, free). When a padding is missing, which is the case
 //     for every clip recorded so far (paddings [id, id, -1, -1]), they fall back to 0x8f009130(track, clip,
-//     mode): mode 0 fades the clip's first 128 frames in (0x8f01ddf0(track, start, start + 128)), mode 1 fades
-//     its last 256 frames out (0x8f01dce0(track, stop - 256, stop)), in place on the tape. Both writers assert
+//     mode): mode 0 fades the clip's first 128 frames in (0x8f01f8e0(track, start, start + 128)), mode 1 fades
+//     its last 256 frames out (0x8f01f7d0(track, stop - 256, stop)), in place on the tape. Both writers assert
 //     track < 4 (0x8f01dd00, 0x8f01de0e; fatal) and are otherwise track-agnostic: malloc, read through the
 //     tape_c wrapper 0x8f01dc24, gain x sample with (T) multiplies and a gain step of 0x7fffffff / frames
 //     applied with (S) adds, write through 0x8f01dc38, free.
@@ -71,10 +72,10 @@ struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (anal
 typedef Slot* (*SlotForLogicalFn)(int logical);
 typedef void (*LogFn)(int level, const char* file, int line, const char* format, ...);
 
-#define STOCK_SLOT_FOR_LOGICAL ((SlotForLogicalFn)0x8fc1f780u)   // slot_by_logical[l], or 0
-#define STOCK_LOG ((LogFn)0x8c0539f0u)
-#define STOCK_XFADE_DIRTY (*(volatile u32*)0x848d03b8u)         // tracks 0-3: the loop buffer needs a recompute (init 0xF)
-#define STOCK_XFADE_VALID (*(volatile u32*)0x848d03b4u)         // tracks 0-3: the loop buffer is computed
+#define STOCK_SLOT_FOR_LOGICAL ((SlotForLogicalFn)0x8fc21280u)   // slot_by_logical[l], or 0
+#define STOCK_LOG ((LogFn)0x8c053a20u)
+#define STOCK_XFADE_DIRTY (*(volatile u32*)0x848d07c4u)         // tracks 0-3: the loop buffer needs a recompute (init 0xF)
+#define STOCK_XFADE_VALID (*(volatile u32*)0x848d07c0u)         // tracks 0-3: the loop buffer is computed
 
 extern "C" i32 op1f_tape_io_read_ext(u32 track, u32 byte_offset, u32 length, unsigned char* buffer) asm("op1f_tape_io_read_ext");
 extern "C" i32 op1f_tape_io_write_ext(u32 track, u32 byte_offset, u32 length, const unsigned char* buffer) asm("op1f_tape_io_write_ext");
@@ -160,7 +161,7 @@ static u32 udiv(u32 n, u32 d) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// The two mask functions, stock's logic (0x8fc2188c..0x8fc21965, 0x8fc21968..0x8fc2199f) for six tracks.
+// The two mask functions, stock's logic (0x8fc2337c..0x8fc21965, 0x8fc23458..0x8fc2199f) for six tracks.
 
 static int range_touches_loop(i32 start, i32 end, i32 loop_a, i32 loop_b) {   // stock's six tests, in order
     i32 after_a = loop_a + XFADE_FRAMES;
@@ -310,7 +311,7 @@ extern "C" void op1f_ext_xfade_compute(i32 loop_a, i32 loop_b) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// The clip-edge fade writers for tracks 4-5: stock's 0x8f01dce0 (fade out) and 0x8f01ddf0 (fade in), in
+// The clip-edge fade writers for tracks 4-5: stock's 0x8f01f7d0 (fade out) and 0x8f01f8e0 (fade in), in
 // pieces of STAGE_FRAMES through the extension-map tape I/O. The gain starts at 1.0 (out) or 0 (in) and moves
 // by 0x7fffffff / frames per frame after each frame, as stock's loops do.
 

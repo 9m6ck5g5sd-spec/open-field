@@ -1,17 +1,18 @@
+/* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build J packs J5e: the entry of the picture loader (OS 1.7.0+0). Logic in build_j5e_art.cpp.
  *
  * This is build_b_art.s without the pictures: since J5e they stand in the pack's file behind the lists and are read
  * when a screen asks for one (analysis/pack_loader_study.md section 20). build_b_art.s and build_b_art.cpp are kept
  * as they are for the packs before J5e.
  *
- * svg_loader.cpp's load(name) 0x8fc88c64 builds "content/display/<name>" (0x848dab20), opens the file, reads it
- * into a buffer from 0x8fcc5744, parses the buffer with parse_svg_from_ram 0x8c040260 and frees it; the document
+ * svg_loader.cpp's load(name) 0x8fc8ab7c builds "content/display/<name>" (0x848daf5c), opens the file, reads it
+ * into a buffer from 0x8fcc7560, parses the buffer with parse_svg_from_ram 0x8c040298 and frees it; the document
  * is its result (0 on any failure, which the caller 0x8fc88e70 turns into a fatal assert). A JUMP.a at its first
  * 8 bytes lands here. The C function answers with a document parsed from a picture a pack carries for that name
  * and with 0 for every other name, and for a picture that cannot be read or does not parse; then the routine goes
  * on through its room and stock continues with the device's file.
  *
- *      load  0x8fc88c64  -> its room, then 0x8fc88c6c
+ *      load  0x8fc8ab7c  -> its room, then 0x8fc88c6c
  *
  * The room (packs L3, analysis/clean_base_study.md section 16): until L3 this routine ran the instructions its hook
  * displaced itself, as a copy. Now it holds none of them and ends in a jump to its room: sixteen bytes of the pack's

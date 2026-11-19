@@ -12,9 +12,9 @@
 //              loader's file is held to it, so that a linked file of another build is refused
 //   --version  the new version's name: v and a number. A version that anyone may have installed keeps its bytes for
 //              good, so a changed loader gets a new name
-//   --stock    your own OS 1.7.0 file, or the environment's OPEN_FIELD_STOCK. It is read for one thing: the size and
+//   --stock    your own OS 1.7.3 file, or the environment's OPEN_FIELD_STOCK. It is read for one thing: the size and
 //              the SHA-256 of the firmware file the builder gives with this loader. Nothing of it is written anywhere.
-//              A file that is not the one profiles/op1f-1.7.0.json is for is refused
+//              A file that is not the one the profile build.json names (profiles/op1f-1.7.3.json) is for is refused
 //
 // What it writes, into this folder (or the one --out names):
 //   loader-<os>-<version>.bin    the loader's file, byte for byte the one given
@@ -109,7 +109,7 @@ function linkedFile(bytes) {
   return { entry, names, loaded };
 }
 
-// The loader has the first 64 KiB of the room for our code; the packs are loaded behind it (linker/op1f-1.7.0-base.ld).
+// The loader has the first 64 KiB of the room for our code; the packs are loaded behind it (linker/op1f-1.7.3-base.ld).
 const LOADER_ROOM = 0x10000;
 
 // The manifest as an object, its fields in the order the page's manifest has had them from its first version.
@@ -142,13 +142,14 @@ async function main() {
   const version = given["--version"];
   need(/^v[0-9]+$/.test(version), "a version's name is v and a number, such as v4: " + version);
   const stockPath = given["--stock"] || process.env.OPEN_FIELD_STOCK || "";
-  need(stockPath || check, "your own OS 1.7.0 file is needed: --stock <your own os.ldr>, or OPEN_FIELD_STOCK. Without it the SHA-256 of the firmware file the builder gives cannot be worked out");
+  need(stockPath || check, "your own OS 1.7.3 file is needed: --stock <your own os.ldr>, or OPEN_FIELD_STOCK. Without it the SHA-256 of the firmware file the builder gives cannot be worked out");
   need(!stockPath || existsSync(stockPath), "no such file: " + stockPath);
   for (const path of [given["--loader"], given["--elf"]]) need(existsSync(path), "no such file: " + path);
   if ("--status" in given) need(/^[\x20-\x7e]{1,80}$/.test(given["--status"]) && given["--status"].trim() === given["--status"], "the status is one short line of plain letters");
   const folder = given["--out"] || here;
 
-  const profile = JSON.parse(readFileSync(join(here, "..", "profiles", "op1f-1.7.0.json"), "utf8"));
+  const plan = JSON.parse(readFileSync(join(here, "..", "build.json"), "utf8"));              // the tree's own profile
+  const profile = JSON.parse(readFileSync(join(here, "..", ...plan.profile.split("/")), "utf8"));
   const os = profile.id.split("-").pop();
   need(/^[0-9]+(\.[0-9]+)*$/.test(os), "the profile's id does not end in an OS version: " + profile.id);
   for (const field of ["entry", "heap_fill_base", "heap_fill_bytes", "module_base", "reserved_bytes", "stock_sha256", "stock_bytes", "stock_records", "image"])
