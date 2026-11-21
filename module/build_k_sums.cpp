@@ -1,5 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build K, pack K5 (analysis/tape_stock_safe.md, sections 9 and 10): the chunks of tracks 5 to 8 lie at the top of
+// Build K, pack K5: the chunks of tracks 5 to 8 lie at the top of
 // the tape, and each has a sum, so that what another firmware recorded over is heard as silence and not as a
 // piece of something else.
 //
@@ -19,7 +19,7 @@
 //
 //   * a sum for every chunk of tracks 5 to 8, kept by physical chunk (so that the chunks older undo records hold
 //     keep theirs), taken at every whole write, looked at when a whole chunk is read, and saved with the tape's
-//     file of tracks 5 to 8 as a third section (build_k_maps.cpp).
+//     file of tracks 5 to 8 as a third section (Build K's maps unit).
 //
 // When is a chunk "not what was written"? A sum on the disk can be behind the chunk it stands for without anybody
 // else having written the tape: the unit went off between a chunk's write and the next save of the file. So a
@@ -27,7 +27,7 @@
 // firmware is known to have written the tape since this pack last saved it.
 //
 //   * That is known from the files' times: this pack writes the file of tracks 5 to 8 so that it is never older
-//     than stock's map file (build_k_maps.cpp writes it once more when the clock has moved between the two), and
+//     than stock's map file (Build K's maps unit writes it once more when the clock has moved between the two), and
 //     any save of the map by another firmware makes the map file the newer one, also when the map's content comes
 //     out the same (a take and its undo). K1's own sign, stock's file changed, counts too.
 //   * After such a load every chunk that has a sum is HELD to it: read whole, summed, and when the sum differs the

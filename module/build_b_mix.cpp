@@ -1,6 +1,6 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3a: the mixer strip of tape tracks 5 and 6, their glyphs on the tape screen, and the
-// ReadInterface mute getter for six tracks (OS 1.7.0+0; read in analysis/build_b_design.md, section 9).
+// ReadInterface mute getter for six tracks (OS 1.7.0+0).
 //
 // What stock does: the four tracks' volumes (Q31) sit at 0x11b01eb0, their pans (Q31 in -0.5..0.5, positive is
 // right) at 0x11b01ec0 and the mute gains (0x7fffffff or 0, computed from the flag bytes 0x11902e34 by
@@ -33,7 +33,7 @@
 // B3b: the encoder delivers +/-1024 per detent (every event of the B3a test carried exactly that), so the delta is
 // turned into detents before the +/-8 clamp; the knob and mute log lines have separate budgets, the knob line at
 // most one per second. B3d: op1f_mixer_page and op1f_ext_mix_set_defaults serve the mixer page and the tape JSON
-// persistence of build_b_mixer.cpp; the label reads " MIX 5-8" while the page is held.
+// persistence of Build B's mixer unit; the label reads " MIX 5-8" while the page is held.
 // B3c: move_clamped tests the value against the end minus the move, since the room to the
 // end, high - value, overflowed a 32-bit word for the pan range at either extreme (the B3b finding A: one detent
 // flipped the pan from one end to the other).
@@ -108,7 +108,7 @@ i32 op1f_ext_params[3 * EXT_TRACKS] = {
 extern "C" u16 op1f_ext_vu[EXT_TRACKS] asm("op1f_ext_vu") __attribute__((aligned(4)));
 u16 op1f_ext_vu[EXT_TRACKS];
 
-// B3d (build_b_mixer.cpp): set while the mixer key is held on the mixer's levels page; the screen's value
+// B3d (Build B's mixer unit): set while the mixer key is held on the mixer's levels page; the screen's value
 // sources, the knobs and shift + track key then address tracks 5-8. Cleared on the key's release and by the
 // frame hook when the mode is no longer the mixer.
 extern "C" volatile unsigned char op1f_mixer_page asm("op1f_mixer_page");
@@ -335,7 +335,7 @@ extern "C" void op1f_tape_glyph_hide(void* screen, i32 index) {
     *((unsigned char*)node + NODE_DISPLAY) = 0;
 }
 
-// For the measurement line (m2_measure.cpp, weak): the selected extension track with its strip, or nothing.
+// For the measurement line (the first frame hook's measuring unit, weak): the selected extension track with its strip, or nothing.
 static char label[32];
 
 static char* put_text(char* p, const char* s) {

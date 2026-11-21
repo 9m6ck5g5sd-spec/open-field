@@ -2,7 +2,7 @@
 """Write a pack's or the loader's table of firmware changes from the profile.
 
   python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --all
-  python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --table module/build_m2_base_table.s [--out FILE]
+  python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --table module/build_r6d_base_table.s [--out FILE]
   python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --check
 
 The profile lists every place where open-field changes the running firmware (`patches`: an address, a length, the

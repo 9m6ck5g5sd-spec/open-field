@@ -1,34 +1,29 @@
 {
   "about": "One tape track turned down by another, or by the beat, with a page of its own. Needs the base (base.pack) and nothing else. With the pack 8 tracks there it works on eight tracks; without it, on the original four.",
   "name": "sidechain",
-  "version": 7,
-  "interface": 1,
-  "build": "build_m1_sidechain",
+  "version": 10,
+  "interface": 2,
+  "build": "build_r4c_sidechain",
   "sources": [
-    "module/build_g_duck.cpp",
-    "module/build_j5g_duck_alone.s",
-    "module/build_j5g_duck_alone.cpp",
-    "module/build_l3_sidechain_table.s",
-    "module/build_m1_sidechain_pictures.s",
-    "module/build_p3_sidechain_needs.s"
+    "module/build_r4b_duck.cpp",
+    "module/build_r4c_duck_keeps.cpp",
+    "module/build_r4b_duck_alone.s",
+    "module/build_r4b_duck_alone.cpp",
+    "module/build_r4b_sidechain_table.s",
+    "module/build_r4b_sidechain_frame.cpp",
+    "module/build_r4c_sidechain_card.s",
+    "module/build_r4c_sidechain_pictures.s",
+    "module/build_r2_sidechain_needs.s"
   ],
   "works_with": [
     {
-      "name": "base",
-      "interface": 2,
-      "needed": true
-    },
-    {
       "name": "8 tracks",
-      "interface": 1,
+      "interface": 2,
       "needed": false
     }
   ],
   "serves": [
-    "base",
-    "8 tracks",
-    "fx train",
-    "lfo"
+    "8 tracks"
   ],
   "exports": [],
   "pictures": [
@@ -41,6 +36,36 @@
       "file": "pictures/sidechain/signalflow4.svg.make"
     }
   ],
+  "card": {
+    "level": 7,
+    "frame": "sidechain_frame",
+    "pick": "op1f_art_pick_sidechain",
+    "pictures": true,
+    "input": null,
+    "folders": [],
+    "asks": [
+      {
+        "kind": "places",
+        "name": "signal-flow",
+        "names": [
+          "signalflow.svg"
+        ]
+      },
+      {
+        "kind": "keeps",
+        "name": "ducks",
+        "changed": "op1f_duck_keeps_changed",
+        "keys": [
+          {
+            "name": "op1f_duck",
+            "files": [
+              "tape"
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "marks": [
     {
       "site": "0x11a0825e",
@@ -48,14 +73,6 @@
     },
     {
       "site": "0x8fc35738",
-      "away": "8 tracks"
-    },
-    {
-      "site": "0x8c0c1db8",
-      "away": "8 tracks"
-    },
-    {
-      "site": "0x8c0c348c",
       "away": "8 tracks"
     }
   ],

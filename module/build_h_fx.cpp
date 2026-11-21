@@ -1,14 +1,14 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build H, images H0, H1a and H1: the effect stage measured (analysis/fx_chain_study.md, sections 6 to 9).
+// Build H, images H0, H1a and H1: the effect stage measured.
 //
-// H0 (section 7): no hook of its own. The measurement unit's frame hook (m2_measure.cpp) calls op1f_fx_frame() once
+// H0 (section 7): no hook of its own. The measurement unit's frame hook (the first frame hook's measuring unit) calls op1f_fx_frame() once
 // per frame through a weak reference; this unit reads stock's own CYCLES stage profiler and the effect hosts' state
 // and logs them every four seconds. The one write is the clearing of each record's running maximum after it is read.
 //
 // H1a (section 8) timed stock's effect call through the four stubs of build_h_fx.s and filled the cost table; it also
 // corrected H0's two findings (the record's maximum is at +16, every line under 200 characters). Since H1 (section 9)
 // the stubs belong to the chain: the start stubs stamp CYCLES into op1f_fx_t0[host] and hand stock a null producer,
-// the end stubs call op1f_fx_chain_run (build_h_chain.cpp); this unit keeps the fx: line and the stage lines.
+// the end stubs call op1f_fx_chain_run (Build H's chain unit); this unit keeps the fx: line and the stage lines.
 //
 // What stock does, as read for H0 (the study, section 6):
 //   * The audio block function 0x11a05620 (L1) stamps CYCLES around its stages into a table of twelve records at
@@ -16,11 +16,11 @@
 //     function writes the end stamp over the delta words, subtracts, keeps max and min, adds to the sum and counts.
 //     Record 0 is the whole block (the end stamp at +8); 2 the stage on the main buses (0x8f0041e0); 3 the instrument
 //     stage (the synth second stage 0x11a04130 or the drum second stage 0x11a03670); 6 the record stage (0x11a07a74);
-//     7 the tape block driver (0x11a07fe4); 9 and 10 stages of the tape mix (the L1 code around 0x11a02e90). The synth
+//     7 the tape block driver (0x11a07fe4); 9 and 10 stages of the tape mix (the L1 code around 0x11a02ec0). The synth
 //     second stage keeps four more records at 0x0801b450: 0 the voice loop, 2 the engine render (the engine object's
 //     method +8), 3 the stage after it. The effect itself has no record of its own: it runs inside record 3, after the
 //     engine render and before the fade and the sum to the main buses, and is skipped while the instrument is silent.
-//   * The instrument's effect is one producer object per host, built by the producer factory 0x8f00f598(type, index)
+//   * The instrument's effect is one producer object per host, built by the producer factory 0x8f011068(type, index)
 //     into a fixed L1 storage (index 0, the synth's and the drum's: 0x11906918; index 1, the master's: 0x11906af8),
 //     its pointer in the slot 0x84a03c84 (the master's 0x84a03c88). The second stages call producer->vtable[2](this,
 //     L bus 0x11902ba0, R bus 0x11902ca0, ctx 0x11904754 = the slot's eight parameters) on the buses in place, only
@@ -32,13 +32,13 @@
 //     0x11904708 (drum); the audio thread's built slots 0x84a01524 / 0x84a01528, the ones the second stages read.
 //   * The fade around a rebuild: the level 0x11902df4 (Q31, applied and stepped per sample by the sum to the main
 //     buses 0x8d503c54), the step 0x11902df8, the step's magnitude 0x11902e00. A slot or mode change fades the level
-//     to zero, rebuilds the engine, the producer and the LFOs once (0x8f00f818, 0x8d505390, 0x8d50426c), fades up.
+//     to zero, rebuilds the engine, the producer and the LFOs once (0x8f0112e8, 0x8d505390, 0x8d50426c), fades up.
 //
 // The log, every four seconds (about 232 frames): `fx:` the hosts' state, `fx stage a:` the twelve records of the
 // first table as average/maximum cycles per execution over the interval, `fx stage b:` the synth stage's four. (H1a's
 // `fx cost` lines are gone with the accounting; the chain unit logs its own `chain` lines.)
 //
-// Q1 (analysis/quiet_log_study.md): the three lines are printed through the gate of build_q_quiet.h. The records
+// Q1: the three lines are printed through the gate of build_q_quiet.h. The records
 // are read and their maxima cleared at every period as before; the lines go to the log when the state the `fx:`
 // line reports changed, while synth voices sound, for two periods after either, at the power popup, and otherwise
 // once in five minutes. "Voices sound" is stock's own profiler: the synth stage's four records (table B) count an
@@ -73,7 +73,7 @@ static const u32 POWER_POPUP_SHOWN = 0x84c9b3e4u;      // Q1: the power popup's 
 
 struct Seen { u32 sum_lo, sum_hi, count; };
 
-// H1a: the start stamps the stubs write (0 synth, 1 drum); since H1 the end stubs call the chain unit (build_h_chain.cpp).
+// H1a: the start stamps the stubs write (0 synth, 1 drum); since H1 the end stubs call the chain unit (Build H's chain unit).
 extern "C" u32 op1f_fx_t0[HOSTS] asm("op1f_fx_t0");
 u32 op1f_fx_t0[HOSTS];
 

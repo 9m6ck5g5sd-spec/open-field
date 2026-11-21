@@ -1,12 +1,11 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Packs L3: Build K's block map unit (module/build_k_maps.cpp, which is kept) with its log lines in this project's own
+// Packs L3: Build K's block map unit (which is kept) with its log lines in this project's own
 // words. Until L3 its lines for a block map file that cannot be read or written were the lines stock's own loader
 // and saver print in the same cases: six format strings were stock's, whole or in their first words, and a seventh
 // was made after one of them. They say the same things here, with the same arguments. Nothing else differs from
-// the elder: no statement, no number, no other line (analysis/clean_base_study.md section 16).
+// the elder: no statement, no number, no other line.
 //
 // Build K: a tape's block map in two files (packs K1 and K1b), and the tape's identity (pack K2).
-// The working note is analysis/tape_stock_safe.md; the proposal it starts from, analysis/pack_loader_study.md 14.
 //
 // Until K1 a tape with anything on tracks 5 to 8 had a block map file of this project's own, version 2: eight
 // tracks in user/tapeNN_map.bin. Stock firmware accepts version 1 only. Given a version-2 file it assumes the layout
@@ -76,7 +75,7 @@
 //
 // Stock functions used: disk_io's fopen 0x8fc22180, fread 0x8fc2214c, fwrite 0x8fc220b8, fclose 0x8fc220a0 and
 // rename 0x8fc222f4, as build_b_storage.cpp has used them since B0b for the same files; the file size 0x8c051f9c;
-// the logger; and since K2 the json functions as build_b_mixer.cpp has bound them since B3d (a json file read
+// the logger; and since K2 the json functions as Build B's mixer unit has bound them since B3d (a json file read
 // 0x8c0534d0, has 0x8c085068, get 0x8c084f74, as int 0x8c084840, from int 0x8c083b1c, a null value 0x8c085ba8,
 // destroy 0x8c0844e0), the tape db's set 0x8d4f24dc(2, key, &value) and the mounted tape's index 0x8fc219a8.
 //
@@ -785,7 +784,7 @@ static void set_json_id(u32 id) {
     STOCK_JSON_DTOR(&value);
 }
 
-// From the TapeController's json writer (build_b_mixer.cpp), at every write of the mounted tape's json: the id
+// From the TapeController's json writer (Build B's mixer unit), at every write of the mounted tape's json: the id
 // goes with the tape's other keys. Nothing is written for a tape without one: a later pack's number is not ours
 // to change, and a number that came with a duplicate's json names no file in this slot. That number stays in
 // the copy's json, which leaves one case open (the working note's 5.10): the original deleted, and the copy

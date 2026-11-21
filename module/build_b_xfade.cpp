@@ -1,6 +1,6 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3b: the loop crossfade of tape tracks 5 and 6, the crossfade masks for six tracks, and the
-// clip-edge fade writers for tracks 5 and 6 (OS 1.7.0+0; read in analysis/build_b_design.md, section 10).
+// clip-edge fade writers for tracks 5 and 6 (OS 1.7.0+0).
 //
 // What stock does (tape_xfade.cpp in record 309, tape_c.cpp in record 307):
 //   * Four loop buffers of 594 frames (4,752 bytes each, from the L2 allocator; pointers at 0x0802fe60) hold,
@@ -55,7 +55,7 @@ typedef unsigned int u32;
 typedef unsigned short u16;
 typedef int i32;
 
-struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (analysis/tape_snapshots_report.md)
+struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes
     unsigned char valid;
     unsigned char stale;
     unsigned char write_pending;
@@ -107,7 +107,7 @@ extern "C" u32 op1f_ext_xfade_dirty asm("op1f_ext_xfade_dirty");   // bit j: it 
 u32 op1f_ext_xfade_valid;
 u32 op1f_ext_xfade_dirty = EXT_MASK;                                // as stock's initial 0xF
 
-// Counters for the measurement line (m2_measure.cpp, weak references).
+// Counters for the measurement line (the first frame hook's measuring unit, weak references).
 extern "C" u32 op1f_ext_xfade_computes asm("op1f_ext_xfade_computes");   // computes that completed
 extern "C" u32 op1f_ext_xfade_fades asm("op1f_ext_xfade_fades");         // junction fades applied, per track
 extern "C" u32 op1f_ext_xfade_waits asm("op1f_ext_xfade_waits");         // computes that found a chunk missing

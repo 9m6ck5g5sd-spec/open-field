@@ -22,12 +22,12 @@
  *                         (tape_snapshots.cpp: tracks 0-3 continue in stock, 4-5 go to op1f_ext_unmap_chunk;
  *                         the import's finalize unmaps every chunk after the imported audio with it)
  *
- * The room (packs L3, analysis/clean_base_study.md section 16): the first four are hooks in the middle of a
+ * The room (packs L3): the first four are hooks in the middle of a
  * function, which do what the instructions under them did with another bound, and stay. The fifth stands at a
  * function's entry. Until L3 its stub ran the instructions the hook displaced itself, as a copy; now it holds none
  * of them and ends in a jump to its room: sixteen bytes of the pack's zeroed data into which the base copies those
  * instructions from the running firmware, with a jump back behind them, before it writes the hook
- * (module/build_l1_base.cpp, make_trampoline; the table entry names the room). The displaced instructions end in
+ * (module/build_m4_loader.cpp, make_trampoline; the table entry names the room). The displaced instructions end in
  * a compare of the track with zero, which stock branches on further down: it runs in the room, after this stub's
  * own compare. P2, the register the stub jumps through, is the one it jumped through before.
  */

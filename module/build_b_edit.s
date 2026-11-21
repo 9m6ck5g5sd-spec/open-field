@@ -18,10 +18,10 @@
  *      to sample     0x8f004204  -> its room, then 0x8f003050 (the instructions under the hook end twelve
  *                    bytes in: the second is eight bytes long and begins inside the hook's eight)
  *
- * The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 each stub ran the instructions its hook
+ * The rooms (packs L3): until L3 each stub ran the instructions its hook
  * displaced itself, as a copy or said in other words. Now it holds none of them on its way into stock and ends in
  * a jump to its room: zeroed data of the pack into which the base copies those instructions from the running
- * firmware, with a jump back behind them, before it writes the hook (module/build_l1_base.cpp, make_trampoline;
+ * firmware, with a jump back behind them, before it writes the hook (module/build_m4_loader.cpp, make_trampoline;
  * the table entry names the room and how many bytes the instructions take). P2, the register a stub jumps
  * through, is the one it jumped through before.
  */

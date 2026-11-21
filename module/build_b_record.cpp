@@ -1,7 +1,7 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B2: recording onto tape tracks 5 and 6 (track indices 4 and 5), armed with the tape key held.
 //
-// What stock does (OS 1.7.0+0, read in analysis/build_b_design.md, section 8): the record track is the
+// What stock does (OS 1.7.0+0): the record track is the
 // GUI's selected track, the int32 at 0x11905a08. The TapeController writes it when a track key (scan codes
 // 6-9) is pressed (0x8c0c18ec) and restores it from the tape's JSON; the L1 record function 0x11a07a74 reads
 // it every block and writes the recorded audio into slot->data + track * 0x20000, sets the slot's dirty bit
@@ -76,7 +76,7 @@ extern "C" u32 op1f_cache_tracks asm("op1f_cache_tracks");   // 6 with the heap-
 extern "C" int op1f_ext_mix_adjust(int track, int knob, int delta) asm("op1f_ext_mix_adjust");   // B3a, build_b_mix.cpp
 extern "C" int op1f_ext_mix_toggle_mute(int track) asm("op1f_ext_mix_toggle_mute");
 
-// Counters for the measurement line (weak references in m2_measure.cpp).
+// Counters for the measurement line (weak references in the first frame hook's measuring unit).
 extern "C" u32 op1f_ext_track_selects asm("op1f_ext_track_selects");   // track 5/6 selected through the key combination
 extern "C" u32 op1f_ext_keys_blocked asm("op1f_ext_keys_blocked");     // B2-B3b: clip-edit keys swallowed while 5/6 was selected; 0 since B3c
 extern "C" u32 op1f_ext_monitor_blocks asm("op1f_ext_monitor_blocks"); // blocks in which the input went to the scratch buffer

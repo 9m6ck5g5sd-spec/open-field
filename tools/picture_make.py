@@ -56,6 +56,14 @@ markup the census has not is listed, `<path>: uses <what> '<value>', which no pi
 unit`; the answer stays 0, and is 1 with `--strict`. A folder with no picture in it is an error, never a census that
 lets everything through. `check` is as it was.
 
+`census` holds one thing more: a picture served under the name of one of the unit's own pictures takes that picture's
+place, and the firmware's own screen looks the picture's parts up by their names. So the picture that is made must hold
+every part (`id`) the unit's own picture of that name holds, the names compared as the firmware reads them (`_x5F_` is
+an underscore, `_x2D_` a `-`, and so on), or the screen can stop the unit at its start. Each missing part is refused,
+`<path>: takes the place of the unit's own <name> and has no part '<id>', which the unit's own has: the firmware's
+screen can stop the unit at its start`, the first five named and a line with the count, and the answer is 1. The
+picture's name is its instructions' file name less `.make`, or `--name` for one set.
+
 Reads its inputs; `compile` and `make --out` write one file each and refuse to overwrite it.
 """
 
@@ -387,6 +395,55 @@ def not_in_census(picture, spans, held):
     return out
 
 
+# An id as the unit's pictures write it: a character that is no letter, digit or underscore by its code, `_x2D_` for
+# `-`, and an underscore itself as `_x5F_` (the artwork tool's way). The firmware's screens look their parts up by the
+# name so written out: `dot_x5F_white` is the part 'dot_white'.
+_ID_CODE = re.compile(r"_x([0-9A-Fa-f]{2,4})_")
+
+
+def part_name(written):
+    """The name of a part as the firmware reads it, from its id as a picture writes it."""
+    return _ID_CODE.sub(lambda m: chr(int(m.group(1), 16)), written)
+
+
+def parts_of(picture):
+    """The names of the parts (`id`) of a picture, as the firmware reads them, each once, in the order met."""
+    out, said = [], set()
+    for token in _MARKUP.finditer(picture):
+        if token.group(2) is None:
+            continue
+        for attribute in _ATTRIBUTE.finditer(picture, token.start(3), token.end(3)):
+            if attribute.group(1) == b"id":
+                value = attribute.group(2) if attribute.group(2) is not None else attribute.group(3)
+                name = part_name(value.decode("latin-1"))
+                if name not in said:
+                    said.add(name)
+                    out.append(name)
+    return out
+
+
+def units_own(folder, name):
+    """The unit's own picture of this name in `folder` (the name compared without regard to case, as the stricter
+    reading), or None when the unit has none of it."""
+    for own in sorted(os.listdir(folder)):
+        if own.lower() == name.lower() and os.path.isfile(os.path.join(folder, own)):
+            with open(os.path.join(folder, own), "rb") as f:
+                return own, f.read()
+    return None
+
+
+def parts_missing(picture, own):
+    """The parts the unit's own picture `own` has that `picture`, which takes its place, has not, in `own`'s order."""
+    have = set(parts_of(picture))
+    return [name for name in parts_of(own) if name not in have]
+
+
+def picture_name(path):
+    """The name a set of instructions' picture is served under: its file's name less `.make`."""
+    base = os.path.basename(path)
+    return base[:-len(".make")] if base.endswith(".make") else base
+
+
 def write_new(path, data):
     if os.path.exists(path):
         raise ValueError("%s exists; this tool does not overwrite" % path)
@@ -443,19 +500,32 @@ def cmd_check(args):
 # small letters and z) and Z, which pictures of ours have drawn on a unit for days. A command outside them (an arc, once)
 # can stop the unit at its start.
 COMMANDS_DRAWN = frozenset("MmLlHhVvCcSsZz")
+PARTS_SAID = 5                  # the missing parts named one a line; the count of all of them follows
 
 
 def cmd_census(args):
     """Since R1: what the instructions' own bytes use, against the census of the unit's own pictures. A path command
     outside COMMANDS_DRAWN is refused; anything else no picture of the unit has is listed as not proven on a unit,
-    and refused too with --strict."""
+    and refused too with --strict. A picture that takes the place of one of the unit's own and lacks one of its parts
+    is refused."""
     held = census(args.display)                                 # the unit's vocabulary, made now from its own pictures
+    if args.name is not None and len(args.instructions) != 1:
+        raise ValueError("--name names the picture of one set of instructions; %d were handed in" % len(args.instructions))
     refused = not_proven = 0
     for path in args.instructions:
         with open(path, "rb") as f:
             data = f.read()
         spans = []
         picture = make(data, stock_reader(args.display), None, args.sources, spans)
+        own = units_own(args.display, args.name if args.name is not None else picture_name(path))
+        if own is not None:                                     # it takes the place of one of the unit's own pictures
+            missing = parts_missing(picture, own[1])
+            refused += len(missing)
+            for part in missing[:PARTS_SAID]:
+                print("%s: takes the place of the unit's own %s and has no part '%s', which the unit's own has: the firmware's screen can stop the unit at its start"
+                      % (path, own[0], part))
+            if missing:
+                print("%s: %d part(s) of the unit's own %s missing in all" % (path, len(missing), own[0]))
         unknown = not_in_census(picture, spans, held)
         for what, value in unknown:
             if what == "the path command" and value not in COMMANDS_DRAWN:
@@ -490,6 +560,7 @@ def main(argv=None):
     four.add_argument("--display", required=True, help="the unit's own pictures: the census is made from them at every run")
     four.add_argument("--sources", type=int, default=8, help="the stock pictures the kit holds for one set: 8 from P3 on")
     four.add_argument("--strict", action="store_true", help="what no picture of the unit has counts as refused too")
+    four.add_argument("--name", help="the name the picture is served under, for one set of instructions (default: its file's name less .make)")
     four.set_defaults(run=cmd_census)
     args = ap.parse_args(argv)
     try:

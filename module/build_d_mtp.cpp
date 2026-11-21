@@ -1,6 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build D, step D2: the disk mode's track files for tracks 5 and 6 (OS 1.7.0+0; read in
-// analysis/build_b_design.md, section 17).
+// Build D, step D2: the disk mode's track files for tracks 5 and 6 (OS 1.7.0+0).
 //
 // What stock does (src/usb/mtp in record 309): the USB disk is an MTP device. basset_device.cpp populates
 // one folder per labelled tape with tape.json, readme.txt and track_1.wav to track_4.wav (a loop to 4 at

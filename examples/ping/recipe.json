@@ -1,0 +1,67 @@
+{
+  "about": "The example of levels 8 and 10 (docs/level-8.md, docs/level-10.md): an effect in the unit's own lists of effects, for a sound (shift and T3) and for the master (the mixer's list), among the unit's own effects by name. An echo in time with the tempo that bounces left and right, with time, feedback, spread and mix on the four knobs. It stands on the unit's delay: a sound saved with it keeps delay's name and four knobs, switched off, and plays dry on a unit without the pack. Its echoes ring out when it is switched off. A megabyte of working memory for each place it plays at, cleared by its reset on the display thread. T3 shows its page, the base's blank page with its name, on which it paints the four values as the sound plays them. It takes no key and no knob, changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "ping",
+  "version": 2,
+  "interface": 1,
+  "build": "build_r6e_ping",
+  "sources": [
+    "examples/ping/ping.cpp",
+    "examples/ping/ping_card.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "card": {
+    "level": 10,
+    "frame": "ping_frame",
+    "pick": null,
+    "pictures": false,
+    "input": null,
+    "asks": [
+      {
+        "kind": "effect",
+        "name": "ping",
+        "rides": "delay",
+        "mono": false,
+        "tails": true,
+        "cycles": 42000,
+        "state_bytes": 1048576,
+        "state_align": 32,
+        "process": "ping_process",
+        "reset": "ping_reset",
+        "shown": "ping_shown",
+        "params": [
+          {
+            "name": "time",
+            "low": 1,
+            "high": 4,
+            "start": 3
+          },
+          {
+            "name": "feedback",
+            "low": 0,
+            "high": 90,
+            "start": 40
+          },
+          {
+            "name": "spread",
+            "low": 0,
+            "high": 100,
+            "start": 100
+          },
+          {
+            "name": "mix",
+            "low": 0,
+            "high": 100,
+            "start": 30
+          }
+        ]
+      }
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

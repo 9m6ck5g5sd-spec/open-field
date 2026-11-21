@@ -1,0 +1,76 @@
+{
+  "about": "The example of levels 9 and 10 (docs/level-9.md, docs/level-10.md): a synth engine in the unit's own list of engines (shift and T1 on a synth sound), among the unit's own engines by name, that renders two channels. A sine folded over itself, hollow and buzzy, with fold, symmetry, sub and drive on the four knobs. No working memory: its phases are its own data. Two sounds of its own, hollow and buzz, in hollow.json and buzz.json beside this recipe, written into a folder fold of the unit's sound list where the unit has room for them and 20 more. T1 shows its page, the base's blank page, on which it paints the four values as the sound plays them. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "fold",
+  "version": 2,
+  "interface": 1,
+  "build": "build_r6e_fold",
+  "sources": [
+    "examples/fold/fold.cpp",
+    "examples/fold/fold_card.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "card": {
+    "level": 10,
+    "frame": "fold_frame",
+    "pick": null,
+    "pictures": false,
+    "input": null,
+    "folders": [],
+    "asks": [
+      {
+        "kind": "engine",
+        "name": "fold",
+        "stereo": true,
+        "cycles": 25000,
+        "voice_bytes": 0,
+        "voice_align": 4,
+        "render": "fold_render",
+        "reset": null,
+        "shown": "fold_shown",
+        "params": [
+          {
+            "name": "fold",
+            "low": 0,
+            "high": 100,
+            "start": 40
+          },
+          {
+            "name": "symmetry",
+            "low": -50,
+            "high": 50,
+            "start": 0
+          },
+          {
+            "name": "sub",
+            "low": 0,
+            "high": 100,
+            "start": 20
+          },
+          {
+            "name": "drive",
+            "low": 0,
+            "high": 100,
+            "start": 30
+          }
+        ],
+        "sounds": [
+          {
+            "name": "hollow",
+            "file": "hollow.json"
+          },
+          {
+            "name": "buzz",
+            "file": "buzz.json"
+          }
+        ]
+      }
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

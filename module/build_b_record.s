@@ -1,7 +1,7 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build B, step B2: register-preserving stubs for the record-track hooks (OS 1.7.0+0). Logic in build_b_record.cpp.
  *
- * Two kinds of stub, both installed by profile group "build-b2" (analysis/build_b_design.md, section 8):
+ * Two kinds of stub, both installed by profile group "build-b2":
  *
  * 1. Entry trampolines. A JUMP.a at the first 8 bytes of a TapeController key handler lands here with the
  *    handler's arguments untouched (R0 = this, R1 = key event pointer, RETS = the dispatcher's return). The
@@ -13,12 +13,12 @@
  *      TapeController::on_key_down        0x8c0c3be2  -> its room, then 0x8c0c321a
  *      TapeController::on_shift_key_down  0x8c0c4422  -> its room, then 0x8c0c3a5a
  *
- *    The rooms (packs L3, analysis/clean_base_study.md section 16). Until L3 a stub of this kind ran the
+ *    The rooms (packs L3). Until L3 a stub of this kind ran the
  *    instructions its hook displaced itself, as a copy, and jumped to the instruction after them. Now it holds
  *    none of them: it ends in a jump to its room, sixteen bytes of the pack's zeroed data at the end of this
- *    file. The base (module/build_l1_base.cpp, make_trampoline) copies the displaced instructions from the
+ *    file. The base (module/build_m4_loader.cpp, make_trampoline) copies the displaced instructions from the
  *    running firmware into the room and puts a jump back behind them, before it writes the hook; the table entry
- *    names the room (module/build_l3_8_tracks_table.s, from tools/boot_table.py --sums --trampoline). The
+ *    names the room (the feature's table, made with its sums and its trampolines). The
  *    register a stub jumps through, P2, is the one it jumped through before: free at a function's entry, and
  *    left holding an address stock does not read.
  *
@@ -40,7 +40,7 @@
  * JSON stub keeps the clamp, so a tape file never names a track stock firmware lacks.
  *
  * 3. Track dispatch at tape_io_read / tape_io_write (added after the first B2 image aborted at record stop in
- *    tape_io.cpp:89, see analysis/build_b2_device_result.md). A JUMP.a at the first 8 bytes of each stock
+ *    tape_io.cpp:89). A JUMP.a at the first 8 bytes of each stock
  *    function lands here with R0 = track, R1 = byte offset, R2 = length and the buffer at [SP + 0xc]; a
  *    track below 4 goes on through the stub's room and continues in stock, any other track tail-jumps to
  *    the module's extension version in build_b_storage.cpp with the registers and the stack untouched.

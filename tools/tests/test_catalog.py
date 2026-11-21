@@ -293,6 +293,21 @@ class TheListingAsAWhole(unittest.TestCase):
                 self.assertFalse(in_order)
                 self.assertIn("its folder's name %r is" % taken, said)
 
+    def test_fx_and_lfo_are_kept_for_open_field_s_own_packs(self):
+        for kept in ("lfo", "LFO"):
+            with self.subTest(name=kept):
+                said, in_order = run(listing(entry_for(pack(), folders=[{"name": kept, "place": "mine"}])))
+                self.assertFalse(in_order)
+                self.assertIn("its folder's name %r is kept for open-field's own packs" % kept, said)
+        ours = dict(listing(), ours=[REPOSITORY])
+        ours["packs"].append(entry_for(pack(name="fx train"), author="open-field", folders=[{"name": "fx", "place": "fx"}]))
+        said, in_order = run(ours)
+        self.assertTrue(in_order, said)
+        ours["packs"].append(entry_for(pack(name="other"), author="open-field", folders=[{"name": "fx", "place": "other"}]))
+        said, in_order = run(ours)
+        self.assertFalse(in_order)
+        self.assertIn("its folder's name 'fx' is held by 'fx train'", said)
+
     def test_a_retired_entry_keeps_its_id_and_its_folders_held(self):
         retired = {"id": "old", "author": "someone", "status": "retired", "categories": ["tools"], "description": "No longer offered.",
                    "sha256": "0" * 64, "bytes": 1000, "version": 1, "firmware": "1.7.3", "places": 0, "needs": [],

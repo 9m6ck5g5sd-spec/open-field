@@ -11,7 +11,7 @@
  *   at 0x8fc842a0  the track to show, which is in R0, is stored at this + 0xd0 and P1 is made the address of
  *                  its entry in the table; P4 holds the screen.
  *
- * R0-R3, P0-P2 and CC are dead at both sites (analysis/build_b_design.md, section 9); R6, R7, P4 and P5 are
+ * R0-R3, P0-P2 and CC are dead at both sites; R6, R7, P4 and P5 are
  * callee-saved and survive the C call; the function is LINKed, so RETS only needs saving around the call.
  */
 .section .text

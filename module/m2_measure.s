@@ -1,5 +1,5 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* M2 measurement image, OS 1.7.0+0: the two entry stubs. The logic is in m2_measure.cpp.
+/* M2 measurement image, OS 1.7.0+0: the two entry stubs. The logic is in the first frame hook's measuring unit.
  *
  * op1f_gfx_frame_hook: the display thread's call at 0x8c0b1936, which writes the frame buffer out of the
  * cache before it is shown. Its three arguments are the frame buffer's first address, its last and a zero.
@@ -12,7 +12,7 @@
  * 0x8c0cacd0 when the debug loopback controller restores it). The SPORT thread calls the handler
  * once per 64-frame DMA half-buffer with R0 = receive half, R1 = transmit half. This wrapper reads
  * CYCLES, calls the stock handler with the untouched arguments, and adds the cycles spent to the
- * counters op1f_audio {busy, count, peak} (defined in m2_measure.cpp, read on the gfx thread).
+ * counters op1f_audio {busy, count, peak} (defined in the first frame hook's measuring unit, read on the gfx thread).
  * Nothing else runs on the audio thread: no logging, no drawing, no division.
  */
 .set STOCK_FLUSH,         0x11a09d48

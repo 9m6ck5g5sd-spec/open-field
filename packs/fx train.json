@@ -1,45 +1,41 @@
 {
   "about": "Up to four effects on an instrument, shown as a train of four wagons; presets of whole trains as files; an instrument that keeps its train; the sound's own LFO on any wagon. Needs the base (base.pack) and nothing else; works together with the LFOs when that pack is there.",
   "name": "fx train",
-  "version": 10,
-  "interface": 1,
-  "build": "build_m1_fx_train",
+  "version": 16,
+  "interface": 3,
+  "build": "build_r6c_fx_train",
   "sources": [
     "module/build_h_fx.s",
     "module/build_h_fx.cpp",
     "module/build_h_regions.s",
-    "module/build_h_chain.cpp",
+    "module/build_r6c_chain.cpp",
     "module/build_i_lfofx.s",
-    "module/build_i_lfopage.cpp",
-    "module/build_i_patch.s",
-    "module/build_i_patch.cpp",
-    "module/build_l3_fx_train_table.s",
-    "module/build_m1_fx_train_pictures.s",
-    "module/build_p3_fx_train_needs.s"
+    "module/build_r5_lfopage.cpp",
+    "module/build_r4c_patch.cpp",
+    "module/build_r4b_fx_train_table.s",
+    "module/build_r6b_train.cpp",
+    "module/build_r2_presets.cpp",
+    "module/build_r2_move.cpp",
+    "module/build_r5_fx_train_frame.cpp",
+    "module/build_r6c_fx_train_card.s",
+    "module/build_r6c_fx_train_pictures.s",
+    "module/build_r2_fx_train_needs.s"
   ],
   "works_with": [
     {
-      "name": "base",
-      "interface": 2,
-      "needed": true
-    },
-    {
       "name": "lfo",
-      "interface": 1,
+      "interface": 3,
       "needed": false
     }
   ],
   "serves": [
-    "base",
-    "8 tracks",
-    "sidechain",
     "lfo"
   ],
   "exports": [],
   "pictures": [
     {
       "name": "fxtrain.svg",
-      "file": "pictures/train/fxtrain.svg.make"
+      "file": "pictures/train/fxtrain-names.svg.make"
     },
     {
       "name": "fxpresets.svg",
@@ -70,6 +66,50 @@
       "file": "pictures/train/midilfo.svg.make"
     }
   ],
+  "card": {
+    "level": 8,
+    "frame": "fx_train_frame",
+    "pick": null,
+    "pictures": true,
+    "folders": [
+      {
+        "name": "fx",
+        "place": "fx"
+      },
+      {
+        "name": "fx train",
+        "place": "fxtrain",
+        "shown": false
+      }
+    ],
+    "asks": [
+      {
+        "kind": "places",
+        "name": "lfo-pages",
+        "names": [
+          "singlelfo.svg",
+          "rndlfo.svg",
+          "reroutelfo.svg",
+          "velocitylfo.svg",
+          "midilfo.svg"
+        ]
+      },
+      {
+        "kind": "keeps",
+        "name": "train",
+        "changed": "op1f_patch_changed",
+        "keys": [
+          {
+            "name": "op1f",
+            "files": [
+              "synth",
+              "drum"
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "marks": [],
   "named": true,
   "sum": true,

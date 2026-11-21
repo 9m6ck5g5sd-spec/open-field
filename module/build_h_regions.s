@@ -1,7 +1,7 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build H image H4: the same effect on several wagons (analysis/fx_chain_study.md, section 20). Profile group
+/* Build H image H4: the same effect on several wagons. Profile group
  * "build-h4": three CALL.a stubs, each in place of the 8-byte immediate load that names a producer's fixed state
- * region, so that the chain unit (build_h_chain.cpp) can point a module-built instance at a private region of its own
+ * region, so that the chain unit (Build H's chain unit) can point a module-built instance at a private region of its own
  * around the instance's process call. Stock's own instances (the mirrored wagon's producer, the master effect's) see
  * stock's bases: the module words hold them whenever the audio thread is not inside a module instance's call.
  *
@@ -20,7 +20,7 @@
  *               the index times 0x42318 is added to it. Only P4 is written. -> op1f_mother_base_p4 (a reviewed
  *               hook inside the protected L1 range, as H1a's four).
  *
- * The words op1f_spring_base and op1f_mother_base are defined by build_h_chain.cpp (volatile, initialised to the stock
+ * The words op1f_spring_base and op1f_mother_base are defined by Build H's chain unit (volatile, initialised to the stock
  * bases); the audio thread sets them to an instance's region before its call and restores them after it. No other
  * register, no flag (a load changes neither CC nor ASTAT) and no loop register is touched.
  */
