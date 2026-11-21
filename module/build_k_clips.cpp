@@ -1,5 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build K, pack K4 (analysis/tape_stock_safe.md, section 8): the clips of tracks 5 to 8 in a list of their own.
+// Build K, pack K4: the clips of tracks 5 to 8 in a list of their own.
 //
 // A tape's clips are kept twice by stock: in the clip store of the current snapshot record (Clips.cpp: 512 records
 // of 28 bytes, a has-clip bitmap, a count of free records; the record is the track, four paddings, the start, the

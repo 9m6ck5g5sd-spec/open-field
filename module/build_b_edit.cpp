@@ -1,7 +1,6 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
 // Build B, step B3c: lift, drop and the range clear on tape tracks 5 and 6 (track indices 4 and 5), and the
-// guard that keeps a lifted track 5/6 out of the sampler import (OS 1.7.0+0; read in
-// analysis/build_b_design.md, section 11).
+// guard that keeps a lifted track 5/6 out of the sampler import (OS 1.7.0+0).
 //
 // What stock does (tape_c.cpp and audio_clipboard.cpp in record 307): a lift posts command 3 with the track
 // (0x8f00c00c, which asserts track < 4 at audio_clipboard.cpp:814); the tape thread's handler 0x8f009548 and
@@ -36,7 +35,7 @@
 //   * op1f_clip_to_sample_refused: the sampler import of a clipboard holding a track 4/5 logs and returns.
 //   Every check stock asserts on is a refusal with a level-2 line here. Counters for the measurement line:
 //   op1f_ext_lifts, op1f_ext_drops, op1f_ext_clears, op1f_ext_edit_refusals.
-// Build D (step D1, analysis/build_b_design.md section 16) adds: the rule for where a lifted track's audio
+// Build D (step D1) adds: the rule for where a lifted track's audio
 //   lives (stock's partition for a clipboard of one track; the files user/op1f_clip_5.raw and _6.raw for
 //   tracks 5-6 of a clipboard of several, since a lift-all can hold j and 4 + j together), the clipboard's
 //   effective volume, pan and clip record of tracks 5-6 (written by build_d_clip.cpp's lift-all, read by the

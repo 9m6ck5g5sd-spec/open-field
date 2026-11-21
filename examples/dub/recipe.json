@@ -1,0 +1,61 @@
+{
+  "about": "The example of levels 6 and 7 (docs/level-6.md, docs/level-7.md): an echo on everything the unit plays, a sound stage after the master effect in a megabyte of working memory, its three values kept with each tape as the member dub_echo. Shift and the metronome key open and close its page in any mode; the blue knob sets the time, the second how much comes back, the third how loud; it starts at level 0, dry. With no tape told of yet, its values are in dub.bin, in a folder the computer does not see. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "dub",
+  "version": 3,
+  "interface": 1,
+  "build": "build_r4c_dub",
+  "sources": [
+    "examples/dub/dub.cpp",
+    "examples/dub/dub_card.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "card": {
+    "level": 7,
+    "frame": "dub_frame",
+    "pick": null,
+    "pictures": false,
+    "input": "dub_input",
+    "folders": [
+      {
+        "shown": false
+      }
+    ],
+    "asks": [
+      {
+        "kind": "memory",
+        "name": "dub",
+        "bytes": 1048576,
+        "align": 32
+      },
+      {
+        "kind": "stage",
+        "name": "dub",
+        "point": "master_out",
+        "cycles": 40000,
+        "listens": false,
+        "memory": "dub",
+        "process": "dub_process"
+      },
+      {
+        "kind": "keeps",
+        "name": "dub",
+        "changed": "dub_changed",
+        "keys": [
+          {
+            "name": "dub_echo",
+            "files": [
+              "tape"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

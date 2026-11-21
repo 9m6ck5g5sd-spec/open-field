@@ -1,5 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build K: a tape's block map in two files (K1, K1b) and the tape's identity (K2). See build_k_maps.cpp.
+// Build K: a tape's block map in two files (K1, K1b) and the tape's identity (K2). See Build K's maps unit.
 #ifndef OP1F_BUILD_K_MAPS_H
 #define OP1F_BUILD_K_MAPS_H
 
@@ -43,7 +43,7 @@ struct XmapLoad {
 extern "C" int op1f_xmap_load(int tape, unsigned short* stock, unsigned short* ext, XmapLoad* out) asm("op1f_xmap_load");
 extern "C" int op1f_xmap_save(int tape, const unsigned short* stock, const unsigned short* ext) asm("op1f_xmap_save");
 extern "C" int op1f_xmap_convert(int tape) asm("op1f_xmap_convert");
-// K2, both on the GUI thread: the tape json writer's call (build_b_mixer.cpp) and the frame hook's (m2_measure.cpp).
+// K2, both on the GUI thread: the tape json writer's call (Build B's mixer unit) and the frame hook's (the first frame hook's measuring unit).
 extern "C" void op1f_xmap_json_write() asm("op1f_xmap_json_write");
 extern "C" void op1f_xmap_frame() asm("op1f_xmap_frame");
 // K4, for the copy of a tape (build_k_copy.cpp): a slot's tracks 5 to 8 as a load takes them, in the unit's own

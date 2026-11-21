@@ -9,6 +9,9 @@
 // when the author pushes again. The file is held to the entry's size and SHA-256 before it goes anywhere near the
 // folder. This is the only place where the page loads anything from another site.
 //
+// The page's live list of the packs on a unit (packs-live.mjs) reads the listing through the same functions, and two
+// more below: the entry for a file on the unit, and the versions of the files the page can recognise.
+//
 // Runs in the browser and in Node (no Node APIs in this file), so that validate-install.mjs runs the same code.
 
 import { sha256 } from "./install.mjs";
@@ -98,6 +101,30 @@ export function withNeeds(listing, ticked) {
 // The ticked packs that need `id`, besides itself.
 export function neededBy(listing, ticked, id) {
   return [...ticked].filter((other) => other !== id && withNeeds(listing, [other]).ids.has(id));
+}
+
+// The listed entry whose file on the unit would be `name` (the unit's own file name, any capitals), or null.
+export function entryForFile(listing, name) {
+  const want = String(name).toLowerCase();
+  for (const entry of listing.offered.values()) if (fileName(entry).toLowerCase() === want) return entry;
+  return null;
+}
+
+// The versions of pack files the page can recognise on a unit by their SHA-256 alone: every entry of the listing for
+// this firmware that names a file (whatever its status), and an entry's `earlier` files where the listing gives them
+// ([{version, sha256}], older files of the same pack). Map sha256 -> {id, version}. The install page uses it to tell
+// an older file of a pack ("an update is out") from a file it does not know ("a different file").
+export function knownVersions(data, firmware) {
+  const out = new Map();
+  if (!data || !Array.isArray(data.packs)) return out;
+  for (const entry of data.packs) {
+    if (!entry || typeof entry !== "object" || entry.firmware !== firmware || typeof entry.id !== "string") continue;
+    if (SHA256.test(entry.sha256 ?? "") && Number.isInteger(entry.version)) out.set(entry.sha256, { id: entry.id, version: entry.version });
+    for (const old of Array.isArray(entry.earlier) ? entry.earlier : []) {
+      if (old && SHA256.test(old.sha256 ?? "") && Number.isInteger(old.version) && !out.has(old.sha256)) out.set(old.sha256, { id: entry.id, version: old.version });
+    }
+  }
+  return out;
 }
 
 // A listed entry's file, downloaded at its commit and held to the entry: {id, name, bytes, sha256, from}, or an error

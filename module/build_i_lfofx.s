@@ -1,6 +1,6 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build I image I2: the stock LFO's effect destination on any wagon of the train (analysis/lfo_train_study.md,
- * section 11). Profile group build-i2: two CALL.a stubs in place of 8-byte loads in the L1 second stages.
+/* Build I image I2: the stock LFO's effect destination on any wagon of the train. Profile group build-i2: two CALL.a
+ * stubs in place of 8-byte loads in the L1 second stages.
  *
  * What stock does there, once a block, when the slot's fx-side LFO object is there and the slot's LFO is on:
  *
@@ -13,7 +13,7 @@
  *          and the class is 5.
  *
  * The stub does the displaced load and puts into P1, in place of the object's vtable, a table of the module's
- * whose word at +8 is the wrapper (op1f_lfofx_table_synth / _drum in build_h_chain.cpp), so stock's own next four
+ * whose word at +8 is the wrapper (op1f_lfofx_table_synth / _drum in Build H's chain unit), so stock's own next four
  * instructions call the wrapper with stock's arguments: R0 the object, R1 the slot's LFO block, R2 the class. The
  * wrapper calls the object's real apply itself. Only R1 and P1 are written, both of which stock sets here anyway;
  * RETS is free at the sites (the CALL that follows sets it).

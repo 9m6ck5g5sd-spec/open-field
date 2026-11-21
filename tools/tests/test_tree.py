@@ -28,7 +28,8 @@ TOOLS = os.path.join(ROOT, "tools")
 STOCK = os.environ.get("OPEN_FIELD_STOCK", "")
 TOOLCHAIN = os.path.join(ROOT, "open-xy", "local", "toolchain", "bin")
 PACKS = ("8 tracks", "base", "fx train", "lfo", "sidechain")                  # the base, base.pack, and the four features
-EXAMPLES = ("list", "wink", "yoyo")                                          # the examples of levels 3, 1 and 2: a card, no place of the firmware
+EXAMPLES = ("crush", "dub", "echo", "fold", "list", "ping", "pluck", "sketch", "wink", "yoyo")      # the examples with a card and no place of the firmware
+LEVELS = {"wink": 1, "yoyo": 2, "list": 3, "sketch": 4, "echo": 5, "dub": 7, "crush": 10, "ping": 10, "pluck": 10, "fold": 10}      # the level each card asks for
 
 
 def tool(name):
@@ -146,23 +147,33 @@ class TheRecipes(unittest.TestCase):
                 self.assertTrue(os.path.isfile(os.path.join(ROOT, *picture["file"].split("/"))), picture["file"])
 
     def test_every_source_is_built_into_something(self):
+        """Every source in module/ is one a recipe or the loader names, or one such a source includes (a unit compiled
+        twice, once as it is and once inside another with a switch defined, as the train's page is for lfo)."""
         plan = load("build.json")
         used = set(plan["loader"]["sources"])
         for name in plan["packs"]:
             used.update(load("packs", name + ".json")["sources"])
+        for path in list(used):
+            if path.endswith(".cpp") and os.path.isfile(os.path.join(ROOT, *path.split("/"))):
+                used.update("module/" + name for name in re.findall(r'^\s*#\s*include\s+"([^"]+\.cpp)"', text(*path.split("/")), re.M))
         there = {"module/" + name for name in os.listdir(os.path.join(ROOT, "module")) if not name.endswith(".h")}
         self.assertEqual(there, used)
 
-    def test_a_feature_pack_needs_the_base_and_no_other_feature(self):
+    def test_a_feature_pack_needs_no_other_pack_and_the_base_through_its_card(self):
+        """Since the release of piece 12 the four features are packs with a card like anyone's: none needs another
+        pack, and each asks the base for a level of its card (works_with names the base no more)."""
         for name in PACKS:
-            needed = [other["name"] for other in load("packs", name + ".json")["works_with"] if other["needed"]]
-            self.assertEqual(needed, [] if name == "base" else ["base"], name)
+            recipe = load("packs", name + ".json")
+            needed = [other["name"] for other in recipe["works_with"] if other["needed"]]
+            self.assertEqual(needed, [], name)
+            if name != "base":
+                self.assertGreaterEqual(recipe["card"]["level"], 1, name)
 
-    def test_the_base_offers_its_release_and_the_marks_of_the_three_levels(self):
+    def test_the_base_offers_its_release_and_the_marks_of_its_levels(self):
         base = load("packs", "base.json")
         self.assertRegex(base["release"], r"^[0-9A-Za-z._-]{1,8}$")
-        self.assertIn("module/build_m3_base_release.s", base["sources"])
-        for mark in ("op1f_cards", "op1f_level_1", "op1f_level_2", "op1f_level_3"):
+        self.assertIn("module/build_r6d_base_release.s", base["sources"])
+        for mark in ["op1f_cards"] + ["op1f_level_%d" % level for level in range(1, 11)]:
             self.assertIn(mark, base["exports"])
         self.assertFalse(base["named"])                         # the start screen shows its release, not its name
 
@@ -184,8 +195,8 @@ class TheRecipes(unittest.TestCase):
 
 
 class TheExamplesWithACard(unittest.TestCase):
-    """examples/wink/, examples/yoyo/ and examples/list/: each a pack in a folder of its own with a card of level 1, 2
-    or 3, which changes no place of the firmware and needs the base."""
+    """examples/wink/ to examples/fold/: each a pack in a folder of its own with a card of the level it shows (1 to 10),
+    which changes no place of the firmware and needs the base; an engine's sounds beside its recipe."""
 
     @classmethod
     def setUpClass(cls):
@@ -197,19 +208,20 @@ class TheExamplesWithACard(unittest.TestCase):
             self.assertEqual(self.plan[name], {"name": name, "recipe": "examples/%s/recipe.json" % name})       # no profile: no place of the firmware
             recipe = load("examples", name, "recipe.json")
             self.assertEqual(recipe["name"], name)
-            self.assertEqual(recipe["sources"], ["examples/%s/%s.cpp" % (name, name), "examples/%s/%s_card.s" % (name, name), "examples/%s/%s_pictures.s" % (name, name)])
-            for path in recipe["sources"] + [picture["file"] for picture in recipe["pictures"]] + ["examples/%s/README.md" % name]:
+            pictures = ["examples/%s/%s_pictures.s" % (name, name)] if recipe["pictures"] else []         # an example with no picture of its own has no directory
+            self.assertEqual(recipe["sources"], ["examples/%s/%s.cpp" % (name, name), "examples/%s/%s_card.s" % (name, name)] + pictures)
+            sounds = ["examples/%s/%s" % (name, sound["file"]) for ask in recipe["card"].get("asks") or [] for sound in ask.get("sounds") or []]
+            for path in recipe["sources"] + [picture["file"] for picture in recipe["pictures"]] + sounds + ["examples/%s/README.md" % name]:
                 self.assertTrue(os.path.isfile(os.path.join(ROOT, *path.split("/"))), path)
             self.assertIn("examples/%s.pack" % name, self.built)
 
     def test_each_has_a_card_of_its_level_and_needs_nothing_but_the_base(self):
-        levels = {"wink": 1, "yoyo": 2, "list": 3}
         for name in EXAMPLES:
             recipe = load("examples", name, "recipe.json")
-            self.assertEqual(recipe["card"]["level"], levels[name], name)
+            self.assertEqual(recipe["card"]["level"], LEVELS[name], name)
             self.assertEqual((recipe["works_with"], recipe["serves"], recipe["exports"], recipe["marks"]), ([], [], [], []), name)
             card = text("examples", name, name + "_card.s")
-            self.assertIn("op1f_level_%d" % levels[name], card, name)       # the card makes its level's mark a name the pack needs
+            self.assertIn("op1f_level_%d" % LEVELS[name], card, name)       # the card makes its level's mark a name the pack needs
         self.assertEqual(load("examples", "list", "recipe.json")["card"]["folders"], [{}])      # one folder, its name and place the pack's own name
         for name in ("wink", "yoyo"):
             self.assertNotIn("folders", load("examples", name, "recipe.json")["card"])       # and none
@@ -308,8 +320,8 @@ class ThePages(unittest.TestCase):
     def test_the_pages_for_those_who_write_a_pack_are_there(self):
         there = pages()
         for page in ("docs/first-pack.md", "docs/packs.md", "docs/base.md", "docs/methods.md", "docs/firmware-interfaces.md", "AGENTS.md",
-                     "docs/guide.md", "docs/build.md", "docs/changes.md", "docs/checking.md", "examples/trampolines/README.md",
-                     "examples/wink/README.md", "examples/yoyo/README.md", "examples/list/README.md"):
+                     "docs/guide.md", "docs/build.md", "docs/changes.md", "docs/checking.md", "examples/trampolines/README.md") \
+                + tuple("docs/level-%d.md" % level for level in range(4, 11)) + tuple("examples/%s/README.md" % name for name in EXAMPLES):
             self.assertIn(page, there)
         start = text("README.md")
         for page in ("docs/first-pack.md", "docs/packs.md", "docs/base.md", "docs/methods.md", "docs/firmware-interfaces.md", "CONTRIBUTING.md", "AGENTS.md"):
@@ -540,7 +552,7 @@ class ThePagesOnAHost(unittest.TestCase):
 
     def test_every_module_the_page_imports_is_beside_it(self):
         files = self.page_files()
-        self.assertEqual(sorted(files), ["catalog.mjs", "ferret.mjs", "index.html", "install.mjs", "ldr.mjs", "patch.mjs", "placement.mjs"])
+        self.assertEqual(sorted(files), ["catalog.mjs", "door.mjs", "ferret.mjs", "index.html", "install.mjs", "ldr.mjs", "packs-live.mjs", "patch.mjs", "placement.mjs"])
 
     def test_the_page_names_no_absolute_path_and_loads_nothing_from_another_site(self):
         for name, content in self.page_files().items():
@@ -615,10 +627,11 @@ class ThePagesOnAHost(unittest.TestCase):
 
     def test_the_helper_s_line_is_made_from_the_page_s_own_address(self):
         page = text(self.served, "index.html")
-        self.assertIn("\"$openFieldPage = '\" + PAGE_ID + \"'; irm '\" + helperUrl + \"' | iex\"", page)       # with the page's mark
+        self.assertIn("\"$openFieldPage = '\" + PAGE_ID + \"'; $openFieldFolder = '\" + psQuoted(folderHandle.name) + \"'; irm '\" + helperUrl + \"' | iex\"", page)   # the page's mark and the folder's name
         self.assertIn('await chosen.writeText(NAMES.page, JSON.stringify({ page: 1, id: PAGE_ID', page)                 # which it writes into the folder chosen
         helper = text(self.served, "open-field-helper.ps1")
         self.assertIn("$Page = [string] $openFieldPage", helper)                                                         # and which the helper checks
+        self.assertIn("$FolderName = [string] $openFieldFolder", helper)                                                 # and the name it looks for the folder by
         self.assertIn("STOPPED: the install page did not choose this folder", helper)
         self.assertNotRegex(page, r"irm\s+'https?://")
 

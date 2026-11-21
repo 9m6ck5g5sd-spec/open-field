@@ -1,5 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build K, pack K4 (analysis/tape_stock_safe.md, section 8): the copy of a tape takes tracks 5 to 8 with it.
+// Build K, pack K4: the copy of a tape takes tracks 5 to 8 with it.
 //
 // Stock's copy of a tape is shift + T3 in the tape list: 0x8c0d7824 finds a free slot, ejects the mounted tape,
 // names the copy and calls the clone 0x8d4fb908(source, destination, progress), then loads the copy. The clone
@@ -19,7 +19,7 @@
 //      stock copies its own. The numbers are free in the destination: its tracks 1 to 4 are the source's, and a
 //      load keeps no chunk of tracks 5 to 8 that tracks 1 to 4 hold. The progress function is called with 1.0
 //      every sixteen chunks, as stock calls it, so that whatever it serves is served;
-//   3. writes the copy's own file of tracks 5 to 8 last, with no identity (build_k_maps.cpp, op1f_xmap_write_plain):
+//   3. writes the copy's own file of tracks 5 to 8 last, with no identity (Build K's maps unit, op1f_xmap_write_plain):
 //      the load that follows takes it by stock's sum, and the save after that gives the copy an id of its own.
 //      A unit that goes off before step 3 has a copy with no file of tracks 5 to 8; its clips of those tracks are
 //      then left out at its load (build_k_clips.cpp).

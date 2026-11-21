@@ -2,8 +2,7 @@
 // Build B, step B1: playback of tape tracks 5 and 6 (track indices 4 and 5).
 // Build F, image F1: four extension tracks (indices 4-7), the filter loop in assembly, the silence skip per track.
 //
-// Stock plays a tape block in the L1 driver 0x11a07fe4 (OS 1.7.0+0) in three steps, read in
-// analysis/build_b_design.md, section 7:
+// Stock plays a tape block in the L1 driver 0x11a07fe4 (OS 1.7.0+0) in three steps:
 //
 //   read_block(speed, state, rolling)  0x8f01ec34  fills four 600-frame window buffers (0x84c61e88 + t * 0x12c0)
 //                                                   with source frames [W0, W0 + wanted) from the chunk cache,
@@ -39,12 +38,12 @@
 // which is every block on a tape whose tracks 5-8 hold nothing at the position, skips the resampling and only
 // counts the block. F2: the fill asks the extension map before copying and writes a track's window only where
 // the track recorded something, so an empty track costs no stores at all (the F1b read-out measured the four
-// windows' fill at about 4.5 points of the core whatever they held; analysis/build_f1b_device_result.md). The 16-tap loop itself is op1f_fir_ext in build_b_play.s (F1): stock's own loop shape with
+// windows' fill at about 4.5 points of the core whatever they held). The 16-tap loop itself is op1f_fir_ext in Build B's playback stub (F1): stock's own loop shape with
 // the loads paired to the multiplies, four instructions per tap where the compiled C spent twelve; this file
 // prepares a job per output sample (the active windows, the frame offset, the coefficient column) and applies
 // the gains, the level, the peaks and the sums to what comes back. Since packs L4 the routine of that name is
 // build_l4_fir.s, written from what it computes, with the same job and the same two sums bit for bit; the one in
-// build_b_play.s is its elder, which every pack before L4 has (analysis/clean_base_study.md, section 17).
+// Build B's playback stub is its elder, which every pack before L4 has.
 //
 // B3b: the loop crossfade. While stock's loop flag B[0x8400129d] is set (read_block sets it within 297 frames
 // of a loop point and clears it after) the window start is wrapped into [loop_a, loop_b) as stock wraps its
@@ -66,7 +65,7 @@ typedef int i32;
 typedef int (*ReadBlockFn)(int speed, void* state, int rolling);
 typedef void (*MixerFn)(int speed, void* state);
 
-struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (analysis/tape_snapshots_report.md)
+struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes
     unsigned char valid;
     unsigned char stale;
     unsigned char write_pending;
@@ -120,7 +119,7 @@ extern "C" void op1f_ext_xfade_compute(i32 loop_a, i32 loop_b) asm("op1f_ext_xfa
 #define LOOP_B (*(volatile i32*)0x84c62224u)
 #define XFADE_MASK ((1u << XFADE_TRACKS) - 1u)
 
-// The filter job for build_b_play.s (F1) and build_l4_fir.s (L4): the layout is the assembly's contract, see there.
+// The filter job for Build B's playback stub (F1) and build_l4_fir.s (L4): the layout is the assembly's contract, see there.
 struct FirJob {
     const i32* bases[EXT_TRACKS];
     u32 count;
@@ -130,7 +129,7 @@ struct FirJob {
 };
 extern "C" void op1f_fir_ext(FirJob* job) asm("op1f_fir_ext");
 
-// Counters for the measurement line (read by m2_measure.cpp through weak references).
+// Counters for the measurement line (read by the first frame hook's measuring unit through weak references).
 extern "C" u32 op1f_ext_play_blocks asm("op1f_ext_play_blocks");     // blocks in which the extension tracks were considered
 extern "C" u32 op1f_ext_play_active asm("op1f_ext_play_active");     // of those, blocks that added a non-zero sample
 extern "C" i32 op1f_ext_play_w0 asm("op1f_ext_play_w0");             // the last window start frame
@@ -151,7 +150,7 @@ static u32 ext_any[EXT_TRACKS];                                     // OR of eve
 static u32 ext_filled[EXT_TRACKS];                                  // F2: frames [0, ext_filled[t]) of a track's window hold this block's data
 static FirJob fir_job __attribute__((aligned(4)));
 extern "C" int op1f_ext_chunk_mapped(u32 track, u32 logical) asm("op1f_ext_chunk_mapped");   // build_b_storage.cpp: the track recorded that chunk
-// Build G (G1, build_g_duck.cpp): the duck. Weak, so images without that unit link unchanged.
+// Build G (G1, Build G's duck unit): the duck. Weak, so images without that unit link unchanged.
 extern "C" void __attribute__((weak)) op1f_duck_block_gains() asm("op1f_duck_block_gains");          // this block's gains into the hold-to-solo words (1-4) and op1f_duck_gain (5-8)
 extern "C" void __attribute__((weak)) op1f_duck_detect(int speed, int w0) asm("op1f_duck_detect");  // the detector over this block's frames
 extern "C" i32 __attribute__((weak)) op1f_duck_gain[EXT_TRACKS] asm("op1f_duck_gain");             // Q31 per extension track, 0x7fffffff when idle

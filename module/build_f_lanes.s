@@ -1,6 +1,6 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build F images F4 to F6: the tape screen's clip bars lower (OS 1.7.0+0; analysis/build_b_design.md, sections 23
- * to 25). Three 8-byte CALL.a retargets in record 309, inside TapeScreen.
+/* Build F images F4 to F6: the tape screen's clip bars lower (OS 1.7.0+0). Three 8-byte CALL.a retargets in record
+ * 309, inside TapeScreen.
  *
  * The bar itself (F6). TapeScreen's per-clip draw 0x8fc81e7c, run from the update's loop 0x8fc81c12 for every clip of
  * the window on every track, ends in one call of the rectangle fill 0x11a0a680 at 0x8fc83d00, whichever colour path
@@ -9,7 +9,7 @@
  * the fill hands them to the span writer 0x11a0a1dc, which clamps them to 0..223 and writes bottom - top + 1 rows of
  * every column from x1 to x2), [SP + 0x14] = the colour pointer. The rows are the lane y (the first lane's row
  * [this + 0x14] plus the track times the spacing [this + 0x18], both integers from the artwork) minus 3 and plus 3:
- * seven rows, which is what the owner's photo of F3 showed, the bars of neighbouring lanes touching at the 7-row
+ * seven rows, which is what the unit's screen showed at F3, the bars of neighbouring lanes touching at the 7-row
  * pitch (F5 result). The lane y is the template line's y plus 0.5, truncated (the TapeScreen's static initialiser
  * 0x8fc82fac writes 0x200 to 0x84c9fb74), so the templates at 168.1 give the lanes 168, 175, ..., 217.
  *
@@ -18,7 +18,7 @@
  * Five rows per bar, two black rows between the lanes.
  *
  * The shift-held overlay (F4's two hooks, kept with F4's values). 0x8fc80e50, run per clip from the same loop only
- * while the shift byte 0x11905a4d is set and no clip is selected ([0x848d98e0] = -1), draws two stroked shapes through
+ * while the shift byte 0x11905a4d is set and no clip is selected (the word 0x848d98e0 holds -1), draws two stroked shapes through
  * the line helper 0x11a0a29c (its arguments: point 1 and point 2, each (x, y) in 22.10 on the caller's frame, then the
  * half-width and the colour pointer, both on the stack): 3.0 and 2.0 at the lane y, the edges y - 3.0 .. y + 3.0 and
  * y - 2.0 .. y + 2.0. F5 had hooked these two alone, which is why the bars did not change on the device.
@@ -29,7 +29,7 @@
  * The overlay's edges become y - 2.0 .. y + 3.0 and y - 1.0 .. y + 2.0: whole edges, the rows y - 2 .. y + 2 and
  * y - 1 .. y + 1, the same five rows as the bar with a row of the outer colour above and below the stripe, as stock's
  * 6/4 pair has. The served tape.svg's lane backgrounds are 5-pixel strokes on the half-pixel centres y + 0.5
- * (tools/tape_svg_lanes.py --half-pixel --stroke 5 --bar-half 2.5, the F4 file), the same whole edges again, so the
+ * (the F4 file), the same whole edges again, so the
  * bar, the band and the overlay light the same five rows. The caller of the overlay stores the two points afresh
  * before the second call, so the first shift does not add up.
  *

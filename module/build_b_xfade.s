@@ -11,10 +11,10 @@
  *      fade out  0x8f01f7d0  -> its room, then 0x8f01dce8
  *      fade in   0x8f01f8e0  -> its room, then 0x8f01ddf8
  *
- * The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 each stub ran the instructions its hook
+ * The rooms (packs L3): until L3 each stub ran the instructions its hook
  * displaced itself, as a copy. Now it holds none of them and ends in a jump to its room, sixteen bytes of the
  * pack's zeroed data into which the base copies those instructions from the running firmware, with a jump back
- * behind them, before it writes the hook (module/build_l1_base.cpp, make_trampoline; the table entry names the
+ * behind them, before it writes the hook (module/build_m4_loader.cpp, make_trampoline; the table entry names the
  * room). P2, the register a stub jumps through, is the one it jumped through before.
  */
 .section .text

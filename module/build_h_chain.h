@@ -1,7 +1,7 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build H images H2 and H3: what the chain unit (build_h_chain.cpp) tells the train page (build_h_train.cpp) each
+// Build H images H2 and H3: what the chain unit (Build H's chain unit) tells the train page (Build H's train page unit) each
 // frame. Plain integers only; the train unit reads it, the chain unit fills it from its own state. H5 adds the
-// presets list's view for build_h_presets.cpp (the chain unit keeps the store, the file and the keys; the presets
+// presets list's view for Build H's presets unit (the chain unit keeps the store, the file and the keys; the presets
 // unit the screen and its labels); H5b the save screen's state.
 #ifndef OP1F_BUILD_H_CHAIN_H
 #define OP1F_BUILD_H_CHAIN_H
@@ -30,10 +30,10 @@ struct Op1fChainView {
 extern "C" void op1f_chain_view(int host, Op1fChainView* out) asm("op1f_chain_view");
 extern "C" int op1f_chain_train_open(int host) asm("op1f_chain_train_open");
 
-// H5: the chain presets list (analysis/fx_chain_study.md section 21), a screen of the GUI's own at the free id 37
+// H5: the chain presets list, a screen of the GUI's own at the free id 37
 // (H6d; H5 to H6c had 85, which the GUI's render loop draws after the power popup's 82, so the list covered the
 // shutdown countdown: every screen of the module's own takes a free id below 82, section 22.13),
-// dressed by build_h_presets.cpp from this view every frame; H5b adds the save screen at the free id 38 (stock's
+// dressed by Build H's presets unit from this view every frame; H5b adds the save screen at the free id 38 (stock's
 // save page redrawn: the host's box with the preset's number, "saving" with the clock while shift + T3 is held,
 // "saved!" with the check after).
 enum { OP1F_PRESETS_SCREEN_ID = 37, OP1F_SAVE_SCREEN_ID = 38, OP1F_PRESET_ROWS = 8, OP1F_PRESET_NAME = 12, OP1F_SAVE_SPOKES = 8 };   // H6d: the list at 37 (below the power popup's 82)
@@ -61,7 +61,7 @@ extern "C" void op1f_presets_view(int host, Op1fPresetsView* out) asm("op1f_pres
 extern "C" int op1f_chain_list_open(int host) asm("op1f_chain_list_open");
 extern "C" int op1f_chain_screen_wanted(int host) asm("op1f_chain_screen_wanted");   // H5b: the save screen's id, the list's id, or 0 for the train or stock
 
-// I2 (analysis/lfo_train_study.md section 11): what the chain unit tells the value LFO's page (build_i_lfopage.cpp)
+// I2: what the chain unit tells the value LFO's page (Build I's LFO page unit)
 // about the stock LFO's effect destination: which effect wagon it turns.
 struct Op1fLfoFxView {
     int known;                             // the current slot's chain is the module's own

@@ -1,35 +1,32 @@
 {
   "about": "Four LFOs on a synth sound, their page and their presets as files. Needs the base (base.pack) and nothing else. With the effect train there, an LFO can turn any wagon; without it, the sound's one effect.",
   "name": "lfo",
-  "version": 8,
-  "interface": 1,
-  "build": "build_m1_lfo",
+  "version": 11,
+  "interface": 3,
+  "build": "build_r4c_lfo",
   "sources": [
     "module/build_i_lfo4.s",
     "module/build_i_lfo4.cpp",
-    "module/build_i_lfopresets.cpp",
+    "module/build_r2_lfopresets.cpp",
     "module/build_j5h_lfo_alone.s",
-    "module/build_j5i_lfo_alone.cpp",
-    "module/build_l3_lfo_table.s",
-    "module/build_m1_lfo_pictures.s",
-    "module/build_p3_lfo_needs.s"
+    "module/build_r4c_lfo_alone.cpp",
+    "module/build_r4b_lfo_table.s",
+    "module/build_r4c_train_lfo.cpp",
+    "module/build_r2_presets_lfo.cpp",
+    "module/build_r2_move.cpp",
+    "module/build_r2_lfo_frame.cpp",
+    "module/build_r4c_lfo_card.s",
+    "module/build_r4c_lfo_pictures.s",
+    "module/build_r2_lfo_needs.s"
   ],
   "works_with": [
     {
-      "name": "base",
-      "interface": 2,
-      "needed": true
-    },
-    {
       "name": "fx train",
-      "interface": 1,
+      "interface": 3,
       "needed": false
     }
   ],
   "serves": [
-    "base",
-    "8 tracks",
-    "sidechain",
     "fx train"
   ],
   "exports": [],
@@ -47,6 +44,24 @@
       "file": "pictures/train/fxsave.svg.make"
     }
   ],
+  "card": {
+    "level": 4,
+    "frame": "lfo_frame",
+    "pick": null,
+    "pictures": true,
+    "folders": [
+      {
+        "name": "lfo",
+        "place": "lfo"
+      },
+      {
+        "name": "lfo",
+        "place": "lfomoved",
+        "shown": false
+      }
+    ],
+    "asks": []
+  },
   "marks": [
     {
       "site": "0x84013834",

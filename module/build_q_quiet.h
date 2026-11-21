@@ -1,11 +1,11 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build Q, packs Q1: a gate for a unit's periodic log lines (analysis/quiet_log_study.md).
+// Build Q, packs Q1: a gate for a unit's periodic log lines.
 //
 // Since H0 the units of the effect train have printed their summary lines every 232 frames, four seconds, whatever
 // the unit did: ten lines, 421 bytes a second, 78 % of the log of a unit that stands switched on and untouched
 // (measured on the device on 2026-11-14: a new log file of 512 KiB every sixteen minutes). That costs more than
 // room: each full log file is twelve index nodes of the volume's filesystem, and the install of a plain os.ldr
-// needs the volume's count of index nodes to stay where it was measured (analysis/os_ldr_install_study.md 12.14).
+// needs the volume's count of index nodes to stay where it was measured.
 //
 // The gate keeps the four-second cadence while there is something to say and slows the lines down when there is
 // not. At the end of a period (quiet_period) the lines are spoken when
@@ -26,7 +26,7 @@
 // popup.
 //
 // Plain integer code with nothing called and nothing divided, so that it runs as it is on the PC:
-// tools/tests/test_quiet_gate.py compiles this file and walks it through sessions.
+// a test compiles this file and walks it through sessions (for tests this tree does not hold).
 
 #ifndef OP1F_BUILD_Q_QUIET_H
 #define OP1F_BUILD_Q_QUIET_H

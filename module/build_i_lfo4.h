@@ -1,7 +1,7 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build I images I6 and I7 (analysis/lfo_train_study.md sections 18 and 20): what the LFO unit (build_i_lfo4.cpp)
-// tells the page (build_h_train.cpp) each frame, and the size of what it keeps in the chain file
-// (build_h_chain.cpp). Plain integers only.
+// Build I images I6 and I7: what the LFO unit (build_i_lfo4.cpp)
+// tells the page (Build H's train page unit) each frame, and the size of what it keeps in the chain file
+// (Build H's chain unit). Plain integers only.
 #ifndef OP1F_BUILD_I_LFO4_H
 #define OP1F_BUILD_I_LFO4_H
 
@@ -29,7 +29,7 @@ struct Op1fLfoTrainView {
 extern "C" void op1f_lfotrain_view(Op1fLfoTrainView* out) asm("op1f_lfotrain_view");
 extern "C" int op1f_lfotrain_open() asm("op1f_lfotrain_open");
 
-// I8 (section 21): a sound's four LFOs as a preset holds them (build_i_lfopresets.cpp keeps the library, the files
+// I8 (section 21): a sound's four LFOs as a preset holds them (Build I's LFO presets unit keeps the library, the files
 // and the list; this unit hands the four out and takes them back). The order on the page (the knob at each place),
 // then for each knob fifteen integers: the kind (-1 none, else 0..5), on or off, the effect wagon it turns (0 the one
 // under the effect train's lamp, 1..4 a knob's), the midi kind's four the same way, and the eight parameters as

@@ -16,14 +16,14 @@
  *      drop-all handler 0x8f00ac78  -> its room, then 0x8f009a28
  *      MIDI bound       0x8f00f96c   the test of the channel against four, and a load of 9              -> continue at 0x8f00f974
  *                       (R5 = the channel, R4 = the type, R7 = the value; channels 0-3 continue in stock with
- *                       R0 = 9 as the displaced load left it; channels 4-5 call op1f_midi_mixer(channel, type,
+ *                       R0 as the displaced load left it; channels 4-5 call op1f_midi_mixer(channel, type,
  *                       value) and leave through stock's epilogue at 0x8f00f9f0 like any other channel; P1,
  *                       the constant pair stock's path still reads, is preserved; P2 is free at the site)
  *
- * The rooms (packs L3, analysis/clean_base_study.md section 16): until L3 the two handler stubs ran the instructions
+ * The rooms (packs L3): until L3 the two handler stubs ran the instructions
  * their hooks displaced themselves, as a copy. Now each holds none of them and ends in a jump to its room: sixteen
  * bytes of the pack's zeroed data into which the base copies those instructions from the running firmware, with a
- * jump back behind them, before it writes the hook (module/build_l1_base.cpp, make_trampoline; the table entry
+ * jump back behind them, before it writes the hook (module/build_m4_loader.cpp, make_trampoline; the table entry
  * names the room). P2, the register a stub jumps through, is the one it jumped through before. The two bounds are
  * hooks in the middle of a function: they do what the instructions under them did with another number, and stay.
  */

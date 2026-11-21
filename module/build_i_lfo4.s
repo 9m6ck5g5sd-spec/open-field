@@ -1,6 +1,6 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build I images I5 and I6: the LFOs that are not stock's own, on the synth (analysis/lfo_train_study.md, sections
- * 16 and 18). Profile group build-i5: two CALL.a stubs in place of 8-byte loads in the synth's first stage
+/* Build I images I5 and I6: the LFOs that are not stock's own, on the synth. Profile group build-i5: two CALL.a
+ * stubs in place of 8-byte loads in the synth's first stage
  * 0x11a04130 (L1), inside its loop over the six voices, at the two places every sounding voice passes
  * whether or not stock's own LFO runs. (The group's three other hooks are CALL.a retargets of the reset 0x8d504496
  * to the C wrapper op1f_lfo4_reset_synth in build_i_lfo4.cpp; they need no assembly.)

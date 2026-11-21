@@ -96,7 +96,7 @@ A pack has no function that is called at the start. **It runs when the firmware 
 - a change is a call that now goes to the pack, a jump at the first instruction of a function, or a word in a table of functions. Those changes are the pack's table, and the next sections say how the loader makes them;
 - a card names the pack's frame function, which the base calls once a frame, and its input function, which the base offers every key and knob event ([the base](base.md)).
 
-A pack can have either, or both. The examples `wink`, `yoyo` and `list` have a card and no table; `trampolines` has a table and no card.
+A pack can have either, or both. Every example has a card and no table, but `trampolines`, which has a table and no card.
 
 Its code is plain C++ and assembly for the Blackfin processor, with no library behind it:
 
@@ -170,8 +170,8 @@ loader: done: 8 pack(s) run, 0 left out, control 0x00000207, 49158269 cycles
 **8. It sets the start screen's text** ([below](#what-the-start-screen-says)).
 
 ```
-loader: the start screen's version text is followed by ' - open-field 0.3': 1 in DDR code written and read back, 0 already there
-loader: the start screen says '1.7.3 - open-field 0.3'
+loader: the start screen's version text is followed by ' - open-field 0.12': 1 in DDR code written and read back, 0 already there
+loader: the start screen says '1.7.3 - open-field 0.12'
 ```
 
 A change that passed its check and then does not go in, or a place that changed between the check and the write, **stops the start-up** with a line that begins `loader: STOPPED`. The firmware would otherwise run with half of a pack's changes. This has not happened on a unit.
@@ -259,7 +259,7 @@ The build works the lists out from the compiled code. Call an optional name only
 
 A needed name can also stand for an ability and not for a function to call: a **mark**. It is never called or read.
 
-- The base offers `op1f_level_1` to `op1f_level_3`: "this base serves cards of that level". A pack's card makes its level's mark a name the pack needs ([the base](base.md), "The levels, and their marks").
+- The base offers `op1f_level_1` to `op1f_level_10`: "this base serves cards of that level". A pack's card makes its level's mark a name the pack needs ([the base](base.md), "The levels, and their marks").
 - The loader answers itself for `op1f_loader_1`: "this loader hands the cards over". The base needs it. A pack that needs something only a later loader does names that loader's mark, and under this loader it is left out with a line that says which mark was missing.
 
 ## What the start screen says
@@ -268,9 +268,9 @@ The loader adds its words behind the firmware's own version text on the start sc
 
 | The screen reads | When |
 | --- | --- |
-| `1.7.3 - open-field 0.3` | Pack files run, and none is left out. `0.3` is the base's release |
-| `1.7.3 - open-field 0.3 (1 left out)` | One pack file is there and does not run. The log says why |
-| `1.7.3 - open-field 0.3 (1 needs foo)` | A file is left out because it needs the pack `foo`, and no file of the folder holds `foo` |
+| `1.7.3 - open-field 0.12` | Pack files run, and none is left out. `0.12` is the base's release |
+| `1.7.3 - open-field 0.12 (1 left out)` | One pack file is there and does not run. The log says why |
+| `1.7.3 - open-field 0.12 (1 needs foo)` | A file is left out because it needs the pack `foo`, and no file of the folder holds `foo` |
 | `1.7.3 - open-field` | Pack files run, and none offers a release: `base.pack` is not among them |
 | `1.7.3 stock (no pack)` | No pack file: the unit runs as the original firmware |
 | `1.7.3 stock (4 need base)` | Four pack files are there, and none runs because `base.pack` is not: copy it |
@@ -319,7 +319,7 @@ It prints each pack's place and the checksum the loader logs for it (`its sum as
 
 | What | Limit |
 | --- | --- |
-| The room for all packs | 2,031,616 bytes. The base and the four features take some 750,000 of them |
+| The room for all packs | 2,031,616 bytes, a pack's code, data and zeroed data together. The base alone takes 526,512 of them and the base with the four features 1,296,388, which leaves 735,228. A delay line, a loop or a big table belongs in [working memory](level-6.md#working-memory) instead, up to 16 MiB for all packs together |
 | Pack files looked at | 32 |
 | A pack's name | 15 characters |
 | A file's name | 39 characters with `.pack` |

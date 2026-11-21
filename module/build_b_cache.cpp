@@ -5,14 +5,13 @@
 // Replaces stock `tape_chunks_init()` in tape_chunks.cpp (OS 1.7.0+0, 0x8fc2140c, its only caller the
 // tape engine init 0x8f01cc10) through a JUMP.a at its entry (profile group "build-b0"). Stock's
 // version lays out 24 slots of 4 tracks × 128 KiB in the 12 MiB fill at 0x8f021280 (the one place
-// that address appears) and links them into the LRU list; see analysis/tape_snapshots_report.md
-// and analysis/build_b_design.md. B0a did the same with slots of 6 × 128 KiB (768 KiB) in an 18 MiB
+// that address appears) and links them into the LRU list. B0a did the same with slots of 6 × 128 KiB (768 KiB) in an 18 MiB
 // block taken once from C heap 1 (24 MiB at 0x82000000, 1 KiB in use) through stock's
 // heap_malloc(index, size), aligned to 32 bytes for the eMMC DMA.
 //
 // Since F1 a slot holds eight tracks (1 MiB) and the 24 slots sit in two regions: slots 0-11 in the
 // stock 12 MiB fill at 0x8f021280, which no code has touched since B0a (its only referrer is stock's
-// slot_init, called only by the replaced function; analysis/eight_track_study.md, section 3), and
+// slot_init, called only by the replaced function), and
 // slots 12-23 in a 12 MiB heap-1 block. The slots need no common block: every stock and module
 // function reaches a slot's data through the slot descriptor's own pointer and addresses track t at
 // data + t × 128 KiB (stock's read_block, the L1 record function at 0x11a07cfa..0x11a07d60, the
@@ -33,7 +32,7 @@ typedef void (*LogFn)(int level, const char* file, int line, const char* format,
 #define STOCK_HEAP_MALLOC ((HeapMallocFn)0x8fcc5a68u)
 #define STOCK_LOG ((LogFn)0x8c053a20u)
 
-struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (analysis/tape_snapshots_report.md)
+struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes
     unsigned char valid;
     unsigned char stale;
     unsigned char write_pending;

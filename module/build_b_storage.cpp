@@ -2,14 +2,14 @@
 // Build B, step B0b: storage plumbing for tape tracks 5 and 6 (track indices 4 and 5).
 //
 // Replaces four stock functions of tape_snapshots.cpp / tape_chunks.cpp (OS 1.7.0+0) through a JUMP.a at each
-// entry (profile group "build-b0b"), and supersedes module/build_a_loader.cpp's op1f_load_block_map (group
+// entry (profile group "build-b0b"), and supersedes Build A's loader's op1f_load_block_map (group
 // "build-a") with a version that also fills the two extension maps:
 //
 //   chunks_service    0x8fc217a0  -> op1f_chunks_service    reload and write back six tracks per cache slot
 //   snapshots_reset   0x8fc224fc  -> op1f_snapshots_reset   stock work, plus clearing the extension maps
 //   save_block_map    0x8fc22d70  -> op1f_save_block_map    version 1 as stock; version 2 when tracks 5-6 hold chunks
 //                                                            (until K1; since K1 always stock's version 1, the tables of
-//                                                            tracks 5-8 in user/tapeNN_ext.bin: build_k_maps.cpp)
+//                                                            tracks 5-8 in user/tapeNN_ext.bin: Build K's maps unit)
 //   take_snapshot_ex  0x8fc23128  -> op1f_take_snapshot_ex  stock's take with the extension records carried along (Build C;
 //                                                            a no-op from B0b to B3f, undo off)
 //   diff_range        0x8fc22c84  -> op1f_diff_range        the changed range over six tracks (Build C), so undo_ex and
@@ -21,8 +21,7 @@
 // the record at CURRENT_SNAPSHOT is live and stock's undo and redo move that index), reach the partition
 // through stock's raw partition read/write (whole 128 KiB chunks only, which is all chunks_service ever moves),
 // and take their chunks from stock's alloc_chunk, so the reference bytes remain the single record of what is
-// free. The stock code these functions mirror is quoted in analysis/tape_snapshots_report.md; the design is in
-// analysis/build_b_design.md, section 3 (B0b). Freestanding like the other units: no library, no division,
+// free. Freestanding like the other units: no library, no division,
 // no memset/memcpy of our own (the ROM memset stock uses is called by address).
 
 #include "build_k_maps.h"       // K1: the block map in two files, stock's own and the extension file
@@ -79,7 +78,7 @@ typedef void* (*MemmoveFn)(void* destination, const void* source, u32 count);
 #define REFERENCES ((volatile unsigned char*)0x84c94208u)           // one byte per physical chunk
 #define LRU_HEAD (*(Slot* volatile*)0x848ced58u)
 
-struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes (analysis/tape_snapshots_report.md)
+struct Slot {                 // tape_chunks.cpp slot descriptor, 28 bytes
     unsigned char valid;
     unsigned char stale;
     unsigned char write_pending;
@@ -143,7 +142,7 @@ extern "C" void op1f_ext_unmap_chunk(u32 track, u32 logical) asm("op1f_ext_unmap
 static u32 quiet_saves;                       // version-2 saves made while recording, not logged yet (B2)
 static u32 quiet_tape, quiet_allocated[EXT_TRACKS];   // what the last quiet save wrote
 
-// Build F, image F1: the eMMC measurement and the free-chunk count, read by m2_measure.cpp (weak references)
+// Build F, image F1: the eMMC measurement and the free-chunk count, read by the first frame hook's measuring unit (weak references)
 // and by the help screen's tape gauge (build_e_screens.cpp). Counted on the tape thread; the frame hook reads.
 extern "C" u32 op1f_io_reloads asm("op1f_io_reloads");                 // slots reloaded (every track of the slot)
 extern "C" u32 op1f_io_writebacks asm("op1f_io_writebacks");           // slots written back (their dirty tracks)
@@ -161,15 +160,14 @@ static u32 service_calls;
 
 // A stock track's entry in the live record's map, as map_lookup 0x8fc20acc computes it (0x8fc20afa..0x8fc20b22:
 // 0x84c68d88 + current x 22,160 + track x 1,938 + logical x 2, a 16-bit read). Read here directly: the first F1
-// image called 0x8fc20b08, an instruction inside that function, and froze at its first slot reload
-// (analysis/build_f1_device_result.md).
+// image called 0x8fc20b08, an instruction inside that function, and froze at its first slot reload.
 static inline u32 live_map_entry(u32 track, u32 logical) {
     const unsigned char* record = RECORDS + CURRENT_SNAPSHOT * RECORD_BYTES;
     return *(const u16*)(record + track * TRACK_MAP_BYTES + logical * 2);
 }
 
 #ifdef OP1F_HOST
-static inline u32 cycles() { return 0; }                               // the unit on the PC (tools/tests/test_tape_store.py): no clock
+static inline u32 cycles() { return 0; }                               // the unit on the PC (for tests this tree does not hold): no clock
 #else
 static inline u32 cycles() {
     u32 c;
@@ -179,8 +177,8 @@ static inline u32 cycles() {
 #endif
 
 // F2: the zero fill of an unallocated chunk's region, a word-store loop (about 0.1-0.3 ms per 128 KiB) in place
-// of the ROM memset (2.4 ms, a byte loop), which the F1b read-out found to be most of a slot reload's time
-// (analysis/build_f1b_device_result.md). Stock's own tape_io_read keeps its memset for tracks 1-4 elsewhere;
+// of the ROM memset (2.4 ms, a byte loop), which the F1b read-out found to be most of a slot reload's time.
+// Stock's own tape_io_read keeps its memset for tracks 1-4 elsewhere;
 // the service loop below does not call it for an unallocated chunk any more.
 static void zero_chunk(unsigned char* destination) {
     u32* word = (u32*)destination;
@@ -635,7 +633,7 @@ extern "C" int op1f_diff_range(i32 other, i32* minimum, i32* maximum) {
 // save_block_map(tape), stock 0x8fc22d70..0x8fc213bf: write magic, version and the live record's four track
 // maps to user/tapeNN_map.tmp, close, rename to user/tapeNN_map.bin, clear the dirty byte. Since K1 that file is
 // always stock's own, version 1, and the tables of tracks 5 to 8 go into user/tapeNN_ext.bin beside it
-// (build_k_maps.cpp: the extension file first, then stock's), so that stock firmware reads every tape. From B0b
+// (Build K's maps unit: the extension file first, then stock's), so that stock firmware reads every tape. From B0b
 // to J4 a tape with a chunk on a track beyond four was saved as one version-2 file, which stock rejects.
 // The log line for a tape with extension chunks is held back while a recording runs (every allocated chunk
 // marks the map dirty and the idle flush saves it) and printed by the service loop once recording has stopped,
@@ -678,10 +676,10 @@ extern "C" void op1f_save_block_map(int tape) {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// load_block_map(tape): Build A's loader (module/build_a_loader.cpp, ran on hardware 2026-11-04), which since
+// load_block_map(tape): Build A's loader (ran on hardware 2026-11-04), which since
 // B0b also fills the extension maps. Contract as stock: 1 when the live record's map was loaded, 0 when tape_open
 // must fall back to the identity map (no file, bad magic, unsupported version, short read); the extension maps
-// are then empty. Since K1 the files are read by build_k_maps.cpp: stock's version-1 file for tracks 1 to 4 and
+// are then empty. Since K1 the files are read by Build K's maps unit: stock's version-1 file for tracks 1 to 4 and
 // the extension file beside it for tracks 5 to 8, or one of this project's old version-2 files. Once a start,
 // before the first tape is read, every tape's file that is still version 2 is rewritten as the two files, so
 // that a unit which has run this pack holds only tapes stock firmware reads.

@@ -1,7 +1,7 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build I images I6 and I7: four LFOs per sound on the synth (analysis/lfo_train_study.md sections 18 and 20).
+// Build I images I6 and I7: four LFOs per sound on the synth.
 //
-// The owner's rule (the study's section 10): four LFOs per sound, each stock's own LFO in every part, shown as a
+// The rule: four LFOs per sound, each stock's own LFO in every part, shown as a
 // train on T4. One of the four is stock's slot LFO as it is: its kind word, its eight words, its on-off byte, its
 // document, its page. That is the wagon under the train's lamp. The three others are objects of stock's LFO
 // classes that this unit builds at its own addresses and calls where stock calls its own, each with its own eight
@@ -12,7 +12,7 @@
 //   * the envelope's part of a voice (the apply with the class 1) and, for the velocity kind, the level's method,
 //     from the stub at 0x11a04334 (build_i_lfo4.s), after stock's own LFO has had its call;
 //   * the engine's part of a voice (the class 0), from the stub at 0x11a045c0;
-//   * the fx side (the class 2), from the chain's run (op1f_fx_chain_run in build_h_chain.cpp), which every block of
+//   * the fx side (the class 2), from the chain's run (op1f_fx_chain_run in Build H's chain unit), which every block of
 //     the second stage reaches after stock's own fx-side call and before any effect wagon runs; the chain unit's
 //     op1f_lfofx_extra aims each LFO at the effect wagon of its choice, as I2 to I4 do for stock's LFO;
 //   * the note-on, from a wrapper of the reset 0x8d504496 at its three calls.
@@ -28,15 +28,15 @@
 // The GUI side: the store (per synth slot the lamp's knob, four wagons and their order on the page), the instances
 // built for the slot on the screen, the page's keys, the move of the lamp, which hands stock another wagon's LFO
 // through stock's own setters and its record's apply, and the log. The page is the effect train's own screen,
-// dressed by build_h_train.cpp from op1f_lfotrain_view: since I7 four UFOs, the wagons of this unit's words.
+// dressed by Build H's train page unit from op1f_lfotrain_view: since I7 four UFOs, the wagons of this unit's words.
 //
-// The keys since I7 are the effect train's, key for key (the owner's word after I6, the study's section 19): a
+// The keys since I7 are the effect train's, key for key (since I6): a
 // knob's turn picks the kind, a short press opens that LFO's page (stock's own for its kind; stock's list of kinds
 // for an empty one), a hold switches it off or on, shift + a turn moves it to the next place, T4 on the page opens
 // the page of the LFO under the searchlight. I6 moved the lamp at a press and opened the page on T4 only.
 //
 // I8 (the study's section 21): presets for the four LFOs, kept as files and listed under shift + T4 on the page by
-// build_i_lfopresets.cpp, exactly as the effect chain's presets are under shift + T3 on the effect train. This unit
+// Build I's LFO presets unit, exactly as the effect chain's presets are under shift + T3 on the effect train. This unit
 // hands a sound's four LFOs out as a preset holds them (op1f_lfo4_preset_capture) and takes a preset's four back
 // (op1f_lfo4_preset_apply: the lamp stays on its knob, that knob's LFO goes onto stock's slot as move_lamp puts one
 // there, the three others into the store, the instances are built again), and passes the page's keys to the list
@@ -98,7 +98,7 @@ enum { CLASS_ENGINE = 0, CLASS_ENVELOPE = 1, CLASS_FX = 2 };   // the apply's th
 enum { FRAME_VOICE_NEXT = 0x30 };                              // stock's frame in the voice loop: the voice's number plus one at FP - 0x30 (0x11a0421c)
 enum { KEY_T1 = 6, KEY_T4 = 9, KEY_CLICK0 = 54, KEY_PRESS0 = 61, PAGE_LFO = 3, CONTROLLER_PAGE = 0x28, CONTROLLER_LFO_LIST = 0x40, CONTROLLER_LFO_ONOFF = 0x58, RECORD_LFO_APPLY = 0x14 };
 enum { ORDER_AS_KNOBS = 0xe4 };                                // the knob at each place, two bits a place: 0, 1, 2, 3
-enum { HOLD_MS = 400, CLEAN_MS = 120, SWALLOW_MS = 300 };      // the effect train's own times (build_h_chain.cpp, H4b)
+enum { HOLD_MS = 400, CLEAN_MS = 120, SWALLOW_MS = 300 };      // the effect train's own times (Build H's chain unit, H4b)
 enum { PRINT_FRAMES = 232, EVENT_LINES = 160, SUMMARY_LINES = 240, CHANGE_LINES = 240, POPUP_LINES = 60, FAST_SUMMARIES = 30, LINES_A_SUMMARY = 3, SETTLE_FRAMES = 30 };
 enum { BY_PERIOD, BY_CHANGE, BY_POPUP, BUDGETS };              // a summary's budget: the three kinds never spend each other's lines
 
@@ -191,9 +191,9 @@ static struct {
 static volatile u32 note_busy;                                 // inside the note-ons of the reset's wrapper
 static volatile u32 notes_started;                             // I7: every call of the reset, for the page (the velocity kind's UFO)
 
-// build_h_chain.cpp. Since J5h (analysis/pack_loader_study.md section 23) each of the seven is optional: where the
+// Build H's chain unit. Since J5h each of the seven is optional: where the
 // effect train's units are away (the pack `lfo` without the pack `fx train`) the LFOs work on the sound's one
-// effect, with the answers of the wrappers below and of build_j5h_lfo_alone.cpp. With those units there, their
+// effect, with the answers of the wrappers below and of J5h's unit for the LFOs without the effect train. With those units there, their
 // own seven are used, as since I6.
 extern "C" int __attribute__((weak)) op1f_lfofx_extra(int host, void* object, u32* block, int pick, const u8* midi_pick) asm("op1f_lfofx_extra");
 extern "C" void __attribute__((weak)) op1f_lfofx_extra_counts(u32* out) asm("op1f_lfofx_extra_counts");
@@ -202,18 +202,18 @@ extern "C" void __attribute__((weak)) op1f_chain_touch(int host) asm("op1f_chain
 extern "C" void __attribute__((weak)) op1f_chain_close_train(int host) asm("op1f_chain_close_train");
 extern "C" void __attribute__((weak)) op1f_chain_lfo_picks(int host, u32 slot, int write, u8* pick, u8* midi) asm("op1f_chain_lfo_picks");
 extern "C" int __attribute__((weak)) op1f_chain_lfo_knob(int host, u32 slot, int pick) asm("op1f_chain_lfo_knob");   // I8: the knob of the effect wagon a choice turns now
-// build_j5h_lfo_alone.cpp (J5h): the clock where the chain's is away, and the LFOs' own settings file. Optional, so
+// J5h's unit for the LFOs without the effect train (J5h): the clock where the chain's is away, and the LFOs' own settings file. Optional, so
 // that the packs before J5h still build this unit by itself.
 extern "C" u32 __attribute__((weak)) op1f_lfo_alone_ms() asm("op1f_lfo_alone_ms");
 extern "C" void __attribute__((weak)) op1f_lfo_file_touch() asm("op1f_lfo_file_touch");                              // the store changed: the own file follows
 extern "C" void __attribute__((weak)) op1f_lfo_file_from_chain(int slot, const int* values) asm("op1f_lfo_file_from_chain");   // the chain unit handed a slot's integers over
 extern "C" void __attribute__((weak)) op1f_lfo_file_to_chain(int slot, const int* values, int have) asm("op1f_lfo_file_to_chain");   // the chain unit collected a slot's integers for its file
 extern "C" void __attribute__((weak)) op1f_lfo_file_frame() asm("op1f_lfo_file_frame");                              // once a frame: the start's choice between the two copies, the own file's write
-// build_i_lfopresets.cpp (I8): the presets list over the page. The key functions answer -1 for a key that is not the list's.
+// Build I's LFO presets unit (I8): the presets list over the page. The key functions answer -1 for a key that is not the list's.
 extern "C" int __attribute__((weak)) op1f_lfopresets_key_down(int key, int shifted) asm("op1f_lfopresets_key_down");
 extern "C" void __attribute__((weak)) op1f_lfopresets_key_up(int key) asm("op1f_lfopresets_key_up");
 extern "C" int __attribute__((weak)) op1f_lfopresets_turn(int knob, int delta) asm("op1f_lfopresets_turn");
-// build_h_train.cpp: the train's screen exists
+// Build H's train page unit: the train's screen exists
 extern "C" int __attribute__((weak)) op1f_train_available() asm("op1f_train_available");
 
 // The core clock. The memory clobber keeps the read where it is written (I5: the compiler may move a volatile asm
@@ -525,7 +525,7 @@ extern "C" int op1f_lfo4_store_save(int slot, int* values) {
 // J5h: the effect wagon the LFO under the lamp turns, and its midi kind's four, as this unit's record of the lamp's
 // wagon holds them: read, or written. With the chain unit there they are that unit's to keep (picks(), its tags 96
 // and 97) and this record is not looked at. While it is away nothing moves them, so the record is where they stay:
-// the LFOs' own file (build_j5h_lfo_alone.cpp) puts them here at a start and carries them in its file.
+// the LFOs' own file (J5h's unit for the LFOs without the effect train) puts them here at a start and carries them in its file.
 extern "C" void op1f_lfo4_lamp_picks(int slot, int write, u8* pick, u8* midi) asm("op1f_lfo4_lamp_picks");
 extern "C" void op1f_lfo4_lamp_picks(int slot, int write, u8* pick, u8* midi) {
     ensure_store();

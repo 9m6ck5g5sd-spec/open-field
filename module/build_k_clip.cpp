@@ -1,5 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build K, pack K3 (analysis/tape_stock_safe.md, section 7): the clipboard's file is always one that stock
+// Build K, pack K3: the clipboard's file is always one that stock
 // firmware reads.
 //
 // Stock describes the clipboard in user/clipboard.json: the lifted tracks ("channels"), the content's name, the

@@ -1,12 +1,12 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build E: the two cosmetic screens for tracks 5 and 6 (OS 1.7.0+0; read in analysis/build_b_design.md, section 18).
+// Build E: the two cosmetic screens for tracks 5 and 6 (OS 1.7.0+0).
 //
 // The help screen (HelpScreen.cpp, help.svg): its update asks the selected-track getter 0x8d514348, then colours
 // the four legend boxes t1tape..t4tape (node pointers at this + 0x2c, one 4-byte colour each) in a hardware loop:
 // the highlight word at this + 0xa4 for the box whose index equals the track, the normal word at this + 0xa8 for
 // the others. With track 4 or 5 selected no box matched. The CALL.a at 0x8fc2e5bc now lands in op1f_help_track
 // (build_e_screens.s), which passes the screen here. Since E3 the module serves a help.svg whose legend row has
-// six boxes (tools/help_svg_ext.py): the stock four moved closer together and, for tracks 5 and 6, two boxes drawn
+// six boxes: the stock four moved closer together and, for tracks 5 and 6, two boxes drawn
 // twice each, a dim copy (t5tapeoff, t6tapeoff, in stock's normal colour #5B6670) and a lit copy (t5tapeon,
 // t6tapeon, in stock's highlight #CDD0C2, both measured on the device with the first image). The OS parser has no
 // display attribute, so every copy is visible after parsing; on every update this function shows the copy that
@@ -32,9 +32,9 @@
 // old value kept per meter), 0x8fc2facc(anchor max x, anchor max y − 1024, new) building a 9-word transform, and
 // 0x8c03dbbe(line, transform) applying it. The CALL.a that takes the VU vector (0x8fc35738) now lands in
 // op1f_signalflow_vu, which returns stock's vector and runs the same steps for tracks 5 and 6 on the lines
-// tapevu5 and tapevu6 of the module's signalflow.svg (tools/signalflow_svg_ext.py), from the module's own peaks.
+// tapevu5 and tapevu6 of the module's signalflow.svg, from the module's own peaks.
 //
-// Build F, image F1: the tape gauge on the help screen. The served help.svg (tools/help_svg_ext.py --font) carries,
+// Build F, image F1: the tape gauge on the help screen. The served help.svg carries,
 // between the speech bubble and the legend row, two reels in the style of the stock reel-to-reel tape screen and
 // the free time of the tape as MM:SS in Teenage Engineering's own digit glyphs. The left reel's roll shows the
 // free part of the tape partition, the right reel's roll the used part (audio and undo copies), each as one of 13
@@ -101,7 +101,7 @@ static u8* legend_nodes[LEGEND_NODES];           // 0 when the artwork has no su
 extern "C" u32 __attribute__((weak)) op1f_tape_free_chunks asm("op1f_tape_free_chunks");   // build_b_storage.cpp (F1)
 
 enum {
-    GAUGE_STEPS = 13,                   // roll sizes per reel, as tools/help_svg_ext.py draws them
+    GAUGE_STEPS = 13,                   // roll sizes per reel, as the artwork tool draws them
     GAUGE_DIGITS = 4,                   // MM:SS
     CHUNKS_PER_PARTITION = 8192,
     CHUNK_FRAMES = 16384,
@@ -266,7 +266,7 @@ enum {
 extern "C" unsigned short op1f_ext_vu[STRIP_SLOTS] asm("op1f_ext_vu");              // build_b_mix.cpp: the block peaks of tracks 5-8
 extern "C" void op1f_matrix_call(i32 x, i32 y, i32 value, u32* matrix) asm("op1f_matrix_call");   // build_e_screens.s
 extern "C" u32 op1f_signalflow_meter_frames asm("op1f_signalflow_meter_frames");       // updates that reshaped the two meters
-// Build G (G1, build_g_duck.cpp): the duck page drawn on every update of this screen; weak, so earlier images link unchanged.
+// Build G (G1, Build G's duck unit): the duck page drawn on every update of this screen; weak, so earlier images link unchanged.
 extern "C" void __attribute__((weak)) op1f_duck_screen(u8* screen, const u8* vector, const u32* ext_db) asm("op1f_duck_screen");
 static u32 ext_db[METERS];                  // this update's dB floats of tracks 5-8, for the duck page
 u32 op1f_signalflow_meter_frames;

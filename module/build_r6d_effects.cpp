@@ -1,0 +1,1833 @@
+// Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
+// Step R6d, base 30, the release's base: the effects unit's sibling. A sibling of base 29's effects unit (base
+// 29), which stays as it was: everything of it is here as it was, its stubs are still module/build_r5_effects.s, and
+// these are added or changed:
+//   a value as heard (level 10): op1f_param_heard, beside level 8's helpers and through their table of kinds, for an
+//       effect and (through the engines unit's op1f_engines_param_heard) an engine; and the mark op1f_level_10. Each
+//       place's values as the pack's effect was last called with them, the LFOs applied, kept by the audio thread
+//       between two steps of a sequence word; the value as set where the place has not played in the last few blocks
+//   a sound loaded onto a slot (base 29's review, F-1): where the loaded sound's effect (its document's fx_type) is
+//       not the slot's type word yet at the tell, the place waits, its member unread and its ride left as it stands,
+//       until the firmware's apply has put it there (the type word then the document's, or no longer the one before),
+//       128 frames at most, so that a ride is never let go on the effect of the sound that was there before
+//   and a ride that ends at a load, a start or a drop no longer makes the firmware's object from the display thread:
+//       the firmware's apply makes it anew (the reading of the crash at base 29's try on a unit)
+// What base 29's unit said follows and holds.
+//
+// Step R6, the base pack 29: the effects of level 8, with the helpers serving level 9's engines. A sibling of
+// base 28's effects unit, which stays as it was: everything of it is here as it was, its stubs are still
+// module/build_r5_effects.s, and one thing is added. The table of the kinds that have values (VALUED), through which
+// op1f_param_get, op1f_param_set and op1f_riding find an ask by its kind, gains one row: kind 8, OP1F_ASK_ENGINE, its
+// places the synth's eight slots, its three functions the engines unit's (op1f_engines_param_get, _param_set,
+// _riding, base 29's engines unit), each held to the helpers' answers (an ask that is no registered engine answers
+// OP1F_BAD_NAME, as an ask of a kind with no row did). The engines' names on the synth's LFO page were base 28's
+// already (op1f_engines_names, the weak name of W4). The engines unit's names are weak here: away, this unit is base
+// 28's in all it does. Two mends of base 28's review are here too: R-1, a ride taken up
+// from the base's member sets the sound's fx_active to 0 as a pick does (read_member); R-2, a ride that ends other than
+// by a pick takes back the stand-in pair its pick wrote, where it still holds it (end_ride, take_back_pair). What base
+// 28's unit said follows and holds.
+//
+// Step R5, the base pack 28: the effects, level 8 (OS 1.7.0+0). A unit of its own, new at R5.
+//
+// A pack adds an effect through an ask of its card (OP1F_ASK_EFFECT, its table an Op1fEffect, module/build_r5_card.h).
+// The effect stands on one of eight of the unit's own effects (`rides`): the unit keeps that effect's name, its four
+// knob words and its switch in the sound's file and plays it nowhere; the base makes the pack's effect do the work in
+// its place, wherever the unit runs its effect for that sound or for the master. What the units of the base share is in
+// module/build_r5_base.h; the eight places of the firmware it stands at are named there, W1 to W8.
+//
+// What this unit does, by where it runs:
+//   the catalog's read (the start's thread, op1f_effects_catalog_read, called by the sequencer unit's sibling): the
+//       first call checks every ask of kind OP1F_ASK_EFFECT of the cards in use and registers those in order, ids 15
+//       and on; every call adds the registered effects' rows to the document's `fx_types`. No line: the lines come at
+//       the first frame
+//   an effect object made (W1, op1f_fx_make, any thread): the firmware's factory, then, with an effect registered, the
+//       object wrapped in one of two objects of the base's own an index, which hand every call on to the firmware's
+//       object but `process`
+//   a block (the audio thread, the wrapping object's `process`): the pack's effect for a place that rides one, the
+//       firmware's object's own `process` for every other
+//   after the effect (the audio thread, op1f_effects_after, from the stages unit): an effect that keeps its tails, for
+//       a place that rides it switched off
+//   a pick (the key thread: W2 for a sound, W3 for the master): a ride begun or ended, then the firmware's own pick
+//   the firmware's switch of the effect (W5, W6, W7, W8): the files never say that a riding place's effect is on
+//   the knob names of the LFO pages (W4): the pack's names of its values for a place that rides; for an engine's
+//       values, what a unit of a later level offers (op1f_engines_names, weak)
+//   a frame (the display thread, op1f_effects_frame, from the cards unit): the lines, the rides held against the type
+//       words, the base's own member op1f_effect read and written through the values unit, the working memory, the
+//       `reset` calls, the period's lines
+//   the helpers op1f_param_get, op1f_param_set, op1f_riding, op1f_rack_at, op1f_rack_list, op1f_rack_ready,
+//       op1f_rack_run, as module/build_r5_card.h words them
+//
+// A place is 0 to 7 for a sound of the synth (its slot), 8 to 15 for a sound of the drum (8 + its slot), 16 for the
+// master. Index 0 of the firmware's effect objects is the instrument's (the sound that plays, synth or drum), index 1
+// the master's.
+//
+// What the firmware needs of these, where the code meets it:
+//   the factory (type, index) answers an object, or 0; the builder (index, type) clears the index's word, calls the
+//       factory, calls the object's init (+0x0c) with the index and publishes it
+//   an effect object's first word is a table of four functions: two destructors (+0x00, +0x04), process (+0x08) with
+//       (the object, the left buffer, the right buffer, the eight knob words), init (+0x0c) with (the object, index)
+//   the instrument whose block runs (0 the synth, 1 the drum) and the slot each instrument built; a place's type
+//       word, its on byte and its eight knob words (a value shifted left by sixteen)
+//   a knob of an effect type: three halfwords, the lowest (signed), the highest (unsigned), the fine step
+//   the catalog's rows are jsoncpp values of twelve bytes, the kind byte at +4 (1 an integer, 2 an unsigned one, 4 a
+//       string, 6 an array, 7 an object); each function is handed only the kinds it takes
+//
+// The threads. The registration on the thread of the start, before any effect object is made; the making of an
+// object on any thread; a block on the audio thread; a pick on the key thread; the switch's places on any thread; the
+// frame and the helpers' work on the display thread. Nothing here says a line but from the display thread; nothing
+// waits; nothing is divided by a number that is not a power of two (the module links no runtime) and nothing is
+// multiplied in 64 bits. The compiler counts with an index register in the catalog's read alone (I2 += M0): it is
+// reached by a call of the sequencer unit's compiled code, where the length registers are 0 as at every such call;
+// the audio thread's way counts with none (the PC's tests hold both). Compiled for the PC as it is, with OP1F_HOST
+// defined: the stand-ins come in through a header of the PC's own (for tests this tree does not hold).
+
+#include "build_r6d_base.h"                            // R6d: base 28's shared names, level 9's and level 10's
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"     // the gate's half for the power popup: this unit is handed no frame to see it by
+#endif
+#include "build_q_quiet.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+typedef unsigned int u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
+
+typedef void* (*FactoryFn)(u32 type, u32 index);
+typedef void (*BuildFn)(u32 index, u32 type);
+typedef void (*SetActiveFn)(u32 record, u32 on);
+typedef void (*SetParamsFn)(u32 record, const u32* words);
+typedef void (*SetOnFn)(u32 slot, u32 on);
+typedef void (*SetMasterOnFn)(u32 on);
+typedef u32 (*GetMasterOnFn)();
+typedef void (*MasterPickFn)(void* controller, u32 id);
+typedef u32 (*ScreenOfFn)(u32 type);
+typedef void (*PickFn)(u32 record, u32 id);
+typedef const void* (*JsonMemberFn)(const void* value, const char* key);
+typedef u32 (*JsonSizeFn)(const void* value);
+typedef const void* (*JsonElementFn)(const void* value, u32 index);
+typedef void (*JsonMakeFn)(void* value, int kind);
+typedef void* (*JsonPlaceFn)(void* value, const char* key);
+typedef void* (*JsonAppendFn)(void* array, const void* value);
+typedef void* (*JsonAssignFn)(void* to, const void* from);
+typedef void (*JsonDestroyFn)(void* value);
+typedef void (*JsonTextFn)(void* value, const char* text);
+typedef void (*JsonNumberFn)(void* value, int number);
+typedef int (*JsonIntFn)(const void* value);
+typedef u32 (*ObjectFn)(void* self, u32 a, u32 b, u32 c);
+
+// The room of the pick's entry (module/build_r5_effects.s): the firmware's pick as it always was. The other two rooms
+// are the entries' alone.
+extern "C" u8 op1f_fx_pick_room[] OP1F_NAMED("op1f_fx_pick_room");
+
+#ifdef OP1F_HOST
+#define OP1F_EFFECTS_R5_UNIT
+#include "mock_effects_r6d.h"                           // the PC's stand-ins: the firmware's memory and calls, the masks, the clock (R6d: a record's document)
+#define EFFECTS_APART
+#else
+#define RD32(a) (*(volatile u32*)(a))
+#define RD16(a) (*(volatile u16*)(a))
+#define RD8(a) (*(volatile u8*)(a))
+#define WR32(a, v) (*(volatile u32*)(a) = (u32)(v))
+#define MASK_OFF(mask) asm volatile("cli %0;" : "=d"(mask) : : "memory")
+#define MASK_ON(mask) asm volatile("sti %0;" : : "d"(mask) : "memory")
+#define BARRIER() asm volatile("" : : : "memory")
+#define EFFECTS_APART __attribute__((noinline))
+// The processor's cycle counter, read with a memory clobber so that the compiler moves no load or store of the call it
+// times across the stamp.
+static inline u32 cycles_now() {
+    u32 c;
+    asm volatile("%0 = CYCLES;" : "=d"(c) : : "memory");
+    return c;
+}
+#define STOCK_FACTORY ((FactoryFn)0x8f011068u)
+#define STOCK_BUILD ((BuildFn)0x8d505390u)
+#define STOCK_SET_ACTIVE ((SetActiveFn)0x8d4f3c24u)
+#define STOCK_SET_PARAMS ((SetParamsFn)0x8d4f3b9cu)
+#define STOCK_ON_SYNTH ((SetOnFn)0x8d504320u)
+#define STOCK_ON_DRUM ((SetOnFn)0x8d5042f0u)
+#define STOCK_ON_MASTER ((SetMasterOnFn)0x8d5042c0u)
+#define STOCK_MASTER_ON ((GetMasterOnFn)0x8d50424cu)
+#define STOCK_MASTER_PICK ((MasterPickFn)0x8c0bb684u)
+#define STOCK_SCREEN_OF ((ScreenOfFn)0x8fc273f0u)
+#define STOCK_JSON_MEMBER ((JsonMemberFn)0x8c084f74u)
+#define STOCK_JSON_SIZE ((JsonSizeFn)0x8c084c22u)
+#define STOCK_JSON_ELEMENT ((JsonElementFn)0x8c084ee0u)
+#define STOCK_JSON_MAKE ((JsonMakeFn)0x8c085ba8u)
+#define STOCK_JSON_PLACE ((JsonPlaceFn)0x8c085e84u)
+#define STOCK_JSON_APPEND ((JsonAppendFn)0x8c085d54u)
+#define STOCK_JSON_ASSIGN ((JsonAssignFn)0x8c0845b8u)
+#define STOCK_JSON_DESTROY ((JsonDestroyFn)0x8c0844e0u)
+#define STOCK_JSON_TEXT ((JsonTextFn)0x8c084430u)
+#define STOCK_JSON_NUMBER ((JsonNumberFn)0x8c083b1cu)
+#define STOCK_JSON_INT ((JsonIntFn)0x8c084840u)
+#define ROOM_PICK ((PickFn)(void*)op1f_fx_pick_room)
+#define RECORD_DOCUMENT(record) ((const void*)((record) + 8u))   // R6d: a slot's record holds its sound's document 8 bytes in
+// A unit of a later level may offer the names of an engine's values at a synth slot (a C text, or 0). Weak: the loader
+// sets it to 0 while no unit offers it, and the firmware's own function answers then.
+extern "C" const char* op1f_engines_names(unsigned slot, int index) OP1F_NAMED("op1f_engines_names") __attribute__((weak));
+#define ENGINES_NAMES (&op1f_engines_names)
+#endif
+
+// The firmware's words (an enum of their own: they do not fit a signed number).
+enum : u32 {
+    PLAYING = 0x11902da4u,              // the instrument whose block runs: 0 the synth, 1 the drum (the block writes it before it builds)
+    SYNTH_BUILT = 0x84a01524u,          // the slot the synth's object was built for, the drum's behind it
+    DRUM_BUILT = 0x84a01528u,
+    SYNTH_SHOWN = 0x11904704u,          // the slot the GUI shows, the synth's and the drum's
+    DRUM_SHOWN = 0x11904708u,
+    SYNTH_TYPES = 0x11904794u,          // a slot's effect type, a word a slot
+    DRUM_TYPES = 0x119047b4u,
+    MASTER_TYPE = 0x11902e24u,
+    SYNTH_ON = 0x84a0154cu,             // a slot's effect switched on, a byte a slot
+    DRUM_ON = 0x84a0155cu,
+    MASTER_ON = 0x84a0156cu,
+    SYNTH_WORDS = 0x119036e0u,          // a slot's eight knob words, 32 bytes a slot
+    DRUM_WORDS = 0x119039e0u,
+    MASTER_WORDS = 0x11903be0u,         // the master's eight, which its block hands its effect
+    STOCK_CTX = 0x11904754u,            // the eight words the instrument's block hands its effect, copied each block
+    EFFECT_WORD = 0x84a03c84u,          // the effect objects: index 0, index 1 behind it
+    SYNTH_RECORDS = 0x080235dcu,        // a slot's record, 52 bytes a slot
+    DRUM_RECORDS = 0x0802377cu,
+    KNOB_ROWS = 0x840afe60u,            // 48 bytes a type, 6 a knob
+    PERIOD = 0x84d20e80u,               // samples a 96th of a beat at 44,100 a second, times 2^18
+    TRANSPORT = 0x11905a04u,            // not 0 while the tape plays
+    CURRENT_MODE = 0x8400f978u,         // the mode: 0 synth, 1 drum, 2 tape, 3 mixer
+    LFO_HOST = 0x0802fea8u,             // the instrument the LFO pages name: 0 the synth
+    EFFECT_NAMES = 0x8490e288u          // the firmware's eleven effects: a name's address and its type, eight bytes each
+};
+
+enum {
+    EFFECTS = OP1F_EFFECTS_MOST, VALUES = OP1F_EFFECT_VALUES_MOST, PLACES = 17, MASTER = OP1F_PLACE_MASTER, DRUM = OP1F_PLACE_DRUM,
+    ID_FIRST = 15, NAME = OP1F_KIND_NAME, FIELD = 24, STOCK_COUNT = 11, TABLE_BYTES = 180, BLOCK_BYTES = 44, ENTRY_BYTES = 20,
+    RUN_BYTES = 36, FRAMES = 64, CARDS = OP1F_CARDS_MOST, CARD_4_BYTES = OP1F_CARD_LEVEL_4_BYTES, RACK_PLACES = OP1F_RACK_PLACES,
+    RACKS = 64, ASIDES_KEPT = 16, RIDE_LINES = 32, PERIOD_FRAMES = 256, RECORD_BYTES = 52, SLOTS = 8, ROW_BYTES = 48, KNOB_BYTES = 6,
+    KIND_INT = 1, KIND_UINT = 2, KIND_STRING = 4, KIND_ARRAY = 6, KIND_OBJECT = 7, KIND_AT = 4, MEMBER_ROOM = 96,
+    NAMES_KIND_ENGINE = 0, NAMES_KIND_EFFECT = 2, STATE_ALIGN_LEAST = 4, CALL_SHOWN = OP1F_CALL_SHOWN
+};
+static const u32 CYCLES_MOST = (u32)OP1F_EFFECT_CYCLES_MOST, CYCLES_OFF = (u32)OP1F_STAGE_CYCLES_OFF, OVER_CALLS = (u32)OP1F_STAGE_OVER_CALLS,
+                 SPARE = (u32)OP1F_STAGE_CYCLES_SPARE, STATE_MOST = (u32)OP1F_EFFECT_STATE_MOST, ALIGN_MOST = (u32)OP1F_MEMORY_ALIGN_MOST;
+static const u32 SECOND = 400000000u;                  // the processor's cycles in a second
+static_assert(sizeof(Op1fEffect) == TABLE_BYTES && sizeof(Op1fEffectBlock) == BLOCK_BYTES && sizeof(Op1fRackEntry) == ENTRY_BYTES &&
+              sizeof(Op1fRackRun) == RUN_BYTES, "level 8's tables as the header has them");
+
+static const char LOG_FILE[] = "../src/main/op1f_effects.cpp";
+static const char KEY_LIST[] = "fx_types";
+static const char KEY_TYPE[] = "type";
+static const char KEY_ID[] = "id";
+static const char KEY_DEFAULTS[] = "default_params";
+static const char KEY_FX_TYPE[] = "fx_type";              // R6d: a sound's effect, in its document
+
+// The unit's own effects, by name, in fixed fields of 24 bytes; and whether a pack's effect may stand on each: never
+// on vocoder (never valid), mother (not valid in the classic mode) or fazer (hidden until it is unlocked).
+static const char STOCK_NAMES[STOCK_COUNT][FIELD] = {"delay", "grid", "punch", "phone", "spring", "mother", "nitro", "cwo", "vocoder", "terminal", "fazer"};
+static const u8 RIDEABLE[STOCK_COUNT] = {1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0};
+
+// The mark of a base of level 8.
+extern "C" const u32 op1f_level_8 OP1F_NAMED("op1f_level_8");
+const u32 op1f_level_8 = 8;
+// R6d: the mark of a base of level 10 (op1f_param_heard, below; module/build_r6d_base.h).
+const u32 op1f_level_10 = 10;
+
+// ---- from the cards unit ----
+
+extern "C" Op1fCards op1f_cards OP1F_NAMED("op1f_cards");
+// The card's slot + 1 while the base calls that card's frame function on the caller's stack, else 0.
+extern "C" u32 op1f_cards_calling() OP1F_NAMED("op1f_cards_calling");
+
+// ---- the words other units read ----
+
+volatile unsigned op1f_effects_registered;
+// The stand-in entries (module/build_r5_base.h): four pairs {mode + 1, screen}, the effects unit writing the pairs
+// OP1F_STAND_EFFECT and OP1F_STAND_MASTER at its picks; the other two are later levels'.
+volatile unsigned op1f_stand_screens[2 * OP1F_STAND_ENTRIES];
+
+// ---------------------------------------------------------------- the registry
+
+struct Effect {
+    const Op1fEffect* table;
+    u32 number;                                        // its place in the registry: its id less 15
+    u32 slot, ask;                                     // the card's slot in op1f_cards, the ask's number in its list
+    u32 type;                                          // the type of the unit's effect it stands on
+    u32 ridden_id;                                     // that effect's row's id in the lists
+    u32 flags, cycles, count, state_bytes, state_align;
+    char name[NAME], rides[NAME];
+    char value_names[VALUES][NAME];
+    int low[VALUES], high[VALUES], start[VALUES];      // the pack's ranges
+    int row_low[VALUES], row_high[VALUES];             // the knob rows of the type it stands on, read at the first frame
+    u32 q_in[VALUES], f_in[VALUES];                    // word to value: the whole part and the fraction (16 bits, rounded up) of the ratio
+    u32 q_out[VALUES], f_out[VALUES];                  // value to word, the same
+    u32 fixed[VALUES];                                 // a row with no span: the value stands at its start
+    u32 screen;                                        // the effect screen of the type it stands on
+    volatile u32 calls, sum, most, over;               // this period's, all places: the audio thread writes, the display thread reads and clears masked
+};
+static Effect effects[EFFECTS];
+static Op1fRackEntry entries[EFFECTS];
+
+// What the check found, said at the first frame.
+enum { WHY_ORDER = 1, WHY_NAME = 2, WHY_TAKEN = 3, WHY_RIDES = 4, WHY_COST = 5, WHY_SEVENTEENTH = 6 };
+struct Aside { u32 slot, why, a, b; char name[NAME], rides[NAME]; };
+static Aside asides[ASIDES_KEPT];
+static u32 aside_count, aside_more;
+
+struct Candidate { const Op1fEffect* table; u32 slot, ask; };
+static Candidate candidates[EFFECTS];
+static u32 candidate_count;
+static u32 checked;                                    // the asks were looked through (once a start)
+enum { LIST_UNREAD = 1, LIST_NOT_OBJECT = 2, LIST_NOT_ARRAY = 3 };
+static u32 list_state;                                 // 0 when the effects were registered, else why not
+static volatile u32 rows_added;                        // the rows added at the catalog's reads
+
+// ---------------------------------------------------------------- the places, the instances, the wrapping objects
+
+struct Budget {                                        // a place's or a run's: the audio thread writes, the display thread reads
+    u32 window_start, window_over, window_most;
+    volatile u32 off;                                  // switched off until the next start
+    volatile u32 off_cycles, off_overs;
+    u32 off_said;
+};
+
+struct Place {
+    volatile u32 ride;                                 // the effect's number + 1, 0 for none
+    volatile u32 on;                                   // the ride's effect switched on, as the base keeps it
+    volatile u32 doc_on;                               // the document's fx_active as the last apply of the slot handed it
+    Budget budget;
+    u32 member_dirty;                                  // the base's member to be written at a frame (the display thread's)
+    u32 absent_said;                                   // the line of a member whose pack is not here was said
+};
+static Place places[PLACES];
+
+// R6d, level 10: a place's values as the pack's effect was last called with them, the LFOs applied. The audio thread
+// writes them at each call between two steps of `seq` (odd while it writes); the display thread reads them between two
+// reads of it (op1f_param_heard). `ride` is the ride they are of, `stamp` the cycle counter at the call; `live` is set
+// by each call and cleared by the frame once the stamp is older than HEARD_CYCLES (a count of cycles comes round every
+// ten seconds).
+struct Heard {
+    volatile u32 seq, ride, stamp, live;
+    volatile int values[VALUES];
+};
+static Heard heard[PLACES];
+static const u32 HEARD_CYCLES = 4643991u;             // eight blocks of 128 frames at 88,200 a second, in the processor's cycles
+enum { HEARD_TRIES = 4, WAIT_FRAMES = 128 };
+
+// R6d (base 29's review, F-1): the places whose loaded sound's effect was not the slot's type word at the tell, a bit a
+// place (the display thread's): the type the document names, the type word at the tell, the frames waited.
+static u32 waiting;
+static u32 wait_type[PLACES], wait_from[PLACES], wait_frames[PLACES];
+
+enum { NONE = 0, CLEARING = 1, READY = 2, REFUSED = 3 };
+struct Instance { int handle; void* volatile state; volatile u32 status; char whose[64]; };
+static Instance instances[EFFECTS][2];                 // an effect's working memory for the instrument, and for the master
+
+struct Wrap;
+static u32 wrapped_destroy(Wrap* self, u32 a, u32 b, u32 c);
+static u32 wrapped_delete(Wrap* self, u32 a, u32 b, u32 c);
+static u32 wrapped_process(Wrap* self, int* left, int* right, const u32* words);
+static u32 wrapped_init(Wrap* self, u32 a, u32 b, u32 c);
+struct Wrap {
+    const void* const* table;                          // the first word, as the firmware reads every effect object
+    void* inner;                                       // the firmware's object
+    u32 index, type, seq;
+    volatile u32 fresh;                                // not yet handed to a pack's `process`
+};
+static const void* const WRAP_TABLE[4] = {(const void*)&wrapped_destroy, (const void*)&wrapped_delete, (const void*)&wrapped_process,
+                                          (const void*)&wrapped_init};
+static Wrap wraps[2][2];
+static u32 wrap_next[2];
+static volatile u32 wrap_seq;
+static volatile u32 reset_seq[2];                      // the build whose `reset` was called, an index
+
+// The runs inside a pack: a record a pack's place and an effect.
+struct Rack { u32 slot, which, effect; Instance in; Budget budget; volatile u32 fresh; char whose[48]; };
+static Rack racks[RACKS];
+static u32 rack_count;
+static volatile u8 rack_current[CARDS][RACK_PLACES];   // the record + 1 a pack's place runs, 0 for none
+
+// What other threads tell the display thread: a bit a place, set and taken under a mask.
+static volatile u32 picked;                            // a ride begun by a pick
+static volatile u32 ended;                             // a ride ended by a pick
+static volatile u32 told;                              // the values unit told a load, a start, a drop
+static volatile u32 told_load;                         // R6d: the loads among them, whose apply may come after the tell
+
+static struct {
+    u32 first_done;
+    u32 frames;
+    int countdown;
+    u32 ride_lines;
+    QuietGate gate;
+} unit;
+
+// ---------------------------------------------------------------- small helpers
+
+static int same_text(const char* a, const char* b, u32 most) {
+    for (u32 i = 0; i < most; ++i) {
+        if (a[i] != b[i]) return 0;
+        if (a[i] == 0) return 1;
+    }
+    return 1;
+}
+
+static void copy_name(char* to, const char* from) {
+    u32 i = 0;
+    for (; i + 1 < (u32)NAME && from[i]; ++i) to[i] = from[i];
+    for (; i < (u32)NAME; ++i) to[i] = 0;
+}
+
+// n / d by shifts and subtractions, d not 0 (the module links no runtime).
+static u32 divided(u32 n, u32 d) {
+    u32 q = 0, r = 0;
+    for (int bit = 31; bit >= 0; --bit) {
+        r = (r << 1) | ((n >> bit) & 1u);
+        if (r >= d) {
+            r -= d;
+            q |= 1u << bit;
+        }
+    }
+    return q;
+}
+
+static u32 place_type(u32 place) {
+    if (place < (u32)DRUM) return RD32(SYNTH_TYPES + 4u * place);
+    if (place < (u32)MASTER) return RD32(DRUM_TYPES + 4u * (place - (u32)DRUM));
+    return RD32(MASTER_TYPE);
+}
+
+static u32 place_on(u32 place) {
+    if (place < (u32)DRUM) return RD8(SYNTH_ON + place);
+    if (place < (u32)MASTER) return RD8(DRUM_ON + place - (u32)DRUM);
+    return RD8(MASTER_ON);
+}
+
+static void set_place_on(u32 place, u32 on) {
+    if (place < (u32)DRUM) STOCK_ON_SYNTH(place, on);
+    else if (place < (u32)MASTER) STOCK_ON_DRUM(place - (u32)DRUM, on);
+    else STOCK_ON_MASTER(on);
+}
+
+static u32 place_words(u32 place) {
+    if (place < (u32)DRUM) return SYNTH_WORDS + 32u * place;
+    if (place < (u32)MASTER) return DRUM_WORDS + 32u * (place - (u32)DRUM);
+    return MASTER_WORDS;
+}
+
+static u32 place_record(u32 place) {
+    if (place < (u32)DRUM) return SYNTH_RECORDS + (u32)RECORD_BYTES * place;
+    return DRUM_RECORDS + (u32)RECORD_BYTES * (place - (u32)DRUM);
+}
+
+// A record's place, by its address: 1 and `place` for one of the sixteen slots' records, else 0.
+static int record_place(u32 record, u32* place) {
+    for (u32 s = 0; s < (u32)SLOTS; ++s) {
+        if (record == SYNTH_RECORDS + (u32)RECORD_BYTES * s) { *place = s; return 1; }
+        if (record == DRUM_RECORDS + (u32)RECORD_BYTES * s) { *place = (u32)DRUM + s; return 1; }
+    }
+    return 0;
+}
+
+// The place whose block runs at index 0 now: the instrument the block runs and the slot it built.
+static u32 playing_place() {
+    if (RD32(PLAYING) == 0) return RD32(SYNTH_BUILT) & 7u;
+    return (u32)DRUM + (RD32(DRUM_BUILT) & 7u);
+}
+
+// The place the owner sees in a mode, or PLACES for none.
+static u32 shown_place(u32 mode) {
+    if (mode == 0) return RD32(SYNTH_SHOWN) & 7u;
+    if (mode == 1) return (u32)DRUM + (RD32(DRUM_SHOWN) & 7u);
+    if (mode == 3) return MASTER;
+    return PLACES;
+}
+
+static const Effect* riding(u32 place) {
+    u32 r = places[place].ride;
+    u32 n = op1f_effects_registered;
+    if (r == 0 || r > n) return 0;
+    return &effects[r - 1u];
+}
+
+static int slot_of(const Op1fCard* card) {
+    u32 seen = op1f_cards.count > (u32)CARDS ? (u32)CARDS : op1f_cards.count;
+    if (card == 0) return -1;
+    for (u32 i = 0; i < seen; ++i)
+        if (op1f_cards.slots[i].card == card) return op1f_cards_verdict(i) == 0 ? (int)i : -1;
+    return -1;
+}
+
+// ---------------------------------------------------------------- the mapping of knob words and values
+
+// A word of the knob `i` as the pack's value: the word's upper half, held to the knob's row, carried onto the value's
+// range by a subtraction, a multiply and a shift.
+static int value_of(const Effect* e, u32 i, u32 word) {
+    if (e->fixed[i]) return e->start[i];
+    int v = e->row_low[i] < 0 ? ((int)word >> 16) : (int)(word >> 16);
+    if (v < e->row_low[i]) v = e->row_low[i];
+    if (v > e->row_high[i]) v = e->row_high[i];
+    u32 d = (u32)(v - e->row_low[i]);
+    u32 p = d * e->q_in[i] + ((d * e->f_in[i]) >> 16);
+    int out = e->low[i] + (int)p;
+    return out > e->high[i] ? e->high[i] : out;
+}
+
+// A value as the knob's word, the other way: held to the value's range first.
+static u32 word_of(const Effect* e, u32 i, int value) {
+    if (value < e->low[i]) value = e->low[i];
+    if (value > e->high[i]) value = e->high[i];
+    if (e->fixed[i]) return (u32)e->row_low[i] << 16;
+    u32 d = (u32)(value - e->low[i]);
+    u32 s = d * e->q_out[i] + ((d * e->f_out[i]) >> 16);
+    int v = e->row_low[i] + (int)s;
+    if (v > e->row_high[i]) v = e->row_high[i];
+    return (u32)v << 16;
+}
+
+// The ratio `to` / `from` as a whole part and a fraction of sixteen bits rounded up, so that the far end of one range
+// lands on the far end of the other; worked out on the display thread.
+static void ratio(u32 to, u32 from, u32* q, u32* f) {
+    *q = divided(to, from);
+    u32 rest = to - *q * from;
+    *f = divided((rest << 16) + from - 1u, from);
+}
+
+// ---------------------------------------------------------------- a block, on the audio thread
+
+static void account(Budget* b, Effect* e, u32 began, u32 took) {
+    u32 sum = e->sum + took;
+    e->sum = sum < took ? 0xffffffffu : sum;
+    ++e->calls;
+    if (took > e->most) e->most = took;
+    if (took > e->cycles) ++e->over;
+    if (began - b->window_start >= SECOND) {
+        b->window_start = began;
+        b->window_over = 0;
+        b->window_most = 0;
+    }
+    if (took > CYCLES_OFF) {
+        b->off_overs = 0;
+        b->off_cycles = took;
+        b->off = 1;
+        return;
+    }
+    if (took > (e->cycles << 1) && took - e->cycles > SPARE) {                       // over: twice its cost, and its allowance
+        if (took > b->window_most) b->window_most = took;
+        if (++b->window_over >= OVER_CALLS) {
+            b->off_overs = b->window_over;
+            b->off_cycles = b->window_most;
+            b->off = 1;
+        }
+    }
+}
+
+// R6d, level 10: the values a place's effect is called with kept as heard (the audio thread; a function of its own, so
+// that the two calls' own code is base 29's as it was).
+static EFFECTS_APART void heard_keep(u32 place, const Effect* e, const int* values) {
+    u32 ride = e->number + 1u, count = e->count;
+    Heard* h = &heard[place];
+    u32 seq = h->seq + 1u;
+    h->seq = seq;                                                                   // odd: being written
+    h->ride = ride;
+    for (u32 i = 0; i < count; ++i) h->values[i] = values[i];
+    h->stamp = cycles_now();
+    h->live = 1;
+    h->seq = seq + 1u;                                                              // even: whole
+}
+
+// The pack's `process` called once, on the buffers handed in, its values in its own numbers, timed and held to its cost.
+static void run(Effect* e, u32 place, int* left, int* right, const int* values, u32 on, u32 fresh, void* state, Budget* b) {
+    u32 mono = (e->flags & (u32)OP1F_EFFECT_MONO) != 0;
+    if (mono)
+        for (u32 k = 0; k < (u32)FRAMES; ++k) left[k] = (left[k] >> 1) + (right[k] >> 1);
+    Op1fEffectBlock block;
+    block.bytes = BLOCK_BYTES;
+    block.place = place;
+    block.frames = FRAMES;
+    block.left = left;
+    block.right = mono ? left : right;
+    block.values = values;
+    block.on = on;
+    block.fresh = fresh ? 1u : 0u;
+    block.period = RD32(PERIOD);
+    block.playing = RD32(TRANSPORT) != 0 ? 1u : 0u;
+    block.state = state;
+    u32 began = cycles_now();
+    e->table->process(&block);
+    account(b, e, began, cycles_now() - began);
+    if (mono)
+        for (u32 k = 0; k < (u32)FRAMES; ++k) right[k] = left[k];
+}
+
+// The effect a place rides, when it may play now on the object `w` built for `index`: its number + 1, else 0.
+static u32 may_play(const Wrap* w, u32 index, u32 place) {
+    u32 r = places[place].ride;
+    if (r == 0 || r > op1f_effects_registered) return 0;
+    const Effect* e = &effects[r - 1u];
+    if (w->type != e->type || place_type(place) != e->type) return 0;
+    return r;
+}
+
+// Whether the effect `r` may be called at `place` for `index` now: not switched off, its memory there, and its `reset`
+// returned for this build.
+static void* ready_state(u32 r, u32 index, const Wrap* w, u32 place, int* ok) {
+    const Effect* e = &effects[r - 1u];
+    *ok = 0;
+    if (places[place].budget.off) return 0;
+    const Instance* in = &instances[r - 1u][index];
+    if (in->status != (u32)READY) return 0;
+    void* state = in->state;
+    if (e->table->reset != 0 && reset_seq[index] != w->seq) return 0;
+    *ok = 1;
+    return state;
+}
+
+static u32 wrapped_process(Wrap* self, int* left, int* right, const u32* words) {
+    u32 index = self->index;
+    u32 place = index ? (u32)MASTER : playing_place();
+    u32 r = may_play(self, index, place);
+    if (r == 0) {
+        void* inner = self->inner;
+        ObjectFn fn = (ObjectFn)(*(const void* const* const*)inner)[2];
+        return fn(inner, (u32)left, (u32)right, (u32)words);
+    }
+    int ok = 0;
+    void* state = ready_state(r, index, self, place, &ok);
+    if (!ok) return 0;                                                              // the place passes the sound dry
+    Effect* e = &effects[r - 1u];
+    int values[VALUES];
+    for (u32 i = 0; i < e->count; ++i) values[i] = value_of(e, i, words[i]);
+    heard_keep(place, e, values);                                                   // R6d
+    u32 fresh = self->fresh;
+    self->fresh = 0;
+    run(e, place, left, right, values, 1u, fresh, state, &places[place].budget);
+    return 0;
+}
+
+static u32 forward(Wrap* self, u32 word, u32 a, u32 b, u32 c) {
+    void* inner = self->inner;
+    ObjectFn fn = (ObjectFn)(*(const void* const* const*)inner)[word];
+    return fn(inner, a, b, c);
+}
+
+static u32 wrapped_destroy(Wrap* self, u32 a, u32 b, u32 c) { return forward(self, 0, a, b, c); }
+static u32 wrapped_delete(Wrap* self, u32 a, u32 b, u32 c) { return forward(self, 1, a, b, c); }
+static u32 wrapped_init(Wrap* self, u32 a, u32 b, u32 c) { return forward(self, 3, a, b, c); }
+
+// After the effect at S1, S2 (OP1F_AT_INSTRUMENT, host 0 the synth, 1 the drum) and S4 (OP1F_AT_MASTER_OUT, host 2):
+// an effect that keeps its tails, at the place that plays, while that place's effect is switched off.
+extern "C" void op1f_effects_after(unsigned point, unsigned host, int* left, int* right) {
+    if (op1f_effects_registered == 0 || host > 2u) return;
+    if (host == 2u ? point != (u32)OP1F_AT_MASTER_OUT : point != (u32)OP1F_AT_INSTRUMENT) return;
+    u32 index = host == 2u ? 1u : 0u;
+    u32 place = host == 2u ? (u32)MASTER : host == 0u ? (RD32(SYNTH_BUILT) & 7u) : (u32)DRUM + (RD32(DRUM_BUILT) & 7u);
+    const Wrap* w = (const Wrap*)RD32(EFFECT_WORD + 4u * index);
+    if (w != &wraps[index][0] && w != &wraps[index][1]) return;
+    u32 r = may_play(w, index, place);
+    if (r == 0) return;
+    Effect* e = &effects[r - 1u];
+    if ((e->flags & (u32)OP1F_EFFECT_TAILS) == 0 || place_on(place) != 0) return;
+    int ok = 0;
+    void* state = ready_state(r, index, w, place, &ok);
+    if (!ok) return;
+    u32 words = index ? (u32)MASTER_WORDS : (u32)STOCK_CTX;
+    int values[VALUES];
+    for (u32 i = 0; i < e->count; ++i) values[i] = value_of(e, i, RD32(words + 4u * i));
+    heard_keep(place, e, values);                                                   // R6d
+    u32 fresh = w->fresh;
+    ((Wrap*)w)->fresh = 0;
+    run(e, place, left, right, values, 0u, fresh, state, &places[place].budget);
+}
+
+// ---------------------------------------------------------------- W1: an effect object made
+
+extern "C" void* op1f_fx_make(unsigned type, unsigned index) OP1F_NAMED("op1f_fx_make");
+extern "C" void* op1f_fx_make(unsigned type, unsigned index) {
+    void* object = STOCK_FACTORY(type, index);
+    if (object == 0 || index > 1u || op1f_effects_registered == 0) return object;
+    u32 mask;
+    MASK_OFF(mask);
+    Wrap* w = &wraps[index][wrap_next[index] & 1u];                                 // the other one may still be in a block
+    wrap_next[index] = (wrap_next[index] + 1u) & 1u;
+    w->table = WRAP_TABLE;
+    w->inner = object;
+    w->index = index;
+    w->type = type;
+    w->seq = ++wrap_seq;
+    w->fresh = 1;
+    MASK_ON(mask);
+    return w;
+}
+
+// ---------------------------------------------------------------- W2, W3: the picks
+
+static void clear_entry(u32 pair) {
+    op1f_stand_screens[2u * pair] = 0;                                              // the mode first
+    op1f_stand_screens[2u * pair + 1u] = 0;
+}
+
+enum { EFFECT_MODE = 2u * OP1F_STAND_EFFECT, EFFECT_SCREEN = 2u * OP1F_STAND_EFFECT + 1u, MASTER_MODE = 2u * OP1F_STAND_MASTER,
+       MASTER_SCREEN = 2u * OP1F_STAND_MASTER + 1u };
+
+// The instruments' pick, from its entry (module/build_r5_effects.s) once an effect is registered: R0 the slot's
+// record, R1 the id the owner picked. The key thread.
+extern "C" void op1f_fx_pick_do(unsigned record, unsigned id) OP1F_NAMED("op1f_fx_pick_do");
+extern "C" void op1f_fx_pick_do(unsigned record, unsigned id) {
+    u32 place = 0, n = op1f_effects_registered;
+    if (!record_place(record, &place)) {
+        ROOM_PICK(record, id);
+        return;
+    }
+    u32 host = place < (u32)DRUM ? 0u : 1u;
+    u32 mask;
+    if (id >= (u32)ID_FIRST && id < (u32)ID_FIRST + n) {
+        const Effect* e = &effects[id - (u32)ID_FIRST];
+        MASK_OFF(mask);
+        places[place].ride = id - (u32)ID_FIRST + 1u;                               // the mark first: the pick's build finds it
+        picked |= 1u << place;
+        ended &= ~(1u << place);
+        op1f_stand_screens[EFFECT_SCREEN] = e->screen;                              // the screen before the mode
+        op1f_stand_screens[EFFECT_MODE] = host + 1u;
+        MASK_ON(mask);
+        ROOM_PICK(record, e->ridden_id);
+        STOCK_SET_ACTIVE(record, 0);                                                // the file says the unit's effect is off
+        return;
+    }
+    if (places[place].ride != 0) {
+        MASK_OFF(mask);
+        places[place].ride = 0;
+        ended |= 1u << place;
+        picked &= ~(1u << place);
+        if (op1f_stand_screens[EFFECT_MODE] == host + 1u) clear_entry(OP1F_STAND_EFFECT);
+        MASK_ON(mask);
+        STOCK_SET_ACTIVE(record, places[place].on);                                 // the file says what played, as the firmware's own toggle would
+    }
+    ROOM_PICK(record, id);
+}
+
+// The master's pick, in the place of the word +0x28 of the mixer's controller: (the controller, the id).
+extern "C" void op1f_fx_master_pick(void* controller, unsigned id) OP1F_NAMED("op1f_fx_master_pick");
+extern "C" void op1f_fx_master_pick(void* controller, unsigned id) {
+    u32 n = op1f_effects_registered, mask;
+    if (id >= (u32)ID_FIRST && id < (u32)ID_FIRST + n) {
+        const Effect* e = &effects[id - (u32)ID_FIRST];
+        MASK_OFF(mask);
+        places[MASTER].ride = id - (u32)ID_FIRST + 1u;
+        picked |= 1u << (u32)MASTER;
+        ended &= ~(1u << (u32)MASTER);
+        op1f_stand_screens[MASTER_SCREEN] = e->screen;
+        op1f_stand_screens[MASTER_MODE] = 3u + 1u;                                  // the mixer's mode + 1
+        MASK_ON(mask);
+        STOCK_MASTER_PICK(controller, e->ridden_id);
+        return;
+    }
+    if (places[MASTER].ride != 0) {
+        MASK_OFF(mask);
+        places[MASTER].ride = 0;
+        ended |= 1u << (u32)MASTER;
+        picked &= ~(1u << (u32)MASTER);
+        if (op1f_stand_screens[MASTER_MODE] == 3u + 1u) clear_entry(OP1F_STAND_MASTER);
+        MASK_ON(mask);
+    }
+    STOCK_MASTER_PICK(controller, id);
+}
+
+// ---------------------------------------------------------------- W4 to W8: the names and the switch
+
+// The knob names' function, from its entry: the pack's name of value `index` for the effects' kind and a sound that
+// rides an effect with that many values; for the engines' kind on the synth's LFO page, what a unit of a later level
+// answers for the shown slot (op1f_engines_names, the index as it came: an engine has eight values); else 0, and the
+// firmware's own function answers.
+extern "C" const char* op1f_fx_names_do(unsigned kind, int index) OP1F_NAMED("op1f_fx_names_do");
+extern "C" const char* op1f_fx_names_do(unsigned kind, int index) {
+    if (kind == (u32)NAMES_KIND_ENGINE) {
+        if (ENGINES_NAMES == 0 || index < 0 || RD32(LFO_HOST) != 0 || RD32(SYNTH_SHOWN) >= (u32)SLOTS) return 0;
+        return ENGINES_NAMES(RD32(SYNTH_SHOWN), index);
+    }
+    if (kind != (u32)NAMES_KIND_EFFECT || index < 0) return 0;
+    u32 place = RD32(LFO_HOST) == 0 ? RD32(SYNTH_SHOWN) : (u32)DRUM + RD32(DRUM_SHOWN);
+    if (place >= (u32)MASTER || (RD32(LFO_HOST) == 0 && place >= (u32)DRUM)) return 0;
+    const Effect* e = riding(place);
+    if (e == 0) return 0;
+    u32 i = (u32)index & 3u;                                                        // the firmware takes the index by its four knobs
+    return i < e->count ? e->value_names[i] : 0;
+}
+
+// The setter of a record's fx_active, from its entry: what is handed on in place of `on`.
+extern "C" unsigned op1f_fx_active_do(unsigned record, unsigned on) OP1F_NAMED("op1f_fx_active_do");
+extern "C" unsigned op1f_fx_active_do(unsigned record, unsigned on) {
+    u32 place = 0;
+    if (record_place(record, &place) && places[place].ride != 0) return 0;
+    return on;
+}
+
+// The records' applies, in the place of their calls of the on setters: (slot, on).
+static void apply_on(u32 base, u32 slot, u32 on) {
+    if (slot < (u32)SLOTS) {
+        Place* p = &places[base + slot];
+        p->doc_on = on;
+        if (p->ride != 0) on = p->on;
+    }
+    if (base == 0) STOCK_ON_SYNTH(slot, on);
+    else STOCK_ON_DRUM(slot, on);
+}
+
+extern "C" void op1f_fx_apply_synth(unsigned slot, unsigned on) OP1F_NAMED("op1f_fx_apply_synth");
+extern "C" void op1f_fx_apply_synth(unsigned slot, unsigned on) { apply_on(0, slot, on); }
+
+extern "C" void op1f_fx_apply_drum(unsigned slot, unsigned on) OP1F_NAMED("op1f_fx_apply_drum");
+extern "C" void op1f_fx_apply_drum(unsigned slot, unsigned on) { apply_on((u32)DRUM, slot, on); }
+
+// The master's save, in the place of its call of the on getter: what it writes as the master's fx_active.
+extern "C" unsigned op1f_fx_master_saved() OP1F_NAMED("op1f_fx_master_saved");
+extern "C" unsigned op1f_fx_master_saved() {
+    if (places[MASTER].ride != 0) return 0;
+    return STOCK_MASTER_ON();
+}
+
+// ---------------------------------------------------------------- the registration, at the catalog's read
+
+static int plain_name(const char* name) {
+    u32 n = 0;
+    for (; n < (u32)NAME && name[n]; ++n) {
+        char c = name[n];
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == ' ' || c == '-' || c == '_')) return 0;
+    }
+    return n != 0 && n < (u32)NAME;
+}
+
+static int stock_number(const char* name) {
+    for (u32 i = 0; i < (u32)STOCK_COUNT; ++i)
+        if (same_text(name, STOCK_NAMES[i], NAME)) return (int)i;
+    return -1;
+}
+
+static void set_aside(u32 slot, u32 why, u32 a, u32 b, const char* name, const char* rides) {
+    if (aside_count >= (u32)ASIDES_KEPT) {
+        ++aside_more;
+        return;
+    }
+    Aside* s = &asides[aside_count++];
+    s->slot = slot;
+    s->why = why;
+    s->a = a;
+    s->b = b;
+    copy_name(s->name, name ? name : "?");
+    copy_name(s->rides, rides ? rides : "");
+}
+
+static int inside(u32 at, const Op1fCardSlot* slot, u32 bytes) {
+    return at >= slot->first && at < slot->end && slot->end - at >= bytes;
+}
+
+// Why an ask of this kind is left aside (WHY_), or 0. For WHY_ORDER, (a, b):
+//   (the ask's bytes, 180)                 its table is too small or too large, or there is none
+//   (the bytes its head says, the ask's)   the two differ
+//   (its place from the pack's first byte, the pack's bytes)   `what` not inside the pack on a word
+//   (its flags, 3)                         a flag this base does not know
+//   (`shown`'s place, the pack's bytes)    `shown` not a function of the pack
+//   (`process`'s place, the pack's bytes)  `process` 0 or not a function of the pack
+//   (`reset`'s place, the pack's bytes)    `reset` not a function of the pack
+//   (its working memory, 8388608)          more than 8 MiB
+//   (its alignment, 4096)                  not a power of two from 4 to 4096
+//   (its count, 4)                         not 1 to 4 values
+//   (0x100 + the value's number, 0)        a value's name, or its range, or its start
+static u32 check(const Op1fAsk* ask, const Op1fCardSlot* slot, u32* a, u32* b) {
+    const Op1fEffect* t = (const Op1fEffect*)ask->what;
+    u32 span = slot->end - slot->first;
+    if (t == 0 || ask->bytes < (u32)TABLE_BYTES || ask->bytes > (u32)OP1F_ASK_BYTES_MOST) { *a = ask->bytes; *b = TABLE_BYTES; return WHY_ORDER; }
+    if (!inside((u32)t, slot, (u32)TABLE_BYTES) || ((u32)t & 3u) != 0) { *a = (u32)t - slot->first; *b = span; return WHY_ORDER; }
+    if (!plain_name(t->head.name)) return WHY_NAME;
+    if (t->head.bytes != ask->bytes) { *a = t->head.bytes; *b = ask->bytes; return WHY_ORDER; }
+    if ((t->head.flags & ~(u32)(OP1F_EFFECT_MONO | OP1F_EFFECT_TAILS)) != 0) { *a = t->head.flags; *b = OP1F_EFFECT_MONO | OP1F_EFFECT_TAILS; return WHY_ORDER; }
+    u32 f = (u32)t->head.shown;
+    if (f != 0 && (!inside(f, slot, 2u) || (f & 1u) != 0)) { *a = f - slot->first; *b = span; return WHY_ORDER; }
+    f = (u32)t->process;
+    if (!inside(f, slot, 2u) || (f & 1u) != 0) { *a = f - slot->first; *b = span; return WHY_ORDER; }
+    f = (u32)t->reset;
+    if (f != 0 && (!inside(f, slot, 2u) || (f & 1u) != 0)) { *a = f - slot->first; *b = span; return WHY_ORDER; }
+    if (t->state_bytes > STATE_MOST) { *a = t->state_bytes; *b = STATE_MOST; return WHY_ORDER; }
+    u32 align = t->state_align;
+    if (t->state_bytes != 0 && (align < (u32)STATE_ALIGN_LEAST || align > ALIGN_MOST || (align & (align - 1u)) != 0)) { *a = align; *b = ALIGN_MOST; return WHY_ORDER; }
+    if (t->count < 1u || t->count > (u32)VALUES) { *a = t->count; *b = VALUES; return WHY_ORDER; }
+    for (u32 i = 0; i < t->count; ++i) {
+        const Op1fParam* p = &t->params[i];
+        if (!plain_name(p->name) || p->low >= p->high || (u32)(p->high - p->low) > 65535u || p->start < p->low || p->start > p->high) {
+            *a = 0x100u + i;
+            *b = 0;
+            return WHY_ORDER;
+        }
+    }
+    int rides = -1;
+    for (u32 i = 0; i < (u32)STOCK_COUNT; ++i)
+        if (same_text(t->rides, STOCK_NAMES[i], NAME)) rides = (int)i;
+    if (rides < 0 || !RIDEABLE[rides]) return WHY_RIDES;
+    if (t->cycles < 1u || t->cycles > CYCLES_MOST) return WHY_COST;
+    return 0;
+}
+
+// The asks of kind OP1F_ASK_EFFECT of the cards the base uses, in the list's order and each card's, held to their form.
+static void look_through() {
+    u32 seen = op1f_cards.count > (u32)CARDS ? (u32)CARDS : op1f_cards.count;
+    for (u32 i = 0; i < seen; ++i) {
+        if (op1f_cards_verdict(i) != 0) continue;                                   // a card the base does not use
+        const Op1fCardSlot* slot = &op1f_cards.slots[i];
+        const Op1fCard* card = slot->card;
+        if (card->bytes < (u32)CARD_4_BYTES || card->level < 8u || card->asks == 0) continue;
+        u32 asks = card->ask_count > (u32)OP1F_ASKS_MOST ? (u32)OP1F_ASKS_MOST : card->ask_count;
+        for (u32 k = 0; k < asks; ++k) {
+            const Op1fAsk* ask = &card->asks[k];
+            if (ask->kind != (u32)OP1F_ASK_EFFECT) continue;
+            u32 a = 0, b = 0;
+            u32 why = check(ask, slot, &a, &b);
+            const Op1fEffect* t = (const Op1fEffect*)ask->what;
+            if (why == WHY_ORDER) {
+                int named = t != 0 && inside((u32)t, slot, (u32)TABLE_BYTES) && plain_name(t->head.name);
+                set_aside(i, why, a, b, named ? t->head.name : "?", 0);
+                continue;
+            }
+            if (why == WHY_NAME) {
+                set_aside(i, why, 0, 0, "?", 0);
+                continue;
+            }
+            int taken = stock_number(t->head.name) >= 0;
+            for (u32 c = 0; c < candidate_count && !taken; ++c)
+                if (same_text(candidates[c].table->head.name, t->head.name, NAME)) taken = 1;
+            if (taken) {
+                set_aside(i, WHY_TAKEN, 0, 0, t->head.name, 0);
+                continue;
+            }
+            if (why) {
+                set_aside(i, why, 0, 0, t->head.name, why == WHY_RIDES && plain_name(t->rides) ? t->rides : "?");
+                continue;
+            }
+            if (candidate_count == (u32)EFFECTS) {
+                set_aside(i, WHY_SEVENTEENTH, 0, 0, t->head.name, 0);
+                continue;
+            }
+            Candidate* c = &candidates[candidate_count++];
+            c->table = t;
+            c->slot = i;
+            c->ask = k;
+        }
+    }
+}
+
+static u32 kind(const void* value) {
+    return ((const volatile u8*)value)[KIND_AT];
+}
+
+static const char* text_of(const void* value) {
+    if (kind(value) != (u32)KIND_STRING) return 0;
+    const char* text = *(const char* const*)value;
+    return text ? text : "";
+}
+
+// The row of `list` whose `type` is the text `name`, or 0.
+static const void* row_named(const void* list, const char* name) {
+    u32 count = STOCK_JSON_SIZE(list);
+    for (u32 i = 0; i < count; ++i) {
+        const void* row = STOCK_JSON_ELEMENT(list, i);
+        if (kind(row) != (u32)KIND_OBJECT) continue;
+        const char* text = text_of(STOCK_JSON_MEMBER(row, KEY_TYPE));
+        if (text && same_text(text, name, NAME)) return row;
+    }
+    return 0;
+}
+
+// The candidates registered in order, each with its id and its ridden row's id; those whose ridden row the catalog
+// does not hold are left aside.
+static void enrol(const void* list) {
+    u32 n = 0;
+    for (u32 c = 0; c < candidate_count; ++c) {
+        const Op1fEffect* t = candidates[c].table;
+        const void* row = row_named(list, t->rides);
+        const void* id = row ? STOCK_JSON_MEMBER(row, KEY_ID) : 0;
+        if (id == 0 || (kind(id) != (u32)KIND_INT && kind(id) != (u32)KIND_UINT)) {
+            set_aside(candidates[c].slot, WHY_RIDES, 0, 0, t->head.name, t->rides);
+            continue;
+        }
+        Effect* e = &effects[n];
+        e->table = t;
+        e->number = n;
+        e->slot = candidates[c].slot;
+        e->ask = candidates[c].ask;
+        e->ridden_id = (u32)STOCK_JSON_INT(id);
+        e->type = (u32)stock_number(t->rides);
+        for (u32 k = 0; k < (u32)STOCK_COUNT; ++k) {                                // the type by the firmware's own table of names
+            const char* name = (const char*)RD32(EFFECT_NAMES + 8u * k);
+            u32 at = 0;
+            while (at < (u32)NAME && RD8((u32)name + at) == (u8)t->rides[at] && t->rides[at] != 0) ++at;
+            if (at < (u32)NAME && RD8((u32)name + at) == 0 && t->rides[at] == 0) e->type = RD32(EFFECT_NAMES + 8u * k + 4u);
+        }
+        e->flags = t->head.flags;
+        e->cycles = t->cycles;
+        e->count = t->count;
+        e->state_bytes = t->state_bytes;
+        e->state_align = t->state_align < (u32)STATE_ALIGN_LEAST ? (u32)STATE_ALIGN_LEAST : t->state_align;
+        copy_name(e->name, t->head.name);
+        copy_name(e->rides, t->rides);
+        for (u32 i = 0; i < t->count; ++i) {
+            copy_name(e->value_names[i], t->params[i].name);
+            e->low[i] = t->params[i].low;
+            e->high[i] = t->params[i].high;
+            e->start[i] = t->params[i].start;
+        }
+        Op1fRackEntry* entry = &entries[n];
+        entry->bytes = ENTRY_BYTES;
+        entry->id = (u32)ID_FIRST + n;
+        entry->pack = op1f_cards.slots[e->slot].card->name;
+        entry->effect = t;
+        entry->rides = e->type;
+        ++n;
+    }
+    BARRIER();                                                                      // every record whole before the word that counts them
+    op1f_effects_registered = n;
+}
+
+static void add_row(void* list, u32 n, const void* ridden) {
+    u32 row[3], value[3];
+    STOCK_JSON_MAKE(row, KIND_OBJECT);
+    STOCK_JSON_TEXT(value, effects[n].name);
+    STOCK_JSON_ASSIGN(STOCK_JSON_PLACE(row, KEY_TYPE), value);
+    STOCK_JSON_DESTROY(value);
+    STOCK_JSON_NUMBER(value, (int)((u32)ID_FIRST + n));
+    STOCK_JSON_ASSIGN(STOCK_JSON_PLACE(row, KEY_ID), value);
+    STOCK_JSON_DESTROY(value);
+    STOCK_JSON_ASSIGN(STOCK_JSON_PLACE(row, KEY_DEFAULTS), STOCK_JSON_MEMBER(ridden, KEY_DEFAULTS));
+    STOCK_JSON_APPEND(list, row);
+    STOCK_JSON_DESTROY(row);
+}
+
+extern "C" void op1f_effects_catalog_read(void* document) {
+    if (!checked) {
+        checked = 1;
+        look_through();
+        if (candidate_count == 0) return;
+        if (kind(document) != (u32)KIND_OBJECT) list_state = LIST_NOT_OBJECT;
+        else if (kind(STOCK_JSON_MEMBER(document, KEY_LIST)) != (u32)KIND_ARRAY) list_state = LIST_NOT_ARRAY;
+        if (list_state) return;                                                     // no row in the lists: no effect of ours either
+        enrol(STOCK_JSON_MEMBER(document, KEY_LIST));
+    }
+    u32 n = op1f_effects_registered;
+    if (n == 0 || kind(document) != (u32)KIND_OBJECT) return;
+    const void* list = STOCK_JSON_MEMBER(document, KEY_LIST);
+    if (kind(list) != (u32)KIND_ARRAY) return;
+    for (u32 i = 0; i < n; ++i) {
+        if (row_named(list, effects[i].name)) continue;
+        const void* ridden = row_named(list, effects[i].rides);
+        if (ridden == 0) continue;
+        add_row(STOCK_JSON_PLACE(document, KEY_LIST), i, ridden);
+        ++rows_added;
+    }
+}
+
+extern "C" int op1f_effects_row_is(const void* row) {
+    u32 n = op1f_effects_registered;
+    if (n == 0 || kind(row) != (u32)KIND_OBJECT) return 0;
+    const char* text = text_of(STOCK_JSON_MEMBER(row, KEY_TYPE));
+    if (text == 0) return 0;
+    for (u32 i = 0; i < n; ++i)
+        if (same_text(text, effects[i].name, NAME)) return 1;
+    return 0;
+}
+
+// ---------------------------------------------------------------- the base's member, op1f_effect
+
+static u32 keep_where(u32 place) {
+    return place < (u32)DRUM ? (u32)OP1F_KEEP_SYNTH : place < (u32)MASTER ? (u32)OP1F_KEEP_DRUM : (u32)OP1F_KEEP_MASTER;
+}
+
+static u32 keep_which(u32 place) {
+    return place < (u32)DRUM ? place : place < (u32)MASTER ? place - (u32)DRUM : 0u;
+}
+
+// The member's text read: 1 with the name (one to fifteen characters) and its switch; 0 when the text is not an object
+// with a member "name" holding a text (`name` then "?").
+static int member_of(const char* text, char* name, u32* on) {
+    copy_name(name, "?");
+    *on = 0;
+    u32 at = 0;
+    while (text[at] == ' ' || text[at] == '\t' || text[at] == '\n' || text[at] == '\r') ++at;
+    if (text[at] != '{') return 0;
+    int named = 0;
+    for (u32 i = at; text[i]; ++i) {
+        if (text[i] != '"') continue;
+        if (same_text(text + i + 1, "name\"", 5)) {
+            u32 k = i + 6;
+            while (text[k] == ' ' || text[k] == ':') ++k;
+            if (text[k] != '"') return 0;
+            ++k;
+            u32 len = 0;
+            while (text[k + len] && text[k + len] != '"') ++len;
+            if (len == 0 || len >= (u32)NAME || text[k + len] != '"') return 0;
+            for (u32 c = 0; c < len; ++c) name[c] = text[k + c];
+            for (u32 c = len; c < (u32)NAME; ++c) name[c] = 0;
+            named = 1;
+            i = k + len;
+        } else if (same_text(text + i + 1, "on\"", 3)) {
+            u32 k = i + 4;
+            while (text[k] == ' ' || text[k] == ':') ++k;
+            *on = text[k] == '1' || text[k] == 't' ? 1u : 0u;
+            i = k;
+        }
+    }
+    return named;
+}
+
+static u32 put(char* out, u32 at, const char* text) {
+    while (*text && at + 1u < (u32)MEMBER_ROOM) out[at++] = *text++;
+    out[at] = 0;
+    return at;
+}
+
+// The member written, or taken away when the place rides nothing: at once when the values unit takes it, again at the
+// next frame only when it answered OP1F_NOT_NOW (a passing state: before its first frame, a load not yet told, another
+// thread writing the slot); any other refusal (OP1F_BAD_NAME, OP1F_BAD_VALUE, OP1F_TOO_LARGE) is not tried again.
+static void write_member(u32 place) {
+    const Effect* e = riding(place);
+    char text[MEMBER_ROOM];
+    int answer;
+    if (e) {
+        u32 at = put(text, 0, "{\"name\": \"");
+        at = put(text, at, e->name);
+        at = put(text, at, places[place].on ? "\", \"on\": 1}" : "\", \"on\": 0}");
+        answer = op1f_keeps_base_set(keep_where(place), keep_which(place), text);
+    } else {
+        answer = op1f_keeps_base_set(keep_where(place), keep_which(place), 0);
+    }
+    places[place].member_dirty = answer == OP1F_NOT_NOW ? 1u : 0u;
+}
+
+extern "C" void op1f_effects_changed(unsigned where, unsigned which, unsigned how) {
+    if (how != (u32)OP1F_KEPT_LOADED && how != (u32)OP1F_KEPT_START && how != (u32)OP1F_KEPT_DROPPED) return;
+    u32 place = where == (u32)OP1F_KEEP_SYNTH && which < (u32)SLOTS ? which
+              : where == (u32)OP1F_KEEP_DRUM && which < (u32)SLOTS ? (u32)DRUM + which
+              : where == (u32)OP1F_KEEP_MASTER ? (u32)MASTER : (u32)PLACES;
+    if (place < (u32)PLACES) {
+        told |= 1u << place;
+        if (how == (u32)OP1F_KEPT_LOADED) told_load |= 1u << place;                  // R6d
+    }
+}
+
+// ---------------------------------------------------------------- the frame's work
+
+static const char* place_words_for_log(u32 place, char* out) {
+    if (place == (u32)MASTER) return "the master";
+    const char* host = place < (u32)DRUM ? "synth " : "drum ";
+    u32 at = 0;
+    while (*host) out[at++] = *host++;
+    out[at++] = (char)('1' + (place & 7u));
+    out[at] = 0;
+    return out;
+}
+
+static void say_ride(u32 place, const char* what, const char* why, const char* name) {
+    if (unit.ride_lines >= (u32)RIDE_LINES) return;
+    ++unit.ride_lines;
+    char words[12];
+    const char* p = place_words_for_log(place, words);
+    if (what) op1f_log(3, LOG_FILE, 3, "effect: %s rides '%s'", p, what);
+    else if (name) op1f_log(3, LOG_FILE, 4, "effect: %s rides nothing now: the unit put %s there", p, name);
+    else op1f_log(3, LOG_FILE, 4, "effect: %s rides nothing now: %s", p, why);
+}
+
+static const char* stock_name(u32 type) {
+    return type < (u32)STOCK_COUNT ? STOCK_NAMES[type] : "another effect";
+}
+
+// The place's knob words as the frame sets them: the place's own word, and for a sound the record's document through
+// the firmware's setter, as a knob would write them.
+static void set_words(u32 place, const u32* four, u32 mask) {
+    u32 words = place_words(place);
+    u32 eight[8];
+    for (u32 i = 0; i < 8u; ++i) eight[i] = RD32(words + 4u * i);
+    for (u32 i = 0; i < 4u; ++i) {
+        if ((mask & (1u << i)) == 0) continue;
+        eight[i] = four[i];
+        WR32(words + 4u * i, four[i]);
+    }
+    if (place < (u32)MASTER) STOCK_SET_PARAMS(place_record(place), eight);
+}
+
+// Whether a place's sound plays now at its index (the instrument's slot that is built, or the master).
+static int plays(u32 place) {
+    if (place == (u32)MASTER) return 1;
+    return playing_place() == place;
+}
+
+// R6, base 28's review R-2: the stand-in pair a pick wrote for the mode of a ride that
+// ends, taken back where it still holds that ride's {mode + 1, screen} and no other place of that mode rides an effect
+// of that screen. The pick writes its mode's pair before the firmware's pick and the cards unit takes it over within a
+// frame; where 77 is not free (a pack's page holds it, as fx train 14's own pick of its first wagon), the pair stayed
+// until the next pick of a pack's effect or a restart, and the screen stub answered 77 for that stock effect's screen in
+// that mode for a sound that rides nothing. The cards unit's own compare-and-clear then finds 0 and does nothing; a pair
+// it holds as its own for a page that still stands is written again at its frame. Inside the caller's mask.
+static void take_back_pair(u32 place, u32 ride) {
+    u32 screen = effects[ride - 1u].screen;
+    u32 first = place == (u32)MASTER ? (u32)MASTER : place < (u32)DRUM ? 0u : (u32)DRUM;
+    u32 last = place == (u32)MASTER ? (u32)MASTER + 1u : first + (u32)SLOTS;
+    for (u32 p = first; p < last; ++p)
+        if (p != place && places[p].ride != 0 && effects[places[p].ride - 1u].screen == screen) return;
+    u32 pair = place == (u32)MASTER ? (u32)OP1F_STAND_MASTER : (u32)OP1F_STAND_EFFECT;
+    u32 mode = place == (u32)MASTER ? 3u + 1u : (place < (u32)DRUM ? 0u : 1u) + 1u;
+    if (op1f_stand_screens[2u * pair] == mode && op1f_stand_screens[2u * pair + 1u] == screen) clear_entry(pair);
+}
+
+// A ride that ends other than by a pick: the base's member taken away, the file's fx_active what plays, and the
+// firmware's object made anew, so that its effect never goes on from a state it kept unused.
+static void end_ride(u32 place, u32 load) {
+    u32 mask;
+    MASK_OFF(mask);
+    if (places[place].ride != 0) take_back_pair(place, places[place].ride);       // R6: base 28's review R-2
+    places[place].ride = 0;
+    picked &= ~(1u << place);
+    MASK_ON(mask);
+    if (load) {
+        if (place < (u32)MASTER) set_place_on(place, places[place].doc_on);           // what the loaded sound's file says
+    } else if (place < (u32)MASTER) {
+        STOCK_SET_ACTIVE(place_record(place), place_on(place));
+    }
+    write_member(place);
+    // R6d: at a load, a start or a drop the firmware's apply makes the object anew (it clears the object's word first and
+    // makes it after the type and the words); one made here could be cut by the key thread's apply of another sound.
+    if (!load && plays(place)) STOCK_BUILD(place == (u32)MASTER ? 1u : 0u, place_type(place));
+}
+
+// The member of a place read after a start or a load: the place rides again when its pack is here and the unit still
+// keeps the effect it stands on; else the ride is let go, or the member kept as it is when its pack is away. Read once
+// at the first frame and once at each tell of the values unit, never in a loop: OP1F_NO_FILE (none, or the values unit
+// not at its first frame yet: its OP1F_KEPT_START tell brings it) and OP1F_BAD_NAME are read as no member.
+static void read_member(u32 place, u32 load) {
+    char text[MEMBER_ROOM];
+    int got = op1f_keeps_base_get(keep_where(place), keep_which(place), text, (u32)MEMBER_ROOM);
+    char name[NAME];
+    u32 on = 0;
+    int named = got >= 0 && member_of(text, name, &on);
+    u32 n = op1f_effects_registered, found = 0;
+    for (u32 i = 0; named && i < n; ++i)
+        if (same_text(name, effects[i].name, NAME)) found = i + 1u;
+    u32 was = places[place].ride;
+    if (found == 0) {
+        if (got >= 0 && !places[place].absent_said) {                               // kept as it is: never less than the firmware alone
+            places[place].absent_said = 1;
+            char words[12];
+            op1f_log(2, LOG_FILE, 5, "effect: %s rides '%s', whose pack is not here: %s plays dry", place_words_for_log(place, words), name,
+                     place == (u32)MASTER ? "it" : "the sound");
+        }
+        if (was) {
+            say_ride(place, 0, got >= 0 ? "its pack is not here" : "a sound without it was loaded", 0);
+            end_ride(place, load);
+        }
+        return;
+    }
+    const Effect* e = &effects[found - 1u];
+    if (place_type(place) != e->type) {                                             // the unit keeps another effect there now
+        say_ride(place, 0, 0, stock_name(place_type(place)));
+        if (was) end_ride(place, load);
+        else write_member(place);                                                   // the member taken away: the place rides nothing
+        return;
+    }
+    u32 mask;
+    MASK_OFF(mask);
+    places[place].on = on;
+    places[place].ride = found;
+    MASK_ON(mask);
+    set_place_on(place, on);
+    // R6, base 28's review R-1: a ride taken up from the member (the first frame, a load,
+    // a start) sets the sound's fx_active to 0 as a pick does, so that a file made "on" elsewhere (on the way back, or
+    // on the original firmware) never says it is on while it rides, nor is saved so. The ride is marked first: W5 hands
+    // 0 on, and the firmware's setter queues the slot's write. The master's switch is the base's at its save (W8).
+    if (place < (u32)MASTER) STOCK_SET_ACTIVE(place_record(place), 0);
+    if (was != found) say_ride(place, e->name, 0, 0);
+}
+
+// The knob rows of the types the registered effects stand on, and the factors each way, at the first frame.
+static void map_all() {
+    u32 n = op1f_effects_registered, said = 0;
+    for (u32 k = 0; k < n; ++k) {
+        Effect* e = &effects[k];
+        int lo[4] = {0, 0, 0, 0}, hi[4] = {0, 0, 0, 0};
+        for (u32 i = 0; i < 4u && e->type < (u32)STOCK_COUNT; ++i) {
+            u32 row = KNOB_ROWS + (u32)ROW_BYTES * e->type + (u32)KNOB_BYTES * i;
+            lo[i] = (int)(short)RD16(row);
+            hi[i] = (int)RD16(row + 2u);
+        }
+        if (e->type < (u32)STOCK_COUNT && (said & (1u << e->type)) == 0) {
+            said |= 1u << e->type;
+            op1f_log(3, LOG_FILE, 6, "effect: the knob rows of %s: %d..%d, %d..%d, %d..%d, %d..%d", e->rides, lo[0], hi[0], lo[1], hi[1], lo[2], hi[2], lo[3], hi[3]);
+        }
+        for (u32 i = 0; i < e->count; ++i) {
+            e->row_low[i] = lo[i];
+            e->row_high[i] = hi[i];
+            if (hi[i] <= lo[i]) {
+                e->fixed[i] = 1;
+                op1f_log(2, LOG_FILE, 7, "effect: '%s' value %u '%s' stands at %d: the knob row of %s has no span", e->name, i + 1u, e->value_names[i], e->start[i], e->rides);
+                continue;
+            }
+            u32 stock = (u32)(hi[i] - lo[i]), own = (u32)(e->high[i] - e->low[i]);
+            ratio(own, stock, &e->q_in[i], &e->f_in[i]);
+            ratio(stock, own, &e->q_out[i], &e->f_out[i]);
+        }
+        e->screen = e->type < (u32)STOCK_COUNT ? STOCK_SCREEN_OF(e->type) : 0u;
+    }
+}
+
+static const char* aside_reason(const Aside* s) {
+    switch (s->why) {
+    case WHY_NAME: return "its name is not one the lists can show";
+    case WHY_TAKEN: return "its name is a stock effect's or an earlier pack's";
+    case WHY_COST: return "its cost is not between 1 and 84000";
+    case WHY_SEVENTEENTH: return "it would be the seventeenth";
+    default: return 0;
+    }
+}
+
+static void first_frame() {
+    for (u32 i = 0; i < aside_count; ++i) {
+        const Aside* s = &asides[i];
+        const char* pack = op1f_cards.slots[s->slot].card->name;
+        if (s->why == WHY_ORDER) op1f_log(2, LOG_FILE, 2, "effect: '%s' of '%s' is left aside: its table is not in order (%u, %u)", s->name, pack, s->a, s->b);
+        else if (s->why == WHY_RIDES) op1f_log(2, LOG_FILE, 2, "effect: '%s' of '%s' is left aside: it stands on %s, which is not one an effect can stand on", s->name, pack, s->rides);
+        else op1f_log(2, LOG_FILE, 2, "effect: '%s' of '%s' is left aside: %s", s->name, pack, aside_reason(s));
+    }
+    if (aside_more) op1f_log(2, LOG_FILE, 2, "effect: %u more ask(s) left aside, not said", aside_more);
+    if (list_state) op1f_log(2, LOG_FILE, 2, "effect: the unit's lists could not be read (%u): no effect is registered", list_state);
+    u32 n = op1f_effects_registered;
+    for (u32 k = 0; k < n; ++k)
+        op1f_log(3, LOG_FILE, 1, "effect: '%s' of '%s' stands on %s, entry %u of the lists, %u cycles a block declared", effects[k].name,
+                 op1f_cards.slots[effects[k].slot].card->name, effects[k].rides, (u32)ID_FIRST + k, effects[k].cycles);
+    if (n == 0) return;
+    map_all();
+    for (u32 p = 0; p < (u32)PLACES; ++p) read_member(p, 0);
+    unit.countdown = PERIOD_FRAMES;
+}
+
+// An instance's working memory asked, or polled while it is cleared. Answers its status.
+static u32 make_ready(Instance* in, const Effect* e, const char* for_what) {
+    if (in->status == (u32)READY || in->status == (u32)REFUSED) return in->status;
+    if (e->state_bytes == 0) {
+        in->state = 0;
+        BARRIER();
+        in->status = READY;
+        return READY;
+    }
+    if (in->status == (u32)NONE) {
+        u32 at = 0;
+        for (const char* c = e->name; *c && at < 15u; ++c) in->whose[at++] = *c;
+        for (const char* c = " for "; *c; ++c) in->whose[at++] = *c;
+        for (const char* c = for_what; *c && at < 63u; ++c) in->whose[at++] = *c;
+        in->whose[at] = 0;
+        in->handle = op1f_memory_more(e->state_bytes, e->state_align, in->whose);
+        if (in->handle <= 0) {
+            in->status = REFUSED;
+            op1f_log(1, LOG_FILE, 9, "effect: '%s' has no room for %s: %s", e->name, for_what,
+                     in->handle == OP1F_TOO_LARGE ? "the packs would take more than 16 MiB" : "the heap has no such room, or less than 8 MiB would stay free");
+            return REFUSED;
+        }
+        in->status = CLEARING;
+    }
+    void* block = op1f_memory_block(in->handle);
+    if (block == 0) return CLEARING;
+    in->state = block;
+    BARRIER();                                                                      // the state before the word that hands it over
+    in->status = READY;
+    op1f_log(3, LOG_FILE, 8, "effect: '%s' has %u bytes for %s at 0x%08x", e->name, e->state_bytes, for_what, (u32)block);
+    return READY;
+}
+
+// `reset` called for the effect a place rides, outside every pack's frame function, recorded as a call of its pack.
+static void call_reset(const Effect* e, u32 place, void* state) {
+    Op1fCallKept kept;
+    op1f_cards_call_in((u32)CALL_SHOWN, e->slot, &kept);
+    e->table->reset(place, state);
+    op1f_cards_call_out((u32)CALL_SHOWN, &kept);
+}
+
+static void say_off(const Effect* e, const char* where, Budget* b) {
+    if (!b->off || b->off_said) return;
+    b->off_said = 1;
+    if (b->off_overs == 0)
+        op1f_log(1, LOG_FILE, 10, "effect: '%s' at %s is switched off until the next start: %u cycles in one call, %u declared", e->name, where, b->off_cycles, e->cycles);
+    else
+        op1f_log(1, LOG_FILE, 11, "effect: '%s' at %s is switched off until the next start: %u calls in one second over twice its cost and its allowance, the most %u cycles, %u declared",
+                 e->name, where, b->off_overs, b->off_cycles, e->cycles);
+}
+
+static void period() {
+    if (--unit.countdown > 0) return;
+    unit.countdown = PERIOD_FRAMES;
+    u32 n = op1f_effects_registered;
+    u32 calls[EFFECTS], sum[EFFECTS], most[EFFECTS], over[EFFECTS];
+    u32 signature = quiet_mix(quiet_start(), n);
+    int activity = 0;
+    for (u32 k = 0; k < n; ++k) {                                                   // read and cleared, whatever the gate says
+        Effect* e = &effects[k];
+        u32 mask;
+        MASK_OFF(mask);
+        calls[k] = e->calls;
+        sum[k] = e->sum;
+        most[k] = e->most;
+        over[k] = e->over;
+        e->calls = 0;
+        e->sum = 0;
+        e->most = 0;
+        e->over = 0;
+        MASK_ON(mask);
+        signature = quiet_mix(signature, calls[k] != 0 ? 1u : 0u);
+        signature = quiet_mix(signature, over[k] != 0 ? 1u : 0u);
+        if (over[k] != 0) activity = 1;
+    }
+    for (u32 p = 0; p < (u32)PLACES; ++p) signature = quiet_mix(signature, places[p].ride | (places[p].budget.off << 8));
+    if (!quiet_period(&unit.gate, signature, activity)) return;
+    for (u32 k = 0; k < n; ++k) {
+        if (calls[k] == 0) continue;
+        op1f_log(3, LOG_FILE, 12, "effect: '%s' this period: %u call(s), %u cycles at most, %u on average, %u over", effects[k].name, calls[k], most[k],
+                 divided(sum[k], calls[k]), over[k]);
+    }
+}
+
+// R6d: the type the firmware's table of names gives a name, as enrol finds a ridden effect's: 1 and `type`, or 0.
+static int stock_type(const char* text, u32* type) {
+    for (u32 k = 0; k < (u32)STOCK_COUNT; ++k) {
+        const char* name = (const char*)RD32(EFFECT_NAMES + 8u * k);
+        u32 at = 0;
+        while (at < (u32)NAME && RD8((u32)name + at) == (u8)text[at] && text[at] != 0) ++at;
+        if (at < (u32)NAME && RD8((u32)name + at) == 0 && text[at] == 0) {
+            *type = RD32(EFFECT_NAMES + 8u * k + 4u);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// R6d: the effect a sound slot's record's document names now (its fx_type): 1 and `type`, or 0 (the master, which has
+// no record; no document; no such member; a name the table does not hold). The document read inside a mask, once a
+// load's tell, on the display thread; the kind of each value held before the library is handed it. Out of line: its
+// loop then counts with no index register.
+static EFFECTS_APART int document_type(u32 place, u32* type) {
+    if (place >= (u32)MASTER) return 0;
+    const void* document = RECORD_DOCUMENT(place_record(place));
+    int found = 0;
+    u32 mask;
+    MASK_OFF(mask);
+    if (kind(document) == (u32)KIND_OBJECT) {
+        const char* text = text_of(STOCK_JSON_MEMBER(document, KEY_FX_TYPE));
+        if (text) found = stock_type(text, type);
+    }
+    MASK_ON(mask);
+    return found;
+}
+
+// R6d: a heard value too old to be heard, its `live` cleared (a mask only when one is to be).
+static void heard_expire() {
+    u32 now = cycles_now(), old = 0;
+    for (u32 p = 0; p < (u32)PLACES; ++p)
+        if (heard[p].live && now - heard[p].stamp > HEARD_CYCLES) old |= 1u << p;
+    if (old == 0) return;
+    u32 mask;
+    MASK_OFF(mask);
+    now = cycles_now();
+    for (u32 p = 0; p < (u32)PLACES; ++p)
+        if ((old & (1u << p)) && now - heard[p].stamp > HEARD_CYCLES) heard[p].live = 0;
+    MASK_ON(mask);
+}
+
+extern "C" void op1f_effects_frame() {
+    if (!unit.first_done) {
+        unit.first_done = 1;
+        first_frame();
+        return;
+    }
+    u32 n = op1f_effects_registered;
+    if (n == 0) return;
+    ++unit.frames;
+    u32 mask;
+    MASK_OFF(mask);
+    u32 began = picked, stopped = ended, loaded = told, by_load = told_load;         // R6d: by_load
+    told_load = 0;
+    picked = 0;
+    ended = 0;
+    told = 0;
+    MASK_ON(mask);
+    for (u32 p = 0; p < (u32)PLACES; ++p) {
+        u32 bit = 1u << p;
+        if (stopped & bit) {
+            say_ride(p, 0, "another effect was picked", 0);
+            write_member(p);
+        }
+        if ((began & bit) && places[p].ride != 0) {                                 // a pick: its start values, the on state the pick set
+            const Effect* e = &effects[places[p].ride - 1u];
+            u32 four[4] = {0, 0, 0, 0};
+            for (u32 i = 0; i < e->count; ++i) four[i] = word_of(e, i, e->start[i]);
+            set_words(p, four, (1u << e->count) - 1u);
+            places[p].on = place_on(p);
+            say_ride(p, e->name, 0, 0);
+            write_member(p);
+        }
+        if (loaded & bit) {                                                         // R6d (F-1): the loaded sound's effect on the slot first
+            u32 type = 0;
+            if ((by_load & bit) && document_type(p, &type) && place_type(p) != type) {   // a start or a drop: read at once
+                waiting |= bit;
+                wait_type[p] = type;
+                wait_from[p] = place_type(p);
+                wait_frames[p] = 0;
+            } else {
+                waiting &= ~bit;
+                read_member(p, 1);
+            }
+        } else if (waiting & bit) {
+            u32 now = place_type(p);
+            if (now == wait_type[p] || now != wait_from[p]) {                       // the apply has come
+                waiting &= ~bit;
+                read_member(p, 1);
+            } else if (++wait_frames[p] >= (u32)WAIT_FRAMES) {
+                waiting &= ~bit;
+                char words[12];
+                op1f_log(2, LOG_FILE, 13, "effect: %s waited %u frames for the loaded sound's %s, which did not come: its member is read as the slot stands",
+                         place_words_for_log(p, words), wait_frames[p], stock_name(wait_type[p]));
+                read_member(p, 1);
+            }
+        }
+    }
+    for (u32 p = 0; p < (u32)PLACES; ++p) {
+        const Effect* e = riding(p);
+        if (e == 0 || (waiting & (1u << p)) != 0) continue;                         // R6d: a place that waits is read once its apply has come
+        if (place_type(p) != e->type) {                                             // the unit, MIDI or the train put another effect there
+            say_ride(p, 0, 0, stock_name(place_type(p)));
+            end_ride(p, 0);
+            continue;
+        }
+        u32 on = place_on(p) ? 1u : 0u;
+        if (on != places[p].on) {
+            places[p].on = on;
+            places[p].member_dirty = 1;
+        }
+        if (places[p].member_dirty) write_member(p);
+        u32 index = p == (u32)MASTER ? 1u : 0u;
+        make_ready(&instances[e->number][index], e, index ? "the master" : "the instrument");
+        char words[12];
+        say_off(e, place_words_for_log(p, words), &places[p].budget);
+    }
+    for (u32 p = 0; p < (u32)PLACES; ++p)                                           // a member refused with OP1F_NOT_NOW, of a place that rides no more
+        if (places[p].member_dirty && riding(p) == 0) write_member(p);
+    for (u32 index = 0; index < 2u; ++index) {                                      // `reset` for a build that rides
+        const Wrap* w = (const Wrap*)RD32(EFFECT_WORD + 4u * index);
+        if (w != &wraps[index][0] && w != &wraps[index][1]) continue;
+        u32 place = index ? (u32)MASTER : playing_place();
+        u32 r = may_play(w, index, place);
+        if (r == 0 || reset_seq[index] == w->seq) continue;
+        const Effect* e = &effects[r - 1u];
+        const Instance* in = &instances[r - 1u][index];
+        if (in->status != (u32)READY) continue;
+        if (e->table->reset) call_reset(e, place, in->state);
+        reset_seq[index] = w->seq;
+    }
+    for (u32 i = 0; i < rack_count; ++i) {
+        Rack* k = &racks[i];
+        if (k->in.status == (u32)CLEARING) make_ready(&k->in, &effects[k->effect], k->whose);
+        say_off(&effects[k->effect], k->whose, &k->budget);
+    }
+    heard_expire();                                                                 // R6d
+    period();
+}
+
+// Does an effect's page stand in now, or would it if the controller asked for its screen (module/build_r5_base.h)?
+// `asked` 1: only while the screen the controller asked for is the ridden type's effect screen (op1f_effects_standing);
+// 0: whatever screen it asked for (op1f_effects_ahead). Nothing else differs between the two.
+static int stand(Op1fStanding* out, unsigned* mode, unsigned* screen, int asked) {
+    if (op1f_effects_registered == 0) return 0;
+    u32 m = RD32(CURRENT_MODE);
+    u32 place = shown_place(m);
+    if (place >= (u32)PLACES) return 0;
+    const Effect* e = riding(place);
+    if (e == 0 || place_type(place) != e->type || (asked && op1f_screen_asked != e->screen)) return 0;
+    u32 index = place == (u32)MASTER ? 1u : 0u;
+    out->slot = e->slot;
+    out->ask = e->ask;
+    out->where = place;
+    out->how = (place_on(place) ? 0u : (u32)OP1F_SHOWN_OFF) | (instances[e->number][index].status == (u32)REFUSED ? (u32)OP1F_STAND_NO_ROOM : 0u) |
+               (places[place].budget.off ? (u32)OP1F_STAND_OVER : 0u);
+    *mode = m;
+    *screen = e->screen;
+    return 1;
+}
+
+extern "C" int op1f_effects_standing(Op1fStanding* out, unsigned* mode, unsigned* screen) {
+    return stand(out, mode, screen, 1);
+}
+
+extern "C" int op1f_effects_ahead(Op1fStanding* out, unsigned* mode, unsigned* screen) {
+    return stand(out, mode, screen, 0);
+}
+
+// ---------------------------------------------------------------- the helpers
+
+static const Effect* effect_of(int slot, u32 ask) {
+    u32 n = op1f_effects_registered;
+    for (u32 i = 0; i < n; ++i)
+        if (effects[i].slot == (u32)slot && effects[i].ask == ask) return &effects[i];
+    return 0;
+}
+
+static int from_frame(int slot) {
+    return op1f_cards_calling() == (u32)slot + 1u;
+}
+
+// The kinds of ask that have values, as op1f_param_get, op1f_param_set and op1f_riding serve them: a row a kind, found
+// by the kind of the card's ask, so that a later level adds its kind by one row (with its own place rules) and no helper
+// and no stub (since step R6). The helpers hold the card and the caller's thread first; each
+// row's functions answer the rest, as the header words the three helpers:
+//   places   the places of the kind: 0 to places - 1
+//   get      the value `index` at `place` into `out`: 0, OP1F_BAD_NAME (no such thing registered, no such value),
+//            OP1F_NOT_HERE (the place does not hold it now)
+//   set      the value set at `place`: the same answers
+//   riding   the places that hold it now, a bit a place
+struct Valued;
+typedef int (*ValuedGetFn)(const Valued* row, int slot, u32 ask, u32 place, u32 index, int* out);
+typedef int (*ValuedSetFn)(const Valued* row, int slot, u32 ask, u32 place, u32 index, int value);
+typedef u32 (*ValuedRidingFn)(const Valued* row, int slot, u32 ask);
+struct Valued { u32 kind, places; ValuedGetFn get; ValuedSetFn set; ValuedRidingFn riding; ValuedGetFn heard; };   // R6d: `heard`, level 10's
+
+// Kind 7, an effect: a place is a sound's slot (0 to 15) or the master (16), and the values are its four knobs.
+static int effect_get(const Valued* row, int slot, u32 ask, u32 place, u32 index, int* out) {
+    const Effect* e = effect_of(slot, ask);
+    if (e == 0 || index >= e->count || out == 0) return OP1F_BAD_NAME;
+    if (place >= row->places || riding(place) != e) return OP1F_NOT_HERE;
+    *out = value_of(e, index, RD32(place_words(place) + 4u * index));
+    return 0;
+}
+
+// R6d, level 10: the value as the place's effect was last called with it, or as set where it has not played in the
+// last few blocks.
+static int effect_heard(const Valued* row, int slot, u32 ask, u32 place, u32 index, int* out) {
+    const Effect* e = effect_of(slot, ask);
+    if (e == 0 || index >= e->count || out == 0) return OP1F_BAD_NAME;
+    if (place >= row->places || riding(place) != e) return OP1F_NOT_HERE;
+    const Heard* h = &heard[place];
+    for (u32 tries = 0; tries < (u32)HEARD_TRIES; ++tries) {
+        u32 seq = h->seq;
+        u32 ride = h->ride, live = h->live, stamp = h->stamp;
+        int v = h->values[index];
+        if ((seq & 1u) != 0 || h->seq != seq) continue;                             // a call came between: read again
+        if (live && ride == e->number + 1u && cycles_now() - stamp <= HEARD_CYCLES) {
+            *out = v;
+            return 0;
+        }
+        break;
+    }
+    *out = value_of(e, index, RD32(place_words(place) + 4u * index));
+    return 0;
+}
+
+static int effect_set(const Valued* row, int slot, u32 ask, u32 place, u32 index, int value) {
+    const Effect* e = effect_of(slot, ask);
+    if (e == 0 || index >= e->count) return OP1F_BAD_NAME;
+    if (place >= row->places || riding(place) != e) return OP1F_NOT_HERE;
+    u32 four[4] = {0, 0, 0, 0};
+    four[index] = word_of(e, index, value);
+    set_words(place, four, 1u << index);
+    return 0;
+}
+
+static u32 effect_riding(const Valued* row, int slot, u32 ask) {
+    const Effect* e = effect_of(slot, ask);
+    if (e == 0) return 0;
+    u32 bits = 0;
+    for (u32 p = 0; p < row->places; ++p)
+        if (riding(p) == e) bits |= 1u << p;
+    return bits;
+}
+
+// R6: kind 8, an engine: a place is a synth sound's slot (0 to 7); the engines unit answers, the card and the thread
+// held by the helper first. An ask that is no registered engine answers OP1F_BAD_NAME, as an ask of a kind with no row.
+#if defined(OP1F_HOST)
+#ifdef OP1F_R6_HOST_ENGINES
+extern "C" int (*mock_engines_param_get)(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int* out);
+#define op1f_engines_param_get (*mock_engines_param_get)
+extern "C" int (*mock_engines_param_set)(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int value);
+#define op1f_engines_param_set (*mock_engines_param_set)
+extern "C" int (*mock_engines_riding)(unsigned card_slot, unsigned ask, unsigned* bits);
+#define op1f_engines_riding (*mock_engines_riding)
+extern "C" int (*mock_engines_param_heard)(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int* out);   // R6d
+#define op1f_engines_param_heard (*mock_engines_param_heard)
+#else
+static int (*const r6_none_engines_param_get)(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int* out) = 0;
+#define op1f_engines_param_get (*r6_none_engines_param_get)
+static int (*const r6_none_engines_param_set)(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int value) = 0;
+#define op1f_engines_param_set (*r6_none_engines_param_set)
+static int (*const r6_none_engines_riding)(unsigned card_slot, unsigned ask, unsigned* bits) = 0;
+#define op1f_engines_riding (*r6_none_engines_riding)
+static int (*const r6_none_engines_param_heard)(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int* out) = 0;   // R6d
+#define op1f_engines_param_heard (*r6_none_engines_param_heard)
+#endif
+#else
+extern "C" int op1f_engines_param_get(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int* out) OP1F_NAMED("op1f_engines_param_get") __attribute__((weak));
+extern "C" int op1f_engines_param_set(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int value) OP1F_NAMED("op1f_engines_param_set") __attribute__((weak));
+extern "C" int op1f_engines_riding(unsigned card_slot, unsigned ask, unsigned* bits) OP1F_NAMED("op1f_engines_riding") __attribute__((weak));
+extern "C" int op1f_engines_param_heard(unsigned card_slot, unsigned ask, unsigned place, unsigned index, int* out) OP1F_NAMED("op1f_engines_param_heard") __attribute__((weak));   // R6d
+#endif
+
+static int engine_get(const Valued* row, int slot, u32 ask, u32 place, u32 index, int* out) {
+    (void)row;
+    if (&op1f_engines_param_get == 0) return OP1F_BAD_NAME;
+    int answer = op1f_engines_param_get((u32)slot, ask, place, index, out);
+    return answer == (int)OP1F_ENGINE_NOT_MINE ? (int)OP1F_BAD_NAME : answer;
+}
+
+static int engine_set(const Valued* row, int slot, u32 ask, u32 place, u32 index, int value) {
+    (void)row;
+    if (&op1f_engines_param_set == 0) return OP1F_BAD_NAME;
+    int answer = op1f_engines_param_set((u32)slot, ask, place, index, value);
+    return answer == (int)OP1F_ENGINE_NOT_MINE ? (int)OP1F_BAD_NAME : answer;
+}
+
+static int engine_heard(const Valued* row, int slot, u32 ask, u32 place, u32 index, int* out) {   // R6d
+    (void)row;
+    if (&op1f_engines_param_heard == 0) return OP1F_BAD_NAME;
+    int answer = op1f_engines_param_heard((u32)slot, ask, place, index, out);
+    return answer == (int)OP1F_ENGINE_NOT_MINE ? (int)OP1F_BAD_NAME : answer;
+}
+
+static u32 engine_riding(const Valued* row, int slot, u32 ask) {
+    (void)row;
+    unsigned bits = 0;
+    if (&op1f_engines_riding == 0 || op1f_engines_riding((u32)slot, ask, &bits) != 0) return 0;
+    return bits;
+}
+
+static const Valued VALUED[] = {
+    {OP1F_ASK_EFFECT, PLACES, effect_get, effect_set, effect_riding, effect_heard},
+    {OP1F_ASK_ENGINE, SLOTS, engine_get, engine_set, engine_riding, engine_heard},             // R6; R6d: `heard`
+};
+enum { VALUED_KINDS = sizeof VALUED / sizeof VALUED[0] };
+
+// The row of the kind of the card's ask `ask`, or 0: the card has no such ask, or its kind has no values.
+static const Valued* valued(int slot, u32 ask) {
+    const Op1fCard* card = op1f_cards.slots[slot].card;
+    if (card->bytes < (u32)CARD_4_BYTES || card->asks == 0 || ask >= card->ask_count || ask >= (u32)OP1F_ASKS_MOST) return 0;
+    u32 kind = card->asks[ask].kind;
+    for (u32 i = 0; i < (u32)VALUED_KINDS; ++i)
+        if (VALUED[i].kind == kind) return &VALUED[i];
+    return 0;
+}
+
+extern "C" int op1f_param_get(const Op1fCard* card, unsigned ask, unsigned place, unsigned index, int* out) {
+    int slot = slot_of(card);
+    if (slot < 0) return OP1F_BAD_NAME;
+    if (!from_frame(slot) && !op1f_cards_inside(card)) return OP1F_NOT_NOW;
+    const Valued* row = valued(slot, ask);
+    if (row == 0) return OP1F_BAD_NAME;
+    return row->get(row, slot, ask, place, index, out);
+}
+
+// R6d, level 10 (module/build_r6d_base.h words it): op1f_param_get's checks, then the row's value as heard.
+extern "C" int op1f_param_heard(const Op1fCard* card, unsigned ask, unsigned place, unsigned index, int* out) {
+    int slot = slot_of(card);
+    if (slot < 0) return OP1F_BAD_NAME;
+    if (!from_frame(slot) && !op1f_cards_inside(card)) return OP1F_NOT_NOW;
+    const Valued* row = valued(slot, ask);
+    if (row == 0) return OP1F_BAD_NAME;
+    return row->heard(row, slot, ask, place, index, out);
+}
+
+extern "C" int op1f_param_set(const Op1fCard* card, unsigned ask, unsigned place, unsigned index, int value) {
+    int slot = slot_of(card);
+    if (slot < 0) return OP1F_BAD_NAME;
+    if (!from_frame(slot)) return OP1F_NOT_NOW;
+    const Valued* row = valued(slot, ask);
+    if (row == 0) return OP1F_BAD_NAME;
+    return row->set(row, slot, ask, place, index, value);
+}
+
+extern "C" unsigned op1f_riding(const Op1fCard* card, unsigned ask) {
+    int slot = slot_of(card);
+    if (slot < 0) return 0;
+    const Valued* row = valued(slot, ask);
+    if (row == 0) return 0;
+    return row->riding(row, slot, ask);
+}
+
+extern "C" unsigned op1f_rack_at(const Op1fCard* card, unsigned place) {
+    if (slot_of(card) < 0 || place >= (u32)PLACES) return 0;
+    const Effect* e = riding(place);
+    return e ? (u32)ID_FIRST + e->number : 0u;
+}
+
+extern "C" const Op1fRackEntry* op1f_rack_list(const Op1fCard* card, unsigned* count) {
+    u32 n = slot_of(card) < 0 ? 0u : op1f_effects_registered;
+    if (count) *count = n;
+    return n ? entries : 0;
+}
+
+extern "C" int op1f_rack_ready(const Op1fCard* card, unsigned which, unsigned id) {
+    int slot = slot_of(card);
+    if (slot < 0) return OP1F_BAD_NAME;
+    if (!from_frame(slot)) return OP1F_NOT_NOW;
+    u32 n = op1f_effects_registered;
+    if (which >= (u32)RACK_PLACES || id < (u32)ID_FIRST || id >= (u32)ID_FIRST + n) return OP1F_BAD_NAME;
+    u32 effect = id - (u32)ID_FIRST;
+    Rack* k = 0;
+    u32 record = 0;
+    for (u32 i = 0; i < rack_count && k == 0; ++i)
+        if (racks[i].slot == (u32)slot && racks[i].which == which && racks[i].effect == effect) {
+            k = &racks[i];
+            record = i + 1u;
+        }
+    if (k == 0) {
+        char whose[48];
+        u32 at = 0;
+        for (const char* c = "place "; *c; ++c) whose[at++] = *c;
+        whose[at++] = (char)('0' + which);
+        for (const char* c = " of '"; *c; ++c) whose[at++] = *c;
+        for (u32 c = 0; c < 15u && card->name[c]; ++c) whose[at++] = card->name[c];
+        whose[at++] = '\'';
+        whose[at] = 0;
+        if (rack_count == (u32)RACKS) {
+            op1f_log(1, LOG_FILE, 9, "effect: '%s' has no room for %s: %s", effects[effect].name, whose, "the base keeps 64 runs inside packs");
+            return OP1F_FAILED;
+        }
+        k = &racks[rack_count];
+        k->slot = (u32)slot;
+        k->which = which;
+        k->effect = effect;
+        for (u32 c = 0; c <= at; ++c) k->whose[c] = whose[c];
+        BARRIER();
+        record = ++rack_count;
+    }
+    const Effect* e = &effects[effect];
+    u32 status = make_ready(&k->in, e, k->whose);
+    if (status == (u32)CLEARING) return OP1F_NOT_NOW;
+    if (status == (u32)REFUSED) return k->in.handle == OP1F_TOO_LARGE ? OP1F_TOO_LARGE : OP1F_FAILED;
+    if (k->budget.off) return OP1F_NOT_HERE;
+    if (rack_current[slot][which] != record) {                                      // the place held another effect, or none
+        if (e->table->reset) call_reset(e, (u32)OP1F_PLACE_HOSTED + which, k->in.state);
+        k->fresh = 1;
+        BARRIER();
+        rack_current[slot][which] = (u8)record;
+    }
+    return 0;
+}
+
+extern "C" int op1f_rack_run(const Op1fCard* card, unsigned which, const Op1fRackRun* r) {
+    int slot = slot_of(card);
+    u32 n = op1f_effects_registered;
+    if (slot < 0 || r == 0 || r->bytes < (u32)RUN_BYTES || which >= (u32)RACK_PLACES || r->frames != (u32)FRAMES || r->left == 0 || r->right == 0 ||
+        r->values == 0 || r->form > (u32)OP1F_RACK_VALUES || r->id < (u32)ID_FIRST || r->id >= (u32)ID_FIRST + n)
+        return OP1F_BAD_NAME;
+    u32 record = rack_current[slot][which];
+    if (record == 0 || record > rack_count) return OP1F_NOT_HERE;
+    Rack* k = &racks[record - 1u];
+    if (k->effect != r->id - (u32)ID_FIRST || k->in.status != (u32)READY || k->budget.off) return OP1F_NOT_HERE;
+    Effect* e = &effects[k->effect];
+    if (r->on == 0 && (e->flags & (u32)OP1F_EFFECT_TAILS) == 0) return 0;           // switched off, and nothing to ring out
+    int values[VALUES];
+    for (u32 i = 0; i < e->count; ++i) {
+        int v = r->values[i];
+        if (r->form == (u32)OP1F_RACK_WORDS) v = value_of(e, i, (u32)v);
+        else v = v < e->low[i] ? e->low[i] : v > e->high[i] ? e->high[i] : v;
+        values[i] = v;
+    }
+    u32 fresh = r->fresh || k->fresh;
+    k->fresh = 0;
+    run(e, (u32)OP1F_PLACE_HOSTED + which, r->left, r->right, values, r->on ? 1u : 0u, fresh, k->in.state, &k->budget);
+    return 0;
+}

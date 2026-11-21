@@ -1,6 +1,6 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
 /* Build L, packs L4: the 16-tap filter of tracks 5 to 8, written from what it computes (OS 1.7.0+0).
- * analysis/clean_base_study.md, section 17. Its elder is op1f_fir_ext in build_b_play.s, which every pack before L4
+ * Its elder is op1f_fir_ext in Build B's playback stub, which every pack before L4
  * has and which is kept as it is; the caller, build_b_play.cpp, is as it was.
  *
  * What it computes. For one output frame and each of one to four tracks, two sums of sixteen products:
@@ -18,8 +18,7 @@
  * The order is part of the result: a sum that has stopped at a limit goes on from that limit, so the sixteen
  * products are added from tap 0 to tap 15 and in no other order. These are the numbers the firmware gives the
  * tape's own four tracks, and the numbers the elder gave: both routines are run on the PC, instruction by
- * instruction from their assembled bytes, and their sums are held against each other as numbers and as formulas
- * (tools/fir_model.py, tools/tests/test_packs_l4.py).
+ * instruction from their assembled bytes, and their sums are held against each other as numbers and as formulas.
  *
  * How. A tap is seven things to do: three words to fetch (the tap and the two samples) and four to work out (two
  * products, two sums). Only the four need an instruction each; a fetch rides beside one of them. So a tap is four

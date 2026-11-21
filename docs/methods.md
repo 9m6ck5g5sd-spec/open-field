@@ -13,7 +13,7 @@ Every address on this page is for OS 1.7.3.
 
 ## 1. Your own firmware file
 
-The firmware file is `os.ldr`. Your unit keeps a copy on its disk, in the folder `upgrade/firmware/blackfin/bin`. The install's helper copies it off for you, into the folder `open-field` in your user folder, as `os-1.7.3-yours.ldr` ([the guide](guide.md), "The install, once"). Take that one, not an `os.ldr` at the top of the disk: that is whatever an install put there.
+The firmware file is `os.ldr`. Your unit keeps a copy on its disk, in the folder `upgrade/firmware/blackfin/bin`. The install's helper copies it off for you, into the working folder you pick on the install page, as `os-1.7.3-yours.ldr` ([the guide](guide.md), "The install, once"). Take that one, not an `os.ldr` at the top of the disk: that is whatever an install put there.
 
 Keep it **outside the repository**. Many tools take its path from the environment, so set it once:
 

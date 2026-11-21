@@ -1,6 +1,5 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Build D, step D1: lift-all and drop-all over six tracks (OS 1.7.0+0; read in analysis/build_b_design.md,
-// section 16).
+// Build D, step D1: lift-all and drop-all over six tracks (OS 1.7.0+0).
 //
 // What stock does (audio_clipboard.cpp / tape_c.cpp in record 307): shift + lift with the byte 0x11905a4d set
 // runs the TapeController's lift-all 0x8c0c1c98, a loop over tracks 0-3 that puts every track with a clip at

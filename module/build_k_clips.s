@@ -1,5 +1,5 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build K, pack K4: the clips of tracks 5 to 8 in a list of their own (analysis/tape_stock_safe.md, section 8).
+/* Build K, pack K4: the clips of tracks 5 to 8 in a list of their own.
  * Profile group build-k4. Four CALL.a stubs, each in place of the 8-byte load of 0x8401ebe8 into R1 (the text
  * "clips") by which one of Clips.cpp's four functions names the tape document's list to the db (db2.cpp). Each
  * stub leaves in R1 the key for the call that follows: stock's own text, or the module's "op1f_clips" for a clip

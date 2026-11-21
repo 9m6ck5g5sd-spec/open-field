@@ -1,12 +1,12 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build H images H1a and H1: the four stubs around stock's instrument effect call (analysis/fx_chain_study.md,
- * sections 8 and 9). Profile group "build-h1a". Each replaces one 8-byte instruction inside a LINKed L1 function with
+/* Build H images H1a and H1: the four stubs around stock's instrument effect call. Profile group "build-h1a". Each
+ * replaces one 8-byte instruction inside a LINKed L1 function with
  * a CALL.a (the function's RETS is saved in its frame, so the CALL's RETS write is harmless).
  *
  * H1a timed stock's call: the start stubs stamped CYCLES and performed the displaced load, the end stubs accounted.
  * H1 owns the chain: the start stubs stamp CYCLES and hand stock a null producer (R0 = 0 for the synth, R1 = 0 for
  * the drum), so stock's test of that register for zero skips its own effect call and falls to the end site, where the end stubs
- * call op1f_fx_chain_run(host) (build_h_chain.cpp), which runs the coupled wagons in order on the two buses, the
+ * call op1f_fx_chain_run(host) (Build H's chain unit), which runs the coupled wagons in order on the two buses, the
  * mirrored wagon through stock's own producer object with stock's ctx, the others through the module's instances.
  *
  *   0x11a052b4  the load of the word at 0x84a03c84 into R0, in the synth second stage 0x11a04130: the producer's

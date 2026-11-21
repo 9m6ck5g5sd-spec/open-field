@@ -1,5 +1,5 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build E: the two cosmetic screens for tracks 5 and 6 (OS 1.7.0+0; analysis/build_b_design.md, section 18).
+/* Build E: the two cosmetic screens for tracks 5 and 6 (OS 1.7.0+0).
  * Two 8-byte CALL.a retargets in record 309; the logic is in build_e_screens.cpp.
  *
  *      help screen update   0x8fc2e5bc:  the call of 0x8d514348 (the selected-track getter) -> CALL.a op1f_help_track.
