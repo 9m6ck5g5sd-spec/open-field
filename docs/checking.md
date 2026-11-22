@@ -71,12 +71,14 @@ It looks at names and at the form of a log, of a listing and of quoted instructi
 
 ### The checks on every change
 
-On every pull request and every change to `main`, the host runs `.github/workflows/checks.yml` on its standard Windows and Linux machines. It needs no firmware, and it runs:
+On every pull request and every change to `main`, the host runs `.github/workflows/checks.yml` on its standard Windows machine. It needs no firmware, and it runs:
 
 - the build, `python -I tools/build_all.py`, held to `packs/built.json`, with the compiler fetched as [docs/build.md](build.md) says and kept between runs;
 - the tree's own tests, `python -I -m unittest discover -s tools/tests`;
 - the install page's three checks, `node builder/validate-builder.mjs` (without a firmware file), `node builder/validate-devmode.mjs` and `node builder/validate-install.mjs`;
 - the part of this check that needs no firmware, `--forms-only`, on every file of the tree.
+
+It also runs `.github/workflows/helper.yml`, two smaller jobs that need no compiler. On Linux the host runs the tree's own tests, with those of the Mac and Linux helper, which Windows skips, then `node builder/validate-devmode.mjs` and `node builder/validate-install.mjs`. On a Mac it runs that helper's tests and nothing else. The install page is published on the success of `checks` alone, so a failure of these two never holds it back.
 
 A pull request that changes the listing of packs also runs `.github/workflows/listing.yml`: `tools/catalog_check.py`, held to the listing before the change and to every pack file that changed ([the listing](catalog.md)).
 

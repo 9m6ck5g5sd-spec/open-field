@@ -1,5 +1,5 @@
 /* Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's. */
-/* Build J image J5b: the base's stub at stock's draw of the version text (analysis/pack_loader_study.md, section 16).
+/* Build J image J5b: the base's stub at stock's draw of the version text.
  *
  * The site, 0x8c0b43e4, is the 8-byte load of the word at 0x0801b804 into R0 (the frame buffer) in the main thread's start-up,
  * a few hundred instructions after the load point. Stock has just stored the two stack arguments of its one draw of
@@ -12,7 +12,7 @@
  * The site is reached straight on only (from 0x8c0b3af8, which two jumps reach). After it R2 and R1 are set anew,
  * the call follows, and what stock uses after the call it takes from its frame: nothing is live in the registers a
  * call may change but R0, which this stub sets last. The main thread's function keeps its own RETS in its frame.
- * The base writes the CALL.a at the load point (build_j5b_base.cpp, build_j5b_base_table.s); no image and no pack
+ * The base writes the CALL.a at the load point (J5b's base unit, J5b's table); no image and no pack
  * has the site.
  *
  * The stub hands stock's text to op1f_base_screen_text and puts its answer where the text was: stock's own pointer,

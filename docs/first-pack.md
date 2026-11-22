@@ -72,7 +72,7 @@ It finds the dot once, by its name, in the tempo screen's document, and keeps it
 | `op1f_show(dot, on)` | The dot shown or hidden |
 | `op1f_log(...)` | A line in the unit's log |
 
-`module/build_m3_card.h` declares every helper of the base, with what each takes and gives back and the thread it may be called from. `wink` includes the header of level 1, which holds the same words for that level.
+`module/build_r6e_card.h` declares every helper of the base, with what each takes and gives back and the thread it may be called from. `wink` includes the header of level 1, which holds the same words for that level.
 
 **Its line in the log** goes through a small gate, `module/build_q_quiet.h`: it is said for the first periods of a start, when the dot blinked, and when the power popup comes up, and rarely otherwise. A line every frame would fill the log.
 
@@ -82,7 +82,7 @@ It finds the dot once, by its name, in the tempo screen's document, and keeps it
 2. Copy `out/examples/wink.pack` into `packs`.
 3. Leave the disk mode. Switch the unit off and on.
 
-The start screen reads `1.7.3 - open-field 0.3`, as before: it names no pack. Press the metronome key: on the tempo screen, a small red dot at the top blinks, half a second on and half a second off.
+The start screen reads `1.7.3 - open-field 0.12`, as before: it names no pack. Press the metronome key: on the tempo screen, a small red dot at the top blinks, half a second on and half a second off.
 
 Without `base.pack` on the unit the example does not run: the start screen counts it as left out, and the log says `nobody offers the name it needs, op1f_level_1`.
 
@@ -159,15 +159,24 @@ Put the example back as it was when you are done (`git checkout examples packs/b
 
 Copy the folder `examples/wink` to a folder of your own and give the pack a new name: in `recipe.json` the `name`, the `build` name, the paths of the sources and of the picture, and the function the card names; in the C++ file the function's name and the name of the file it hands to the logger. Then make the card's source and the directory of pictures from your recipe, as in step 5 with your own recipe and file names, and build it with the second command of step 1 and your own recipe.
 
-What your pack can ask of the base comes in three levels, each with an example:
+What your pack can ask of the base comes in levels, each with an example:
 
 | Level | What it adds | Example |
 | --- | --- | --- |
 | 1 | A call every frame, pictures for the firmware's screens and of the pack's own, helpers for a screen's parts and the log | `wink` |
 | 2 | A page of the pack's own, with keys and knobs | [`yoyo`](../examples/yoyo/README.md) |
 | 3 | Folders and files on the unit's disk, shown in the disk mode if the pack asks, and text on its page | [`list`](../examples/list/README.md) |
+| 4 | Painting on the frame, pages that stack, text placed and measured, a file deleted, a key watched | [`sketch`](../examples/sketch/README.md) |
+| 5 | A sequencer of your own in the unit's list, and the notes heard | [`echo`](../examples/echo/README.md) |
+| 6 | A place in the sound, working memory, pictures that take a place by name | [`dub`](../examples/dub/README.md) |
+| 7 | Values kept with each tape and each sound, in the unit's own files | [`dub`](../examples/dub/README.md) |
+| 8 | An effect of your own in the unit's lists of effects, for the sounds and the master | [`crush`](../examples/crush/README.md), [`ping`](../examples/ping/README.md) |
+| 9 | A synth engine of your own in the unit's list of engines, with sounds of its own | [`pluck`](../examples/pluck/README.md), [`fold`](../examples/fold/README.md) |
+| 10 | The value as the sound plays it, LFOs and all, for your page to draw | the four of levels 8 and 9 |
 
-[The base](base.md) has every one of them: the card, the order in which keys are offered, the threads, the folders and files, the text.
+When the examples are too small for what you are after, look at [open-field-packs](https://github.com/LaP0573/open-field-packs). It holds four real packs on cards with their sources: `lfo` (level 4), `8 tracks` and `sidechain` (level 7) and `fx train` (level 8). It is also the model for a repository of your own: a folder a pack, and a `build.py` that builds them with the tools and headers of this one at a commit it names.
+
+[The base](base.md) has levels 1 to 3: the card, the order in which keys are offered, the threads, the folders and files, the text. Levels 4 to 10 each have a page of their own: [level 4](level-4.md), [level 5](level-5.md), [level 6](level-6.md), [level 7](level-7.md), [level 8](level-8.md), [level 9](level-9.md), [level 10](level-10.md).
 
 A picture of your own is instructions too. `tools/picture_make.py` makes the picture on your computer from a copy of your unit's picture folder and says what it holds; `tools/picture_delta.py` works out the stretches of a picture of the second kind.
 
@@ -177,7 +186,7 @@ To offer your pack to every owner on the install page, add it to [the listing](c
 
 ## 7. A pack that changes the firmware
 
-Some features cannot be had through the base: they have to stand in the firmware's own code, where it does something. `8 tracks` is such a feature. A pack of that kind carries a **table of changes**: where the running firmware is changed, and which function of the pack goes there. The loader makes the changes at every start, and only where a checksum says the firmware is the one the pack was made for.
+Some features cannot be had through the base: they have to stand in the firmware's own code, where it does something. `8 tracks` is such a feature ([its sources](https://github.com/LaP0573/open-field-packs/tree/main/8%20tracks)). A pack of that kind carries a **table of changes**: where the running firmware is changed, and which function of the pack goes there. The loader makes the changes at every start, and only where a checksum says the firmware is the one the pack was made for.
 
 The smallest such pack is `trampolines`, in `examples/trampolines/` ([its page](../examples/trampolines/README.md)). It adds nothing you can see or hear: it stands at two functions of the firmware, counts, and writes one line into the log. It needs no base.
 

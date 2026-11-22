@@ -1,0 +1,67 @@
+{
+  "about": "The example of levels 8 and 10 (docs/level-8.md, docs/level-10.md): an effect in the unit's own lists of effects, for a sound (shift and T3) and for the master (the mixer's list), among the unit's own effects by name. It makes a sound rougher, with bits, rate, drive and mix on the four knobs. It stands on the unit's punch: a sound saved with it keeps punch's name and four knobs, switched off, and plays dry on a unit without the pack. It keeps nothing from one block to the next, so it asks no working memory and has no reset. T3 shows its page, the base's blank page with its name, on which it paints the four values as the sound plays them. It takes no key and no knob, changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "crush",
+  "version": 2,
+  "interface": 1,
+  "build": "build_r6e_crush",
+  "sources": [
+    "examples/crush/crush.cpp",
+    "examples/crush/crush_card.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "card": {
+    "level": 10,
+    "frame": "crush_frame",
+    "pick": null,
+    "pictures": false,
+    "input": null,
+    "asks": [
+      {
+        "kind": "effect",
+        "name": "crush",
+        "rides": "punch",
+        "mono": false,
+        "tails": false,
+        "cycles": 31000,
+        "state_bytes": 0,
+        "state_align": 4,
+        "process": "crush_process",
+        "reset": null,
+        "shown": "crush_shown",
+        "params": [
+          {
+            "name": "bits",
+            "low": 2,
+            "high": 16,
+            "start": 8
+          },
+          {
+            "name": "rate",
+            "low": 0,
+            "high": 6,
+            "start": 2
+          },
+          {
+            "name": "drive",
+            "low": 0,
+            "high": 4,
+            "start": 0
+          },
+          {
+            "name": "mix",
+            "low": 0,
+            "high": 100,
+            "start": 100
+          }
+        ]
+      }
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

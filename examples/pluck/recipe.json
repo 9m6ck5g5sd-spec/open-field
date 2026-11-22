@@ -1,0 +1,100 @@
+{
+  "about": "The example of levels 9 and 10 (docs/level-9.md, docs/level-10.md): a synth engine in the unit's own list of engines (shift and T1 on a synth sound), among the unit's own engines by name. A plucked string: a delay line a voice, plucked by a burst of noise as loud and bright as the note. Eight values, on the four knobs and on the four knobs with shift: tone, decay, damping, pick, body, drift, noise, level. 16 KiB of working memory a voice, cleared by its reset on the display thread. Two sounds of its own, nylon and harp, in nylon.json and harp.json beside this recipe, written into a folder pluck of the unit's sound list where the unit has room for them and 20 more. T1 shows its page, the base's blank page, on which it paints the eight values as the sound plays them. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "pluck",
+  "version": 2,
+  "interface": 1,
+  "build": "build_r6e_pluck",
+  "sources": [
+    "examples/pluck/pluck.cpp",
+    "examples/pluck/pluck_card.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "card": {
+    "level": 10,
+    "frame": "pluck_frame",
+    "pick": null,
+    "pictures": false,
+    "input": null,
+    "folders": [],
+    "asks": [
+      {
+        "kind": "engine",
+        "name": "pluck",
+        "stereo": false,
+        "cycles": 33000,
+        "voice_bytes": 16384,
+        "voice_align": 32,
+        "render": "pluck_render",
+        "reset": "pluck_reset",
+        "shown": "pluck_shown",
+        "params": [
+          {
+            "name": "tone",
+            "low": 0,
+            "high": 100,
+            "start": 60
+          },
+          {
+            "name": "decay",
+            "low": 0,
+            "high": 100,
+            "start": 70
+          },
+          {
+            "name": "damping",
+            "low": 0,
+            "high": 100,
+            "start": 40
+          },
+          {
+            "name": "pick",
+            "low": 0,
+            "high": 100,
+            "start": 25
+          },
+          {
+            "name": "body",
+            "low": 0,
+            "high": 100,
+            "start": 30
+          },
+          {
+            "name": "drift",
+            "low": 0,
+            "high": 100,
+            "start": 10
+          },
+          {
+            "name": "noise",
+            "low": 0,
+            "high": 100,
+            "start": 0
+          },
+          {
+            "name": "level",
+            "low": 0,
+            "high": 100,
+            "start": 80
+          }
+        ],
+        "sounds": [
+          {
+            "name": "nylon",
+            "file": "nylon.json"
+          },
+          {
+            "name": "harp",
+            "file": "harp.json"
+          }
+        ]
+      }
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

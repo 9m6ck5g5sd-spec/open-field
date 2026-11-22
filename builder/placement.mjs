@@ -2,10 +2,11 @@
 // file listing of the unit's volume. No memory reading. Runs in the browser (plain ES module, no Node
 // APIs in this file) and in Node.
 //
-// The model was worked out for te-boot 1000.1.1 and held against real writes. For te-boot 1000.2.0,
-// whose heap is the same but for where it starts (BOOTLOADERS, below), one write on one unit holds it. Every verdict names the
-// bootloader it is for, and a version not in BOOTLOADERS gets none: the dev-mode step reads the
-// bootloader's version and refuses any other.
+// The model was worked out for te-boot 1000.1.1 and held against real writes.
+//
+// te-boot 1000.2.0 has a profile beside 1000.1.1's (BOOTLOADERS, below). Its numbers are a contributor's reading,
+// not read again by us, and one reported write on one unit holds them. Every verdict is for the bootloader the
+// caller names; none is assumed, and a version that is not in BOOTLOADERS gets no verdict.
 //
 // Why it matters: entry 4 reads /os.ldr into a buffer from te-boot's general allocator (8-byte aligned),
 // and its eMMC driver asserts the source is 32-byte aligned (rsi.c:311). The buffer lands 8 bytes behind
@@ -16,36 +17,31 @@
 
 // ---- constants (tools/teboot_heap.py, with the te-boot addresses it cites) ----
 
-// What differs between the bootloaders the model knows: the heap's base and length, from the heap table's
-// one entry, and the step by which the heap grows. Everything else below is the same in both.
+// The numbers the model takes from each bootloader it knows. Every other constant in this file, and every
+// address cited beside one, is 1000.1.1's and is used for both.
 export const BOOTLOADERS = Object.freeze({
-  // 1000.1.1: tools/teboot_heap.py, held against real writes.
   "1000.1.1": Object.freeze({
     heapBase: 0x88a1ca70,                    // the heap table's one entry (0x889e9df8)
     heapLength: 0x01fffffc,
     grow: 0x200,                             // the word at 0x889eeb8c
   }),
-  // 1000.2.0: read from te-boot 1000.2.0 itself (2026-11-20). The heap table's entry stands at 0x889efec8,
-  // its only one; the grow word at 0x889f4c5c. The allocator works as 1000.1.1's does, and the static
-  // constructors' 13 requests and the mount's fixed setup ask the same sizes, request for request. So the
-  // heap's start moves by 0x60c8 and every buffer moves with it: 8 more modulo 32 than on 1000.1.1.
-  // USB_BASE, USB_WITH_COMPUTER, START_REST, SEEN_RESTS and fileTnodes were not read again for 1000.2.0:
-  // they are 1000.1.1's, and one write holds them: on 2026-11-20 it landed first time on a unit with
-  // 1000.2.0 (one unit, macOS), with a pad file of 14,400,000 bytes this model chose.
+  // 1000.2.0's numbers are the reading of the contributor of open-field's pull request 10, who found them at the
+  // addresses below in that bootloader's own code. They were not read again by us. One reported write on one
+  // unit holds them (2026-11-20): it landed, with the pad file of 14,400,000 bytes that this profile chooses.
   "1000.2.0": Object.freeze({
-    heapBase: 0x88a22b3c,
+    heapBase: 0x88a22b3c,                    // the heap table's one entry (0x889efec8)
     heapLength: 0x01fffffc,
-    grow: 0x200,
+    grow: 0x200,                             // the word at 0x889f4c5c
   }),
 });
 
-// The bootloader's version as the model keys it: "1000.2.0" or the screen's "1000.2.0+0". Anything else,
-// or nothing, throws: no verdict without a known bootloader.
+// The bootloader's version as the model keys it: "1000.2.0", or "1000.2.0+0" as te-boot gives it. Anything
+// else, or nothing, throws a sentence the page can show: there is no default bootloader.
 export function bootloaderVersion(version) {
   const key = typeof version === "string" ? version.replace(/\+0$/, "") : "";
   if (!Object.hasOwn(BOOTLOADERS, key)) {
-    throw new Error("the placement model knows the bootloaders " + Object.keys(BOOTLOADERS).join(" and ") +
-      " only, and was given " + (version === undefined || version === null || version === "" ? "none" : String(version)));
+    const given = version === undefined || version === null || version === "" ? "none" : String(version);
+    throw new Error("the placement model knows the bootloaders " + Object.keys(BOOTLOADERS).join(" and ") + " only, and was given " + given);
   }
   return key;
 }
@@ -381,7 +377,7 @@ export function plainBuffer(mountEnd, withComputer = true) {
 // The buffer and whether it passes, for one listing's counts, over the power-on cases the unit shows.
 // With a computer on the cable (the browser), and on any populated volume (above ~30 batches), the two
 // rests agree, so `pass` is the honest verdict. `perRest` is there for the thin-volume case.
-// `bootloader` is required: its version, one of BOOTLOADERS.
+// `bootloader` is required: the unit's version, one of BOOTLOADERS.
 export function placement(counts, { bootloader, withComputer = true, rests = SEEN_RESTS } = {}) {
   bootloader = bootloaderVersion(bootloader);
   const perRest = rests.map((rest) => {
@@ -432,7 +428,7 @@ export function recommendPad(counts, { bootloader, withComputer = true, rests = 
 // `imageBytes` (the size of the os.ldr to be written) should be passed whenever it is known: it makes the
 // count reflect the write-visit volume with that exact image on it, whatever the listing holds (see
 // countListing). Without it the verdict is only right if the listing was taken with the intended os.ldr
-// already on the volume. `bootloader` (its version, one of BOOTLOADERS) is required.
+// already on the volume. `bootloader` (the unit's version, one of BOOTLOADERS) is required.
 export function analyzeListing(rows, options = {}) {
   bootloaderVersion(options.bootloader);
   const counts = countListing(rows, options);

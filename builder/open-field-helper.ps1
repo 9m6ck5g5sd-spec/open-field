@@ -2,7 +2,7 @@
 #
 # On Windows a web page cannot reach the unit's files, so this does it, with the shell Windows itself uses for the
 # unit (the unit shows as a portable device named OP-1 while its bootloader's drive mode is open). It works with the
-# install page through one folder on this computer, by default "open-field" in your user folder:
+# install page through one folder on this computer, the working folder the owner picked on the page (any folder):
 #   1. it finds the unit, copies your own firmware file off (upgrade/firmware/blackfin/bin/os.ldr), takes the log
 #      files off into the folder, lists the disk, and waits;
 #   2. the page builds the new firmware file, works out whether the write lands, and writes a plan into the folder;
@@ -12,64 +12,152 @@
 # It decides nothing about the write's placement: the page does, and this only compares.
 #
 # What it changes on the unit, and nothing else: it takes the files in "logs" off, and the pad files of earlier
-# installs that bear its own name (open-field-pad.bin, open-field-pad-2.bin, ...), and it writes os.ldr at the top
-# level, the pad file the plan names, and the pack files of the folder's "packs" sub folder into user/pk (the folder
-# made if it is not there). It never deletes a folder, and it writes nothing before it has listed the disk again and
-# found it as the plan was made from.
+# installs that bear its own name (open-field-pad.bin, open-field-pad-2.bin, ...), and the files in user/pkin, the
+# waiting folder where the install page leaves pack files over USB MIDI (its note .apply among them), and it writes
+# os.ldr at the top level, the pad file the plan names, and the pack files of the folder's "packs" sub folder into
+# user/pk (the folder made if it is not there). It never deletes a folder, and it writes nothing before it has listed
+# the disk again and found it as the plan was made from.
 #
 # Run it from a PowerShell window (the install page shows the command), or as a file:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File open-field-helper.ps1
-# -Folder names another folder. -Source names a folder of this computer that stands for the unit's disk, read and
-# written through the same shell calls: the check of this script without a unit.
 # -Page, or $openFieldPage set before the script runs as the page's line does it, is the install page's mark: the page
 # writes it into the folder it chose (page.json), and this checks it before anything else, so that the two never work
 # in two different folders. Without a mark nothing is checked.
+# -FolderName, or $openFieldFolder set the same way, is that folder's name. A browser tells a page a folder's name and
+# never its path, so this looks for the folder: one of that name that holds the page's mark, in the current folder,
+# the user folder, the Desktop, Documents and Downloads, each and one level below. With exactly one such folder it
+# works there; with none or several it asks once, with a folder dialog, and checks the mark of the folder picked.
+# -Folder names the folder outright (no search). -NoDialog stops where the dialog would open (for the tests).
+# -Source names a folder of this computer that stands for the unit's disk, read and written through the same shell
+# calls: the check of this script without a unit.
 param(
     [string] $Folder = '',
+    [string] $FolderName = '',
     [string] $Source = '',
     [int] $WaitMinutes = 60,
     [int] $FindSeconds = 180,
-    [string] $Page = ''
+    [string] $Page = '',
+    [switch] $NoDialog
 )
 
+# The mark the install page wrote into a folder (page.json), or $null.
+function Read-OpenFieldMark([string] $Dir) {
+    $markPath = Join-Path $Dir 'page.json'
+    if (-not (Test-Path -LiteralPath $markPath -PathType Leaf)) { return $null }
+    try { return [string] ((Get-Content -Raw -LiteralPath $markPath -Encoding UTF8 | ConvertFrom-Json).id) } catch { return $null }
+}
+
+# The folders that may be the one the page picked: of the name given (any letters' case) and holding the mark given,
+# among the places an owner makes a folder in, each and one level below. Folders that cannot be read are passed over.
+function Find-OpenFieldFolder([string] $Name, [string] $Mark) {
+    # a full path with no backslash at its end, but for a drive's own top (C:\)
+    $tidy = { param([string] $p) $f = [System.IO.Path]::GetFullPath($p); if ($f.Length -gt 3) { $f = $f.TrimEnd('\') }; $f }
+    $roots = New-Object System.Collections.Generic.List[string]
+    $here = $null
+    try { $here = (Get-Location -PSProvider FileSystem).Path } catch { $here = $null }
+    $downloads = if ($env:USERPROFILE) { Join-Path $env:USERPROFILE 'Downloads' } else { $null }
+    foreach ($r in @($here, $env:USERPROFILE, [Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('MyDocuments'), $downloads)) {
+        if ($r -and (Test-Path -LiteralPath $r -PathType Container)) {
+            $full = & $tidy $r
+            if (-not ($roots | Where-Object { $_ -ieq $full })) { $roots.Add($full) }
+        }
+    }
+    $found = New-Object System.Collections.Generic.List[string]
+    foreach ($root in $roots) {
+        $places = @($root)
+        try { $places += @([System.IO.Directory]::GetDirectories($root)) } catch { }
+        foreach ($p in $places) {
+            $full = & $tidy $p
+            if ($Name -and -not ((Split-Path -Leaf $full) -ieq $Name)) { continue }
+            if ($Mark -and (Read-OpenFieldMark $full) -ne $Mark) { continue }
+            if (-not ($found | Where-Object { $_ -ieq $full })) { $found.Add($full) }
+        }
+    }
+    return ,$found.ToArray()
+}
+
+# The owner picks the folder in a dialog: '' when the dialog is closed with no folder.
+function Select-OpenFieldFolder([string] $Name) {
+    $title = 'Pick the working folder you chose on the install page' + $(if ($Name) { ' (' + $Name + ')' } else { '' })
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = $title
+        $dialog.ShowNewFolderButton = $false
+        $owner = New-Object System.Windows.Forms.Form
+        $owner.TopMost = $true
+        try {
+            if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { return [string] $dialog.SelectedPath }
+            return ''
+        } finally { $owner.Dispose(); $dialog.Dispose() }
+    } catch {
+        # a shell where that dialog cannot open (not on a single-threaded apartment): the shell's own folder dialog
+        $picked = (New-Object -ComObject Shell.Application).BrowseForFolder(0, $title, 0x41, 0)
+        if ($picked) { return [string] $picked.Self.Path }
+        return ''
+    }
+}
+
 function Start-OpenFieldHelper {
-    param([string] $Folder, [string] $Source, [int] $WaitMinutes, [int] $FindSeconds, [string] $Page)
+    param([string] $Folder, [string] $FolderName, [string] $Source, [int] $WaitMinutes, [int] $FindSeconds, [string] $Page, [bool] $NoDialog)
     $ErrorActionPreference = 'Stop'
     $HelperVersion = 1
     # The original OS 1.7.3 file, as the builder's manifest names it: the only file kept under the name "yours".
     $OriginalSha = 'd134eb1ac7ad88e8370d988329cd5d7419f016005b1d269034f9cf7166fad0ec'
     $Names = @{ stock = 'os-1.7.3-yours.ldr'; image = 'open-field-os.ldr'; helper = 'helper.json'; before = 'listing-before.json';
                 after = 'listing-after.json'; plan = 'plan.json'; packs = 'packs' }
-    if (-not $Folder) { $Folder = Join-Path $env:USERPROFILE 'open-field' }
     if ($WaitMinutes -le 0) { $WaitMinutes = 60 }
     if ($FindSeconds -le 0) { $FindSeconds = 180 }
+    # The folder the page picked: looked for by its name and the page's mark, or picked in a dialog.
+    if (-not $Folder) {
+        $hits = @()
+        if ($FolderName -or $Page) { $hits = Find-OpenFieldFolder $FolderName $Page }
+        if ($hits.Count -eq 1) { $Folder = $hits[0] }
+        else {
+            $what = if ($FolderName) { 'the working folder "' + $FolderName + '"' } else { 'the working folder' }
+            $why = if ($hits.Count -gt 1) { 'Found ' + $hits.Count + ' folders that could be ' + $what + '.' } else { 'Could not find ' + $what + ' by itself.' }
+            if ($NoDialog) {
+                Write-Host ('STOPPED: ' + $why + ' Nothing was done.') -ForegroundColor Red
+                return
+            }
+            Write-Host ($why + ' Pick it in the window that opens.') -ForegroundColor Yellow
+            $Folder = Select-OpenFieldFolder $FolderName
+            if (-not $Folder) {
+                Write-Host 'STOPPED: no folder was picked. Nothing was done.' -ForegroundColor Red
+                return
+            }
+        }
+    }
     # The page's mark, before anything is made or written: the folder the page chose must be this one.
-    if ($Page) {
-        $markPath = Join-Path $Folder 'page.json'
-        $mark = $null
-        if (Test-Path -LiteralPath $markPath) {
-            try { $mark = [string] ((Get-Content -Raw -LiteralPath $markPath -Encoding UTF8 | ConvertFrom-Json).id) } catch { $mark = $null }
-        }
-        if ($mark -ne $Page) {
-            Write-Host ('STOPPED: the install page did not choose this folder: ' + $Folder) -ForegroundColor Red
-            Write-Host 'In the page, step 3, choose the folder open-field in your user folder (make it there if it is not there yet),' -ForegroundColor Red
-            Write-Host 'then copy the page''s line again and run it. Nothing was done.' -ForegroundColor Red
-            return
-        }
+    if ($Page -and (Read-OpenFieldMark $Folder) -ne $Page) {
+        Write-Host ('STOPPED: the install page did not choose this folder: ' + $Folder) -ForegroundColor Red
+        Write-Host 'On the install page, step 3, pick your working folder again,' -ForegroundColor Red
+        Write-Host 'then copy the line of step 4 again and run it. Nothing was done.' -ForegroundColor Red
+        return
     }
     New-Item -ItemType Directory -Force -Path $Folder | Out-Null
     $Folder = (Resolve-Path -LiteralPath $Folder).Path
     $run = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
     $logFile = Join-Path $Folder ('helper-' + $run + '.log')
     $state = [ordered]@{ helper = $HelperVersion; run = $run; page = $(if ($Page) { $Page } else { $null }); state = 'starting'; time = (Get-Date).ToString('s'); folder = $Folder;
-                         unit = $null; stock = $null; logs = $null; oldPads = $null; listing = $null; checks = @(); lines = @(); message = $null }
+                         unit = $null; stock = $null; logs = $null; oldPads = $null; waiting = $null; listing = $null; checks = @(); lines = @(); message = $null }
     $shell = New-Object -ComObject Shell.Application
     $utf8 = New-Object System.Text.UTF8Encoding $false
 
-    # Written beside and renamed, so that the page, which reads the folder every second, never reads half a file.
+    # Written beside and put in the place of the old file in one step, so that the page, which reads the folder every
+    # second, never reads half a file and never finds none (a move over a file takes the old one away first, and a
+    # read in between found nothing: one cause of the step that jumped on the page, 2026-11-20). The page may hold the
+    # file for a moment while it reads it, so the swap is tried again a few times.
     function Save-Text([string] $path, [string] $text) {
         $part = $path + '.part'
         [System.IO.File]::WriteAllText($part, $text, $utf8)
+        for ($try = 1; $try -le 20; $try++) {
+            try {
+                if (Test-Path -LiteralPath $path) { [System.IO.File]::Replace($part, $path, [NullString]::Value) }
+                else { [System.IO.File]::Move($part, $path) }
+                return
+            } catch { Start-Sleep -Milliseconds 50 }
+        }
         Move-Item -LiteralPath $part -Destination $path -Force
     }
     function Save-State([string] $now) {
@@ -321,6 +409,42 @@ function Start-OpenFieldHelper {
             else { Say ($padsLeft + ' pad file(s) of earlier installs stay on the unit. That is no fault: the plan counts the disk as it is.') 'Yellow' }
         }
 
+        # ---- 3c. the waiting folder of the packs, emptied ----
+        # The install page sends pack files over USB MIDI into user/pkin, where they wait for the owner's T1 on the unit,
+        # and the unit keeps a note there (.apply) while it changes its packs. An install puts a base.pack on the unit,
+        # and a note left behind must never meet it: the very same base.pack file cannot be told from the one that wrote
+        # the note. The plan is made after the listing, so whether this run writes base.pack is not known yet; every
+        # run takes the files of user/pkin off, the note among them, before the listing, as it does the logs, so that
+        # the plan counts the disk without them (the way back loses nothing by it: the files that wait there are lost
+        # at the unit's next start anyway, and the original firmware never reads them). The folder itself stays.
+        $pkin = Resolve-Folder $top 'user/pkin'
+        $waitingFound = 0; $waitingLeft = 0
+        if ($pkin) {
+            $waitingFiles = @(@($pkin.Items()) | Where-Object { -not $_.IsFolder })
+            $waitingFound = $waitingFiles.Count
+            if ($waitingFound -gt 0) {
+                $waitDir = Join-Path $Folder ('old-pkin-' + $run)
+                New-Item -ItemType Directory -Force -Path $waitDir | Out-Null
+                foreach ($item in $waitingFiles) {
+                    $name = Get-Name $item
+                    $want = Get-Size $item
+                    $shell.NameSpace($waitDir).MoveHere($item, 4 + 16 + 1024)
+                    $target = Join-Path $waitDir $name
+                    $deadline = (Get-Date).AddSeconds(120)
+                    while ((Get-Date) -lt $deadline -and -not ((Test-Path -LiteralPath $target) -and ($want -lt 0 -or (Get-Item -LiteralPath $target).Length -eq $want))) { Start-Sleep -Milliseconds 200 }
+                }
+                Start-Sleep -Seconds 1
+                $pkinNow = Resolve-Folder $top 'user/pkin'
+                $waitingLeft = if ($pkinNow) { @(@($pkinNow.Items()) | Where-Object { -not $_.IsFolder }).Count } else { 0 }
+                Remove-Item -LiteralPath $waitDir -Recurse -Force
+            }
+        }
+        $state.waiting = [ordered]@{ found = $waitingFound; taken_off = ($waitingFound - $waitingLeft); left_on_unit = $waitingLeft }
+        if ($waitingFound -gt 0) {
+            if ($waitingLeft -eq 0) { Say ('The ' + $waitingFound + ' file(s) waiting in user/pkin are taken off the unit.') 'Green' }
+            else { Stop-Helper ($waitingLeft + ' file(s) stay in user/pkin on the unit and would meet the new base.pack. Delete them in the unit''s drive, then run the command again') }
+        }
+
         # ---- 4. the disk, listed ----
         $rows = Get-Listing $top
         Save-Listing $rows $Names.before
@@ -432,8 +556,9 @@ function Start-OpenFieldHelper {
         Save-State 'ready'
         Write-Host ''
         Say 'READY TO WRITE.' 'Green'
-        Say 'On the unit: press 2 to close the drive, then switch the unit off. Leave it off until the write;' 'Green'
-        Say 'a start in between writes to its disk, and the placement no longer holds. The install page has the keys of the write.' 'Green'
+        Say 'Now restart your OP-1 in bootloader mode: turn it off, then turn it on while holding COM.' 'Green'
+        Say 'Do NOT restart it in normal mode until the install is finished, otherwise you will have to start again.' 'Green'
+        Say 'Step 7 of the install page has the rest.' 'Green'
     } catch {
         if ("$_" -ne 'open-field-helper-stopped') {
             try { Say ('STOPPED by an error: ' + $_) 'Red'; $state.message = "$_"; Save-State 'stopped' } catch { Write-Host ('STOPPED by an error: ' + $_) }
@@ -441,6 +566,8 @@ function Start-OpenFieldHelper {
     }
 }
 
-# The page's line sets $openFieldPage before it hands this text to the shell, where a parameter cannot be passed.
+# The page's line sets $openFieldPage and $openFieldFolder before it hands this text to the shell, where a parameter
+# cannot be passed.
 if (-not $Page -and (Get-Variable -Name openFieldPage -ErrorAction SilentlyContinue)) { $Page = [string] $openFieldPage }
-Start-OpenFieldHelper -Folder $Folder -Source $Source -WaitMinutes $WaitMinutes -FindSeconds $FindSeconds -Page $Page
+if (-not $FolderName -and (Get-Variable -Name openFieldFolder -ErrorAction SilentlyContinue)) { $FolderName = [string] $openFieldFolder }
+Start-OpenFieldHelper -Folder $Folder -FolderName $FolderName -Source $Source -WaitMinutes $WaitMinutes -FindSeconds $FindSeconds -Page $Page -NoDialog $NoDialog.IsPresent

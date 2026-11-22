@@ -1,25 +1,9 @@
 {
- "about": "What a build of this tree gives: the size and the SHA-256 of each finished pack file (base.pack, the shared pack every other relies on, and the four features), of the loader (our piece inside the firmware file, as linked and as the file the installer's builder uses) and of the example packs. tools/build_all.py holds its results to these, and its option --update writes them anew after a change that is meant to change them.",
+ "about": "What a build of this tree gives: the size and the SHA-256 of base.pack (the shared pack every other relies on), of the loader (our piece inside the firmware file, as linked and as the file the installer's builder uses) and of the example packs. tools/build_all.py holds its results to these, and its option --update writes them anew after a change that is meant to change them.",
  "files": {
-  "8 tracks.pack": {
-   "bytes": 99484,
-   "sha256": "dffc324f1cb0a45fd42592418678904686f5cb240f4b135f4804d43f6cd8bf2f"
-  },
   "base.pack": {
-   "bytes": 107492,
-   "sha256": "5c9a5ead757e4bc7d21b592a4bb2fe59edc7758d7f9749d462e5b059f43b59d3"
-  },
-  "fx train.pack": {
-   "bytes": 426794,
-   "sha256": "58d07f9f5c69ba25e50b59b4920961da5a861e931dbf9a2e621775e49b5f68f8"
-  },
-  "lfo.pack": {
-   "bytes": 375422,
-   "sha256": "22f7eafa2f002100ddb5d733a47b2de58b664e5cb2565090c11b72e6871e3363"
-  },
-  "sidechain.pack": {
-   "bytes": 104062,
-   "sha256": "505570137195cff863a7b794ec35c70b59ad239528ba93c46095cfa16cf689be"
+   "bytes": 291049,
+   "sha256": "4a60a3a5e10737ffaf17d95cf6f75b17cce0a03226f22c1a161c007730617f2e"
   },
   "loader.bin": {
    "bytes": 25876,
@@ -29,9 +13,37 @@
    "bytes": 25876,
    "sha256": "4db491cd06f914fef25f0be3c62a84253ce33b128094b6af26bd06ad3e3d7254"
   },
+  "examples/crush.pack": {
+   "bytes": 2668,
+   "sha256": "a417e9012a0734b7ab60d739d95b9fa63cd7beb01c8843e1c8fefaa2c500a2dd"
+  },
+  "examples/dub.pack": {
+   "bytes": 11196,
+   "sha256": "44ffaa72d81c80be725ae3d6e9b8ffbbb461608bd4b935a1eb0839a73cf0314f"
+  },
+  "examples/echo.pack": {
+   "bytes": 9344,
+   "sha256": "6903736446c110246b78d9de9dfaec79d662470fe55b0d930d494ef102b29118"
+  },
+  "examples/fold.pack": {
+   "bytes": 3376,
+   "sha256": "fa52ddd3c41fb4d04225e96d5aaf8b767e97368e56ceb0fbf6fc62ffca2722b5"
+  },
   "examples/list.pack": {
    "bytes": 7281,
    "sha256": "39e1aa2190c646a214d0f95e28de3214372051826104707d7f9555fc24b626d7"
+  },
+  "examples/ping.pack": {
+   "bytes": 3232,
+   "sha256": "3b20570aa78c4d3f3d8de1d9846cc8d723eaeccec3169c26b2ef3baecb63c3c0"
+  },
+  "examples/pluck.pack": {
+   "bytes": 3688,
+   "sha256": "baaa8de587624465f969a856cac7dd00ec8de5247d8b22f52e6f191063602645"
+  },
+  "examples/sketch.pack": {
+   "bytes": 8038,
+   "sha256": "b64d25dbc3d62a9f9a0c7b645da116b398cd098984b94ef630ce9f4868466ae9"
   },
   "examples/trampolines.pack": {
    "bytes": 848,

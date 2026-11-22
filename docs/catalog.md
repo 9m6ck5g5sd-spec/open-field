@@ -39,8 +39,8 @@ If you have not built a pack yet, start with [a first pack](first-pack.md).
 | `version` | The version in the file's header. It only grows: every new file has a higher one, but for a move to another firmware (below) |
 | `firmware` | The firmware version the file is built for: a version this repository has a profile for (`profiles/op1f-<version>.json`). Today that is 1.7.3 |
 | `places` | How many places of the firmware the pack changes: 0 for a pack that only uses the base's card |
-| `needs` | The packs it cannot run without, by their ids: `base` for a pack built as the four features are, none for a pack with a card |
-| `level` | For a pack with a card: the level of the base it needs, 1 to 3 ([the base](base.md)) |
+| `needs` | The packs it cannot run without, by their ids: `base` for a pack that wants the base's names and has no card, none for a pack with a card |
+| `level` | For a pack with a card: the level of the base it needs, 1 to 10 ([the base](base.md)) |
 | `folders` | The folders its card asks for under `user/pf/`: each its name in the disk mode and its place. None to eight |
 
 The base's own entry says `offers_level` instead of `level`: the highest level it offers. A pack that needs a higher level than the listed base offers is refused.
@@ -74,9 +74,9 @@ An entry only moves that way, and is never taken out.
 
 ## This project's own packs
 
-The listing's `ours` names the repositories that hold this project's own packs: the four features lie in a repository of their own, beside this one, and are listed like anyone's.
+The listing's `ours` names the repositories that hold this project's own packs: the four features lie in a repository of their own beside this one, [open-field-packs](https://github.com/LaP0573/open-field-packs), sources and finished files, and are listed like anyone's.
 
-The three examples, `wink`, `yoyo` and `list`, are for people who write packs, not for owners: their sources lie in this repository under `examples/`, and the build makes their files. Their entries stay `reserved`, so that their names and the folder `list` stay held, and the install page never offers them. An entry whose `author` is `open-field` lies in one of those repositories, and an entry in one of them has `open-field` as its author; the check refuses anything else. A pull request never changes `ours`: the check refuses that too, so that no entry can take the place of this project's own.
+The examples under `examples/` are for people who write packs, not for owners: their sources lie in this repository, and the build makes their files. Ten of them have an entry, `wink`, `yoyo`, `list`, `sketch`, `echo`, `dub`, `crush`, `ping`, `pluck` and `fold`, and every one of those stays `reserved`. That keeps their names held, and with them the folders `list`, `sketch`, `echo` and `dub`, and the install page never offers them. `trampolines`, the example that changes places of the firmware, has no entry. An entry whose `author` is `open-field` lies in one of those repositories, and an entry in one of them has `open-field` as its author. The check refuses anything else. A pull request never changes `ours`: the check refuses that too, so that no entry can take the place of this project's own.
 
 ## On the install page
 
@@ -123,10 +123,10 @@ The listing's form, and every name held once:
 python -I tools/catalog_check.py
 ```
 
-After a build ([docs/build.md](build.md)), every entry of this project's own packs held to the file the build gave, in `out/packs/` and `out/examples/`:
+After a build ([docs/build.md](build.md)), every entry of this project's own packs held to its file: the base's and the examples' in `out/packs/` and `out/examples/`, the four features' in a checkout of open-field-packs at the commit their entries name:
 
 ```bash
-python -I tools/catalog_check.py --files out/packs --files out/examples
+python -I tools/catalog_check.py --files out/packs --files out/examples --files <your checkout of open-field-packs>
 ```
 
 Every listed entry held to its file downloaded from its repository at its commit, as the install page downloads it:

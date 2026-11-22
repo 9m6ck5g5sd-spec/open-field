@@ -4,7 +4,7 @@
   python -I tools/change_list.py --profile profiles/op1f-1.7.3.json [--out docs/changes.md]
   python -I tools/change_list.py --profile profiles/op1f-1.7.3.json --check
 
-The change list says, for every place where open-field changes the firmware, where it is, what stands there and
+The change list says, for every place where the loader or the base changes the firmware, where it is, what stands there and
 what our code does there: in our own words, with no instruction of the firmware quoted and none of its bytes given.
 It follows from the profile, so it is made and never written by hand. `--check` writes nothing and answers 1 when
 the page in the tree is not what the profile gives. Standard library only.
@@ -17,14 +17,10 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FORMS = {"word": "a word of data", "call": "a call", "jump": "a jump", "load": "the load of an address"}
-PARTS = ("loader", "base", "8 tracks", "fx train", "lfo", "sidechain")
+PARTS = ("loader", "base")
 ABOUT = {
     "loader": "The loader's own three changes: the loader is our small piece inside the firmware file. It makes them at every start that runs at least one pack.",
     "base": "The pack `base`, the file base.pack: the shared pack every other pack relies on. Every unit with open-field needs it. Its last five changes hand keys, knobs and a screen to a pack's page (level 2).",
-    "8 tracks": "The pack `8 tracks`: tape tracks 5 to 8, and tapes the original firmware still reads.",
-    "fx train": "The pack `fx train`: up to four effects on an instrument, their presets, and an instrument that keeps its effects.",
-    "lfo": "The pack `lfo`: four LFOs on a synth sound, their page and their presets.",
-    "sidechain": "The pack `sidechain`: one tape track turned down by another, or by the beat.",
 }
 
 
@@ -43,12 +39,12 @@ def render(profile, image_uses=None):
     lines = [
         "# The change list",
         "",
-        "Every place where open-field changes OS %s of the %s, and nothing else. This page is made from `profiles/%s.json` by `tools/change_list.py`; change the profile, not the page."
+        "Every place where the loader and the base of open-field change OS %s of the %s, and nothing else. This page is made from `profiles/%s.json` by `tools/change_list.py`; change the profile, not the page."
         % (profile["firmware_version"], profile["device"], profile["id"]),
         "",
         "It holds addresses and our own words. It quotes no instruction of the firmware and gives none of its bytes. For each place the profile keeps a checksum of the firmware's own bytes there, so that the loader can tell the place before it changes it; a unit with another firmware is left as it is.",
         "",
-        "There are %d places. %d of them are changed in the firmware file, by the builder, on the owner's own computer. The others are changed in the running firmware, in memory, at every start: %d changes in %d tables. A place that two packs can use is listed under each."
+        "There are %d places. %d of them are changed in the firmware file, by the builder, on the owner's own computer. The others are changed in the running firmware, in memory, at every start: %d changes in %d tables. A pack's places are not on this page: it names them in a profile of its own (for `8 tracks`, `fx train`, `lfo` and `sidechain`, `profile.json` in each one's folder in [open-field-packs](https://github.com/LaP0573/open-field-packs))."
         % (len(places), len(image), in_tables, len(profile["tables"])),
         "",
         "## In the firmware file, by the builder",
@@ -66,7 +62,7 @@ def render(profile, image_uses=None):
         if not tables:
             continue
         count = sum(len(table["entries"]) for table in tables)
-        lines += ["### %s (%d)" % ("The loader" if part == "loader" else "The base, `base.pack`" if part == "base" else "`%s`" % part, count), "",
+        lines += ["### %s (%d)" % ("The loader" if part == "loader" else "The base, `base.pack`", count), "",
                   ABOUT[part], "", "| Address | Change | Function of ours | What stands there | What ours does |", "| --- | --- | --- | --- | --- |"]
         for table in tables:
             for entry in table["entries"]:

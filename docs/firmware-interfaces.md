@@ -17,7 +17,7 @@ typedef int (*FileSizeFn)(const char* path);
 
 **The threads.** *The main thread* runs the start-up. *The display thread* draws a frame some sixty times a second; the shared part calls our frame functions from it. *The key thread* hands key presses and knob turns to the mode that is shown. *The audio thread* makes the sound, a block of 64 samples at a time, and must never wait: no log line, no file, no memory asked for there. Where the last column says "ours", it names the threads our code calls the function on today; that it is safe on another thread has not been shown.
 
-There are 159 functions bound in the sources. 47 are described below, by subject. The other 112 are listed at the end with their type and the files that bind them: their words are still to be written.
+There are 91 functions bound in the sources. 39 are described below, by subject. The other 52 are listed at the end with their type and the files that bind them: their words are still to be written.
 
 ## The log
 
@@ -38,12 +38,6 @@ A path is a C text, counted from the top of the unit's disk, with no slash in fr
 | `0x8fc8a9a8` | `int file_read(void* buffer, int size, int count, int descriptor)` | Reads `count` items of `size` bytes into the buffer. Gives back the number of items read. The descriptor is the fourth argument, so it travels on the stack. | As `file_open`. |
 | `0x8fc8a994` | `int file_close(int descriptor)` | Closes a file opened with `file_open`. | As `file_open`. |
 | `0x8c0a3630` | `int file_seek(int descriptor, u32 offset_low, u32 offset_high, int from)` | Goes to a place in a file opened with `file_open`. The offset is 64 bits wide and is handed over as two words, the low one first. `from`: 0 counts from the file's start, 1 from the present place, 2 from the file's end. Gives back the low word of the new place. | As `file_open`. |
-| `0x8fc22180` | `i32 fopen(const char* path, const char* mode)` | The second family, which the tape's code uses. Opens a file with a mode as C has it (`rb`, `w+b`). Gives back a descriptor, which may be 0; a negative number when the open failed, after a line of its own in the log. To ask whether a file is there, use `file_size`, which writes no line. | Not the audio thread. |
-| `0x8fc2214c` | `i32 fread(void* destination, i32 size, i32 count, i32 file)` | Reads `count` items of `size` bytes from a file opened with `fopen`. Gives back the number of items read. | As `fopen`. |
-| `0x8fc220b8` | `i32 fwrite(const void* source, i32 size, i32 count, i32 file)` | Writes `count` items of `size` bytes to a file opened with `fopen`. Gives back the number of items written, and writes a line into the log itself when it fails. | As `fopen`. |
-| `0x8fc220a0` | `void fclose(i32 file)` | Closes a file opened with `fopen`. | As `fopen`. |
-| `0x8fc222f4` | `void rename(const char* old_path, const char* new_path)` | Gives a file another path, over a file that is there already. Our code writes a file under a spare name and renames it over the real one, so that a power cut leaves the old file or the new one, never half of one. | As `fopen`. |
-| `0x8fcbc350` | `u32 file_mtime(const char* path)` | A number for when the file was last written; 0 when there is no such file. Our code only compares two such numbers: of two files, the one written later never has the smaller number. What the number counts in has not been established. | Not the audio thread. |
 | `0x8c05206c` | `int make_folders(const char* path)` | Makes the folders of a path that are missing. Only a part that a slash ends is made: `user/fx/` makes both folders, `user/fx` makes `user` alone. | Not the audio thread. |
 | `0x8fcbefb4` | `int file_remove(const char* path)` | Removes the file at a path. Gives back 0 when the file is gone. | Ours: the disk mode's thread. |
 | `0x8c051e28` | `void* dir_open(const char* path)` | Opens a folder to list it. The path has no slash at its end. Gives back a handle, or 0 when the folder cannot be opened. | Not the audio thread. Ours: the main thread at the start, the disk mode's thread. |
@@ -56,22 +50,21 @@ The firmware keeps its settings as JSON, and so does our code. A JSON value is a
 
 | Address | The call | What the caller hands over and gets back | Called from |
 | --- | --- | --- | --- |
-| `0x8c085ba8` | `void json_ctor(void* json, int kind)` | Makes a value of a kind in the caller's 12 bytes. Kind 0 makes a null, which becomes an array at its first `json_push`. | Not the audio thread. Ours: the main thread at the start, the display thread, the key thread. |
-| `0x8c0844e0` | `void json_dtor(void* json)` | Gives back what a value holds. Call it for every value made with `json_ctor`, and for none that is a reference. | As `json_ctor`. |
-| `0x8c0534d0` | `int json_read_file(const char* path, void* json)` | Reads a JSON file and parses it into a value the caller has made. Not 0 when the file was read and parsed. | As `json_ctor`. |
-| `0x8c053168` | `int json_write_file(void* path_string, void* json)` | Writes a value as a JSON file. The path is a text object of the firmware (`string_ctor` below), not a C text. The file is written under a spare name in the folder `tmp` and then renamed over the target. 0 comes back when that failed: look at the answer, and make the target's folder first. | As `json_ctor`. |
-| `0x8c084840` | `int json_int(void* json)` | A number as an `int`. It takes all three kinds of number. For any other kind it gives back 0 and writes a line into the log. | As `json_ctor`. |
-| `0x8c084b94` | `int json_bool(void* json)` | A value of the kind true-or-false as 1 or 0. | As `json_ctor`. |
-| `0x8c084c22` | `int json_size(void* json)` | How many elements an array has. Ask it of an array only. | As `json_ctor`. |
-| `0x8c084ee0` | `void* json_at(void* json, int index)` | An array's element by its number, from 0: a reference into the array. | As `json_ctor`. |
-| `0x8c085068` | `int json_has(void* json, const char* key)` | Not 0 when an object has a member of that name. | As `json_ctor`. |
-| `0x8c084f74` | `void* json_get(void* json, const char* key)` | An object's member by its name: a reference into the object. Our code asks `json_has` first and never asks for a member that is not there. | As `json_ctor`. |
-| `0x8c085e84` | `void* json_lookup(void* json, const char* key)` | An object's member by its name, as `json_get` gives it; a member that is not there is made, as a null. The way to add a member: look it up, then assign to it. | As `json_ctor`. |
-| `0x8c0845b8` | `void json_assign(void* target, void* value)` | Gives a value the content of another. The target may be a reference, such as a member got with `json_lookup`. | As `json_ctor`. |
-| `0x8c085d54` | `void json_push(void* array, void* value)` | Puts a copy of a value at an array's end. A null becomes an array at its first push. | As `json_ctor`. |
-| `0x8c083b1c` | `void json_from_int(void* json, int value)` | Makes a value an integer (the kind 1). | As `json_ctor`. |
-| `0x8c083aec` | `void json_from_bool(void* json, int value)` | Makes a value true or false (the kind 5). | As `json_ctor`. |
-| `0x8c084430` | `void json_from_cstr(void* json, const char* text)` | Makes a value a text (the kind 4), copied from a C text. | As `json_ctor`. |
+| `0x8c085ba8` | `void json_ctor(void* value, int kind)` | Makes a value of a kind in the caller's 12 bytes. Kind 0 makes a null, which becomes an array at its first `json_push`. | Not the audio thread. Ours: the main thread at the start, the display thread, the key thread. |
+| `0x8c0844e0` | `void json_dtor(void* value)` | Gives back what a value holds. Call it for every value made with `json_ctor`, and for none that is a reference. | As `json_ctor`. |
+| `0x8c0534d0` | `int json_read_file(const char* path, void* document)` | Reads a JSON file and parses it into a value the caller has made. Not 0 when the file was read and parsed. | As `json_ctor`. |
+| `0x8c053168` | `int json_write_file(void* path, void* document)` | Writes a value as a JSON file. The path is a text object of the firmware (`string_ctor` below), not a C text. The file is written under a spare name in the folder `tmp` and then renamed over the target. 0 comes back when that failed: look at the answer, and make the target's folder first. | As `json_ctor`. |
+| `0x8c084840` | `int json_int(const void* value)` | A number as an `int`. It takes all three kinds of number. For any other kind it gives back 0 and writes a line into the log. | As `json_ctor`. |
+| `0x8c084c22` | `u32 json_size(const void* value)` | How many elements an array has. Ask it of an array only. | As `json_ctor`. |
+| `0x8c084ee0` | `const void* json_at(const void* value, u32 index)` | An array's element by its number, from 0: a reference into the array. | As `json_ctor`. |
+| `0x8c085068` | `int json_has(const void* value, const char* key)` | Not 0 when an object has a member of that name. | As `json_ctor`. |
+| `0x8c084f74` | `const void* json_get(const void* value, const char* key)` | An object's member by its name: a reference into the object. Our code asks `json_has` first and never asks for a member that is not there. | As `json_ctor`. |
+| `0x8c085e84` | `void* json_lookup(void* value, const char* key)` | An object's member by its name, as `json_get` gives it; a member that is not there is made, as a null. The way to add a member: look it up, then assign to it. | As `json_ctor`. |
+| `0x8c0845b8` | `void* json_assign(void* to, const void* from)` | Gives a value the content of another. The target may be a reference, such as a member got with `json_lookup`. | As `json_ctor`. |
+| `0x8c085d54` | `void* json_push(void* array, const void* value)` | Puts a copy of a value at an array's end. A null becomes an array at its first push. | As `json_ctor`. |
+| `0x8c083b1c` | `void json_from_int(void* value, int number)` | Makes a value an integer (the kind 1). | As `json_ctor`. |
+| `0x8c083aec` | `void json_from_bool(void* value, int number)` | Makes a value true or false (the kind 5). | As `json_ctor`. |
+| `0x8c084430` | `void json_from_cstr(void* value, const char* text)` | Makes a value a text (the kind 4), copied from a C text. | As `json_ctor`. |
 
 ## Texts and memory
 
@@ -82,7 +75,6 @@ Our code has no library of its own: no `malloc`, no `memcpy`, no division by a v
 | `0x8c03e434` | `void string_ctor(void* out, const char* text)` | Makes a text object of the firmware from a C text, in memory the caller provides (our code keeps 48 zeroed bytes for it). A text of up to fifteen characters lives inside the object, and nothing has to be freed afterwards. Our code keeps its paths that short for this reason: `user/op1f.json` fits, `user/lfo/01.json` does not. | Not the audio thread. Ours: the main thread at the start, the display thread, the key thread, the disk mode's thread. |
 | `0x8fcc7560` | `void* alloc(u32 bytes)` | A block of the firmware's own heap, the one its screens and pictures come from. It never gives back 0: when the heap has no room, the firmware writes an error into the log and stops. So bound what you ask for (our picture maker asks for a megabyte at most) and give every block back with `free` at `0x8fcc4e10`. | Not the audio thread. Ours: the main thread when a screen is made, and the display thread. |
 | `0x8fcc6c30` | `void free(void* block)` | Gives back a block got with `alloc` at `0x8fcc5744`. | As `alloc`. |
-| `0x8fcc5a68` | `void* heap_malloc(int heap_index, u32 size)` | A block of one of two large heaps that the firmware itself hardly uses, by the heap's number, 0 or 1. Our code takes large blocks there once and keeps them: the tape's cache for tracks 5 to 8 from heap 1, the effect train's private regions from heap 0. Gives back 0 when the heap has no room. | Not the audio thread. Ours: the tape's set-up at the start, and the display thread. |
 | `0x8fcc51fc` | `u32 heap_free(int heap_index)` | How many bytes of such a heap are not in use, by the heap's number. | Ours: the display thread. |
 
 ## Screens, pictures and texts
@@ -92,11 +84,11 @@ A screen of the firmware is an object with a picture: an SVG text, parsed into a
 | Address | The call | What the caller hands over and gets back | Called from |
 | --- | --- | --- | --- |
 | `0x8c040298` | `void* parse_svg(char* text)` | Parses a picture, an SVG text that a zero byte ends, into a document. Gives back the document, or 0. Hand it only what the firmware's own pictures use: the path commands M, L, H, V, C, S and z in capitals or small letters, and no attribute its own files lack. A path command it does not know makes it hang, and the unit with it. | Ours: the main thread when a screen is made, and the display thread. |
-| `0x8fc26398` | `void screen_ctor(void* obj, int id, const char* name)` | Makes a screen object in memory the caller provides (our code keeps 64 bytes) and registers it under a number. Register a screen once: a number that is taken stops the firmware. In OS 1.7.3 our code uses the numbers 37, 38 and 77, which are free there. Keep a number below 82: the firmware draws the screens in the order of their numbers, and a screen above 82 is drawn over the shutdown countdown. The object's second word is its document: put the parsed picture there. `name` may be 0. | Ours: the display thread, once. |
+| `0x8fc26398` | `void screen_ctor(void* object, int number, const char* name)` | Makes a screen object in memory the caller provides (our code keeps 64 bytes) and registers it under a number. Register a screen once: a number that is taken stops the firmware. In OS 1.7.3 our code uses the numbers 37, 38 and 77, which are free there. Keep a number below 82: the firmware draws the screens in the order of their numbers, and a screen above 82 is drawn over the shutdown countdown. The object's second word is its document: put the parsed picture there. `name` may be 0. | Ours: the display thread, once. |
 | `0x8fc25cc0` | `void* find_node(void* screen, const char* id, int optional)` | Finds a part of a screen's picture by its id. With `optional` not 0 it gives back 0 for a part that is not there, and our code always asks that way. The screen must have its document: look at the object's second word before you ask. | Ours: the display thread. |
-| `0x8c03dbbe` | `void apply_matrix(void* node, const u32* matrix)` | Gives a part of a picture a transform: nine words, each a number with ten bits behind the point, `[a, b, 0, c, d, 0, e, f, 1024]`, for x' = a·x + c·y + e and y' = b·x + d·y + f. Keep the third, sixth and ninth word at 0, 0 and 1024. | Ours: the display thread. |
+| `0x8c03dbbe` | `void apply_matrix(void* node, const int* matrix)` | Gives a part of a picture a transform: nine words, each a number with ten bits behind the point, `[a, b, 0, c, d, 0, e, f, 1024]`, for x' = a·x + c·y + e and y' = b·x + d·y + f. Keep the third, sixth and ninth word at 0, 0 and 1024. | Ours: the display thread. |
 | `0x8fc25abc` | `void* label_from_node(void* screen, void* node, int align)` | Turns a part of a picture into a label, an object whose text can be set while the unit runs. The part is a placeholder: it gives the label its place and its colour. The label takes the part's place in the document and comes back; keep it, since the id finds it no more. Our code passes 0 for `kind`: the text then starts at the placeholder's left edge. | Ours: the display thread, once for each label. |
-| `0x8fc3aa3c` | `void label_text(void* label, const char* text, int max_width)` | Sets a label's text from a C text. A text wider than `max_width` pixels is shortened and gets a mark at its end. An empty text hides the label. Send small letters and digits: the firmware's font has the letters at the small letters' codes and its own signs at the capitals'. Each call asks the heap for memory, so set a text only when it changes; setting the text a label already has changes nothing. | Ours: the display thread. |
+| `0x8fc3aa3c` | `void label_text(void* label, const char* text, int width)` | Sets a label's text from a C text. A text wider than `max_width` pixels is shortened and gets a mark at its end. An empty text hides the label. Send small letters and digits: the firmware's font has the letters at the small letters' codes and its own signs at the capitals'. Each call asks the heap for memory, so set a text only when it changes; setting the text a label already has changes nothing. | Ours: the display thread. |
 | `0x8fc3820c` | `LabelBox label_bounds(void* label)` | The box of a label's text as it was last laid out: left, right, top and bottom, each a number with ten bits behind the point. It is the box of the shapes without their stroke, so an upright stroke is 0 wide. The box comes back as a structure, by value: bind the function as one that returns the structure, and the compiler hands over the address for it in P0. | Ours: the display thread. |
 
 ## Keys and the screen that is shown
@@ -112,115 +104,55 @@ Each of these is called by the files named. The type is what our code hands over
 
 | Address | The call | Bound in |
 | --- | --- | --- |
-| `0x040201c4` | `void* memcpy(void* destination, const void* source, u32 count)` | `build_b_storage.cpp` |
-| `0x04020218` | `void* memmove(void* destination, const void* source, u32 count)` | `build_b_storage.cpp` |
-| `0x04020fd8` | `i32 float_to_int(u32 a)` | `build_e_screens.cpp`, `build_g_duck.cpp` |
-| `0x04021310` | `u32 rom_float_to_int(u32)` | `build_b_mix.cpp` |
-| `0x04021854` | `u32 float_from_int(i32 value)` | `build_b_mixer.cpp`, `build_e_screens.cpp`, `build_k_clip.cpp`, `build_k_clips.cpp` |
-| `0x040218a0` | `u32 rom_value_to_float(u32)` | `build_b_mix.cpp` |
-| `0x040218e0` | `u32 rom_float_sub(u32, u32)` | `build_b_mix.cpp` |
-| `0x040218e2` | `u32 rom_float_add(u32 a, u32 b)` | `build_b_mix.cpp`, `build_e_screens.cpp`, `build_g_duck.cpp` |
-| `0x040219e4` | `u32 rom_float_div(u32 a, u32 b)` | `build_b_mix.cpp`, `build_b_mixer.cpp`, `build_e_screens.cpp` |
-| `0x04021ac0` | `u32 rom_float_mul(u32 a, u32 b)` | `build_b_mix.cpp`, `build_e_screens.cpp`, `build_g_duck.cpp` |
-| `0x04021bdc` | `u32 rom_half_to_float(u32)` | `build_b_mix.cpp` |
-| `0x04022ea8` | `void* memset(void* destination, int value, u32 count)` | `build_b_edit.cpp`, `build_b_storage.cpp` |
-| `0x8c051f88` | `int rename(const char* from, const char* to)` | `build_m3_folders.cpp` |
-| `0x8c052054` | `int is_folder(const char* path)` | `build_m3_folders.cpp` |
-| `0x8c052744` | `void string_clear(void* string)` | `build_d_clip.cpp` |
+| `0x8c051f88` | `int rename(const char* from, const char* to)` | `build_r2_folders.cpp`, `build_r4c_door.cpp`, `build_r6d_engines.cpp` |
+| `0x8c052054` | `int is_folder(const char* path)` | `build_r2_folders.cpp`, `build_r4c_door.cpp`, `build_r6d_engines.cpp` |
 | `0x8c053a50` | `void assert(const char* message)` | `build_m4_loader.cpp` |
 | `0x8c0567f0` | `u32 kb_request(void* link, u32 type, const void* payload, u32 bytes, void* answer, u32 timeout_ms)` | `build_m4_loader.cpp` |
-| `0x8c0828e0` | `int json_read_raw(void* a, void* path_string, void* json, int flag)` | `build_i_patch.cpp` |
-| `0x8c08437c` | `void json_from_float(void* json, u32 float_bits)` | `build_k_clip.cpp` |
-| `0x8c08448c` | `void json_from_string(void* json, const void* string)` | `build_k_clip.cpp` |
-| `0x8c084782` | `void json_to_string(void* out_string, void* json)` | `build_h_chain.cpp`, `build_i_lfopresets.cpp` |
-| `0x8c0b6d3c` | `int drum_screen_id(void* self)` | `build_h_train.cpp` |
-| `0x8c0bce20` | `void mode_switch(int mode)` | `build_g_duck.cpp` |
-| `0x8c0c1dd0` | `void* tape_model(void)` | `build_b_mix.cpp`, `build_b_record.cpp`, `build_g_duck.cpp` |
-| `0x8c0cf364` | `int synth_key_up(void* self, int key)` | `build_j5i_lfo_alone.cpp` |
-| `0x8c0cf904` | `int synth_key_shift(void* self, const int* event)` | `build_j5i_lfo_alone.cpp` |
-| `0x8c0cfe7c` | `int synth_key_down(void* self, const int* event)` | `build_i_lfo4.cpp`, `build_j5i_lfo_alone.cpp` |
-| `0x8c0d5b24` | `int synth_screen_id(void* self)` | `build_h_train.cpp` |
-| `0x8c0d5c10` | `int synth_encoder(void* self, int index, int delta)` | `build_j5i_lfo_alone.cpp` |
-| `0x8c0dd2cc` | `void draw_char(u16* framebuffer, int character)` | `build_m1_measure.cpp` |
-| `0x8d4e4324` | `void* alloc_aligned(u32 alignment, u32 bytes)` | `build_k_copy.cpp` |
-| `0x8d4e43a4` | `void free_aligned(void* block)` | `build_k_copy.cpp` |
-| `0x8d4e63bc` | `void* heap_alloc(u32 bytes)` | `build_m1_loader_disk.cpp`, `build_m3_disk.cpp`, `build_m3_folders.cpp` |
-| `0x8d4e63cc` | `void free(void* block)` | `build_h_chain.cpp`, `build_i_lfopresets.cpp`, `build_k_clip.cpp`, `build_k_clips.cpp` and 1 more |
-| `0x8d4e9724` | `void patch_apply(void* descriptor)` | `build_h_chain.cpp` |
-| `0x8d4ed6e4` | `i32 clips_idle(void)` | `build_b_record.cpp`, `build_g_duck.cpp` |
-| `0x8d4ed7e8` | `void clip_fill(i32* record, i32 track, i32 start, i32 stop, const i32* paddings)` | `build_k_clips.cpp` |
-| `0x8d4ed944` | `void* clips(void)` | `build_d_clip.cpp` |
-| `0x8d4eda26` | `void* clip_record(void* clips, i32 id, void* record)` | `build_d_clip.cpp` |
-| `0x8d4edfa0` | `i32 clip_at(u32 track, i32 position)` | `build_d_clip.cpp` |
-| `0x8d4ee6f8` | `void clips_relink(void* store)` | `build_k_clips.cpp` |
-| `0x8d4ee98c` | `void clip_set(void* store, i32 id, const i32* record, i32 to_document)` | `build_k_clips.cpp` |
-| `0x8d4eea84` | `void clips_load(void* store)` | `build_k_clips.cpp` |
-| `0x8d4eef00` | `void clip_remove(void* store, i32 id)` | `build_k_clips.cpp` |
-| `0x8d4f23f8` | `int db_clear(int db, const char* key)` | `build_k_clips.cpp` |
-| `0x8d4f24dc` | `void db_set(int db, const char* key, void* value)` | `build_b_mixer.cpp`, `build_g_duck.cpp`, `build_j5g_duck_alone.cpp`, `build_k_clips.cpp` and 1 more |
-| `0x8d4f2b80` | `void* tape_doc(void)` | `build_b_mixer.cpp`, `build_g_duck.cpp`, `build_j5g_duck_alone.cpp`, `build_k_clips.cpp` |
-| `0x8d4f3a54` | `void lfo_pick(void* record, int id)` | `build_i_lfo4.cpp` |
-| `0x8d4f3b9c` | `void set_params_doc(void* record, const u32* words)` | `build_h_chain.cpp` |
-| `0x8d4f3c24` | `void set_active_doc(void* record, int value)` | `build_h_chain.cpp` |
-| `0x8d4f3c84` | `void set_lfo_words_doc(void* record, const u32* words)` | `build_i_lfo4.cpp` |
-| `0x8d4f3d0c` | `void set_lfo_active_doc(void* record, int value)` | `build_i_lfo4.cpp` |
-| `0x8d4f4e2c` | `void apply_drum(void* descriptor)` | `build_h_chain.cpp` |
-| `0x8d4f635c` | `void apply_synth(void* descriptor)` | `build_h_chain.cpp` |
-| `0x8d4fb908` | `void clone(int source, int destination, ProgressFn progress, u32 fourth)` | `build_k_copy.cpp` |
-| `0x8d500438` | `void close_partition(i32 handle)` | `build_b_edit.cpp`, `build_k_copy.cpp` |
-| `0x8d500688` | `i32 partition_read(i32 handle, u32 byte_offset, u32 length, void* buffer)` | `build_b_edit.cpp`, `build_b_storage.cpp`, `build_k_copy.cpp` |
-| `0x8d500b88` | `i32 partition_write(i32 handle, u32 byte_offset, u32 length, void* buffer)` | `build_b_edit.cpp`, `build_b_storage.cpp`, `build_k_copy.cpp` |
-| `0x8d500f94` | `void partition_sync(void)` | `build_b_edit.cpp` |
-| `0x8d501008` | `i32 open_partition(const char* name)` | `build_b_edit.cpp`, `build_k_copy.cpp` |
-| `0x8d504308` | `void lfo_on_set(u32 slot, int value)` | `build_i_lfo4.cpp` |
-| `0x8d504496` | `void reset_synth(u32 voice)` | `build_i_lfo4.cpp` |
-| `0x8d504854` | `void page_copy(u32 slot, u32 type, int cls)` | `build_i_lfo4.cpp` |
-| `0x8d505390` | `void build_producer(int index, int type)` | `build_h_chain.cpp` |
-| `0x8d51233c` | `int random_param(int type, int index, int bias)` | `build_h_chain.cpp` |
-| `0x8d5168f4` | `void* mixer_values(void)` | `build_b_mixer.cpp` |
-| `0x8d516c90` | `void* vu_values(void)` | `build_b_mixer.cpp`, `build_e_screens.cpp`, `build_j5g_duck_alone.cpp` |
-| `0x8d51750c` | `const char* param_name(int kind, int index)` | `build_i_lfopage.cpp` |
-| `0x8f0037be` | `void sample_finalize(void* sample)` | `build_b_edit.cpp` |
-| `0x8f0061a8` | `u32 db_to_amp(u32 db)` | `build_e_screens.cpp`, `build_g_duck.cpp` |
-| `0x8f0061d4` | `u32 vu_curve(u32 x)` | `build_b_mixer.cpp`, `build_e_screens.cpp` |
-| `0x8f0099a4` | `void vector_assign(void* destination, const void* source)` | `build_d_clip.cpp`, `build_k_clip.cpp` |
-| `0x8f009e94` | `void write_clipboard_json(void)` | `build_d_clip.cpp` |
-| `0x8f00a62c` | `void lift_worker(u32 track, i32 start, i32 end)` | `build_d_clip.cpp` |
-| `0x8f00a870` | `void drop_worker(const void* record, u32 source, u32 destination, i32 position, i32 end, i32 mix)` | `build_d_clip.cpp` |
-| `0x8f00b1d0` | `void split(u32 track, i32 position)` | `build_d_clip.cpp` |
-| `0x8f00c5e0` | `void clipboard_load(void)` | `build_k_clip.cpp` |
-| `0x8f01e3ec` | `i32* track_output(int track)` | `build_b_record.cpp` |
-| `0x8f01ec34` | `int read_block(int speed, void* state, int rolling)` | `build_b_play.cpp`, `build_j5g_duck_alone.cpp` |
-| `0x8f01f4e0` | `void mixer(int speed, void* state)` | `build_b_play.cpp` |
-| `0x8f01ff94` | `void set_position(i32 position)` | `build_d_clip.cpp` |
-| `0x8fc21280` | `Slot* slot_for_logical(int logical)` | `build_b_play.cpp`, `build_b_xfade.cpp`, `build_g_duck.cpp` |
-| `0x8fc218f8` | `void invalidate_range(i32 start, i32 end)` | `build_b_edit.cpp` |
-| `0x8fc21994` | `i32 tape_handle(void)` | `build_b_storage.cpp` |
-| `0x8fc219a8` | `int tape_index(void)` | `build_b_storage.cpp`, `build_k_clips.cpp`, `build_k_sums.cpp`, `build_l3_maps.cpp` |
-| `0x8fc21bac` | `i32 tape_io_read(u32 track, u32 byte_offset, u32 length, void* buffer)` | `build_b_edit.cpp`, `build_b_storage.cpp` |
-| `0x8fc21d1c` | `i32 tape_io_write(u32 track, u32 byte_offset, u32 length, void* buffer)` | `build_b_edit.cpp`, `build_b_storage.cpp` |
-| `0x8fc22064` | `void mark_map_dirty(void)` | `build_b_storage.cpp`, `build_k_sums.cpp` |
-| `0x8fc22498` | `void set_current_snapshot(i32 index)` | `build_b_storage.cpp` |
-| `0x8fc22804` | `i32 count_free(void)` | `build_b_storage.cpp` |
-| `0x8fc22838` | `u32 alloc_chunk(void)` | `build_b_storage.cpp` |
-| `0x8fc22a14` | `i32 drop_oldest(void)` | `build_b_storage.cpp` |
-| `0x8fc22af0` | `i32 take_snapshot(void)` | `build_b_storage.cpp` |
-| `0x8fc25ebc` | `u8* colour_pointer(void* screen, const char* id, int optional)` | `build_e_screens.cpp` |
-| `0x8fc261fc` | `u32* screens(void)` | `build_i_lfopage.cpp`, `build_m3_cards.cpp` |
-| `0x8fc27678` | `u32 draw(u32, u32, u32)` | `build_p3b_cost.cpp` |
-| `0x8fc356a0` | `i32 meter_fixed(u32 amp)` | `build_e_screens.cpp`, `build_g_duck.cpp` |
-| `0x8fc809b8` | `void flash_track(int track)` | `build_b_mix.cpp` |
-| `0x8fc809cc` | `void clear_region(void)` | `build_d_clip.cpp` |
-| `0x8fc809fc` | `void lift_region(i32 track, i32 start, i32 end, i32 flag)` | `build_d_clip.cpp` |
-| `0x8fca1ed2` | `void notify(void* object)` | `build_b_mix.cpp`, `build_b_mixer.cpp`, `build_b_record.cpp`, `build_g_duck.cpp` |
-| `0x8fca6940` | `u32 tick(u32, u32, u32)` | `build_p3b_cost.cpp` |
-| `0x8fca7b08` | `int fx_type_of(void* string)` | `build_h_chain.cpp` |
-| `0x8fcacea0` | `void* root_child(void* behaviour, const char* name)` | `build_m1_loader_disk.cpp`, `build_m3_disk.cpp` |
-| `0x8fcaeb10` | `void* make_folder(void* parent, const char* name)` | `build_m1_loader_disk.cpp`, `build_m3_disk.cpp`, `build_m3_folders.cpp` |
-| `0x8fcaed68` | `void* add_file(void* folder, const char* name)` | `build_m1_loader_disk.cpp`, `build_m3_disk.cpp`, `build_m3_folders.cpp` |
-| `0x8fcba8ac` | `void close(int handle)` | `build_m3_folders.cpp` |
-| `0x8fcba8c0` | `int write(const void* data, u32 size, u32 count, int handle)` | `build_m3_folders.cpp` |
-| `0x8fcba954` | `int read(void* buffer, u32 size, u32 count, int handle)` | `build_m3_folders.cpp` |
-| `0x8fcba988` | `int open(const char* path, const char* mode)` | `build_m3_folders.cpp` |
-| `0x8fcbabb8` | `void fs_file_ctor(void* obj, const char* path)` | `build_m1_loader_disk.cpp`, `build_m3_disk.cpp`, `build_m3_folders.cpp` |
-| `0x8fcc76bc` | `void array_ctor(void* storage, int count, int size, void* ctor, void* dtor)` | `build_h_chain.cpp` |
+| `0x8c0828e0` | `int json_read_raw(void* a, void* path, void* value, int flag)` | `build_r6b_keeps.cpp` |
+| `0x8c084748` | `const char* json_cstring(const void* value)` | `build_r6b_keeps.cpp` |
+| `0x8c0a4730` | `long long free_space(const char* path)` | `build_r4c_door.cpp` |
+| `0x8c0bb684` | `void master_pick(void* controller, u32 id)` | `build_r6d_effects.cpp` |
+| `0x8c0c1dd0` | `void* tape_saver(void)` | `build_r6b_keeps.cpp` |
+| `0x8c0dd2cc` | `void draw_char(u16* framebuffer, int character)` | `build_r2_measure.cpp` |
+| `0x8c0df868` | `void restart(int code, int delay_ms)` | `build_r4c_door.cpp` |
+| `0x8d4e5cb8` | `void midi_out(int index, const void* packets, u32 bytes)` | `build_r4c_door.cpp` |
+| `0x8d4e63bc` | `void* heap_alloc(u32 bytes)` | `build_m1_loader_disk.cpp`, `build_r2_folders.cpp` |
+| `0x8d4e63cc` | `void free(void* memory)` | `build_m1_loader_disk.cpp` |
+| `0x8d4f24dc` | `int tape_set(int db, const char* key, const void* value)` | `build_r6b_keeps.cpp` |
+| `0x8d4f2b80` | `void* tape_root(void)` | `build_r6b_keeps.cpp` |
+| `0x8d4f3b9c` | `void set_params(u32 record, const u32* words)` | `build_r6d_effects.cpp` |
+| `0x8d4f3c24` | `void set_active(u32 record, u32 on)` | `build_r6d_effects.cpp` |
+| `0x8d4f6748` | `void drum_put(void* record, int slot, void* json, int flag)` | `build_r6b_keeps.cpp` |
+| `0x8d4f689c` | `void knob_set(u32 record, const u32* words)` | `build_r6d_engines.cpp` |
+| `0x8d4f6c3c` | `void synth_put(void* record, int slot, void* json, int flag)` | `build_r6b_keeps.cpp` |
+| `0x8d4fee88` | `int user_sounds(void)` | `build_r6d_engines.cpp` |
+| `0x8d50424c` | `u32 master_on(void)` | `build_r6d_effects.cpp` |
+| `0x8d5042c0` | `void on_master(u32 on)` | `build_r6d_effects.cpp` |
+| `0x8d5042f0` | `void on_drum(u32 slot, u32 on)` | `build_r6d_effects.cpp` |
+| `0x8d504320` | `void on_synth(u32 slot, u32 on)` | `build_r6d_effects.cpp` |
+| `0x8d505390` | `void build(u32 index, u32 type)` | `build_r6d_effects.cpp` |
+| `0x8f007d68` | `NoteRecord note_record(int key, int velocity)` | `build_r6_seq.cpp` |
+| `0x8f008388` | `void note_on(int note, int velocity, int third, int fourth, int octave, int target, int no_midi)` | `build_r6_seq.cpp` |
+| `0x8f008518` | `void note_off(int note, int velocity, int third, int fourth, int target, int no_midi)` | `build_r6_seq.cpp` |
+| `0x8f008ba8` | `void bend(int note, int pitch)` | `build_r6_seq.cpp` |
+| `0x8f011068` | `void* factory(u32 type, u32 index)` | `build_r6d_effects.cpp` |
+| `0x8fc261fc` | `u32* screens(void)` | `build_r6d_cards.cpp` |
+| `0x8fc273f0` | `u32 screen_of(u32 type)` | `build_r6d_effects.cpp` |
+| `0x8fc274ac` | `u32 engine_screen(u32 type)` | `build_r6d_engines.cpp` |
+| `0x8fc27678` | `u32 draw(u32, u32, u32)` | `build_r2_cost.cpp` |
+| `0x8fc681a0` | `int overlay_match(void* overlay, u32 screen)` | `build_r6_seq.cpp` |
+| `0x8fc97844` | `u32* player_word(void)` | `build_r6_seq.cpp` |
+| `0x8fc978fc` | `void* current_player(void)` | `build_r6_seq.cpp` |
+| `0x8fc9e818` | `int restart_allowed(void)` | `build_r6_seq.cpp` |
+| `0x8fc9e868` | `void restart(void)` | `build_r6_seq.cpp` |
+| `0x8fca1ed2` | `void notify(void* saver)` | `build_r6b_keeps.cpp` |
+| `0x8fca2220` | `u32 classic(void)` | `build_r6d_engines.cpp` |
+| `0x8fca6940` | `u32 tick(u32, u32, u32)` | `build_r2_cost.cpp` |
+| `0x8fcacea0` | `void* root_child(void* behaviour, const char* name)` | `build_m1_loader_disk.cpp`, `build_r2_disk.cpp` |
+| `0x8fcaeb10` | `void* make_folder(void* parent, const char* name)` | `build_m1_loader_disk.cpp`, `build_r2_folders.cpp` |
+| `0x8fcaed68` | `void* add_file(void* folder, const char* name)` | `build_m1_loader_disk.cpp`, `build_r2_folders.cpp` |
+| `0x8fcba8ac` | `void close(int handle)` | `build_r2_folders.cpp`, `build_r4c_door.cpp`, `build_r6d_engines.cpp` |
+| `0x8fcba8c0` | `int write(const void* data, u32 size, u32 count, int handle)` | `build_r2_folders.cpp`, `build_r4c_door.cpp`, `build_r6d_engines.cpp` |
+| `0x8fcba954` | `int read(void* buffer, u32 size, u32 count, int handle)` | `build_r2_folders.cpp`, `build_r6d_engines.cpp` |
+| `0x8fcba988` | `int open(const char* path, const char* mode)` | `build_r2_folders.cpp`, `build_r4c_door.cpp`, `build_r6d_engines.cpp` |
+| `0x8fcbabb8` | `void fs_file_ctor(void* obj, const char* path)` | `build_m1_loader_disk.cpp`, `build_r2_folders.cpp` |

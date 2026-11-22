@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+  The page the install page leaves for while the OP-1 restarts after a change of its packs. It holds no MIDI at all, so
+  that the browser keeps nothing of the unit while the unit goes away and comes back. Its button loads the install page
+  anew, which finds its record in the browser's storage, asks for MIDI again and checks every file it sent.
+  ?for=power: the unit couldn't finish a change and asked to be switched off and on. Closing the tab is never asked of
+  the owner: on one computer that froze the browser.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>open-field · your OP-1 restarts</title>
+<style>
+  :root { color-scheme: light; --paper: #e9e9e6; --panel: #f3f3f0; --ink: #111111; --ink2: #333333; --mid: #6d6d69; --line: #cdcdc8; --red: #E52817; --on-ink: #ffffff;
+    --sans: "Helvetica Neue", "Segoe UI Variable Text", "Segoe UI", Helvetica, Arial, sans-serif; --mono: Consolas, "SF Mono", Menlo, "Cascadia Mono", monospace; }
+  :root[data-theme="dark"] { color-scheme: dark; --paper: #121311; --panel: #1a1b18; --ink: #ecece6; --ink2: #cbcbc4; --mid: #9b9b94; --line: #34352f; --red: #FF5B3B; --on-ink: #121311; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; --paper: #121311; --panel: #1a1b18; --ink: #ecece6; --ink2: #cbcbc4; --mid: #9b9b94; --line: #34352f; --red: #FF5B3B; --on-ink: #121311; }
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--paper); }
+  body { margin: 0; color: var(--ink); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 720px; margin: 0 auto; padding: 0 16px 60px; }
+  .top { display: flex; align-items: center; gap: 11px; height: 62px; border-bottom: 1px solid var(--ink); font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+  .dots { display: inline-flex; gap: 3px; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; }
+  h1 { margin: 30px 0 14px; font-size: 40px; line-height: 1.05; font-weight: 300; letter-spacing: -.035em; }
+  p { margin: 0 0 14px; color: var(--ink2); max-width: 56ch; }
+  ol { list-style: none; margin: 18px 0 24px; padding: 0; border-top: 1px solid var(--line); }
+  li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  li b { font: 500 12px/21px var(--mono); color: var(--mid); }
+  button { display: inline-flex; align-items: center; height: 44px; padding: 0 26px; border-radius: 22px; background: var(--ink); color: var(--on-ink); font: 500 14px var(--sans); border: 1px solid var(--ink); cursor: pointer; }
+  .note { font-size: 12px; color: var(--mid); margin-top: 18px; }
+  @media (max-width: 560px) { h1 { font-size: 30px; } }
+</style>
+<script>
+  (function () { var t = null; try { t = localStorage.getItem("of-theme"); } catch (e) { t = null; } if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); })();
+</script>
+</head>
+<body>
+<main>
+  <div class="top"><span class="dots"><i style="background:#3C6087"></i><i style="background:#8A653C"></i><i style="background:#A2A4A6"></i><i style="background:var(--red)"></i></span>open-field</div>
+  <h1 id="title">your OP-1 is restarting</h1>
+  <p id="why">This page doesn't talk to your OP-1, so the browser lets go of it while it restarts.</p>
+  <ol id="steps">
+    <li><b>1</b><span>Watch your OP-1. Its screen goes dark, then the start screen shows for a few seconds.</span></li>
+    <li><b>2</b><span>When the start screen has gone and your OP-1 shows its usual screen, press the button below.</span></li>
+  </ol>
+  <button type="button" id="back">it's back, check it</button>
+  <p class="note">The page then checks every file it sent. Leave this tab open. If the page says it can't reach your OP-1, quit the browser completely (every window), open it again and go back to the page. It remembers what to check.</p>
+</main>
+<script>
+  // ?for=power: your OP-1 couldn't finish a change and asked to be switched off and on
+  if (new URLSearchParams(location.search).get("for") === "power") {
+    document.getElementById("title").textContent = "switch your OP-1 off and on";
+    document.getElementById("why").textContent = "Your OP-1 couldn't finish changing its packs. This page doesn't talk to it, so the browser lets go of it.";
+    var steps = document.getElementById("steps");
+    steps.replaceChildren();
+    [
+      "Switch your OP-1 off, wait a few seconds, and switch it on again.",
+      "If a change was left half done, it finishes it as it starts and restarts once more by itself.",
+      "When the start screen has gone and your OP-1 shows its usual screen, press the button below.",
+    ].forEach(function (text, i) {
+      var li = document.createElement("li"), b = document.createElement("b"), s = document.createElement("span");
+      b.textContent = String(i + 1); s.textContent = text; li.append(b, s); steps.append(li);
+    });
+  }
+  document.getElementById("back").onclick = function () { location.replace("index.html#sec-unit"); };
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 // open-field: the install's plan, made once, from the helper's listing of the unit's disk.
 //
-// The page and the helper (open-field-helper.ps1 on Windows, open-field-helper.py on Linux) share one folder on the computer. The helper takes the
+// The page and the helper (open-field-helper.ps1, or open-field-helper.py) share one folder on the computer. It takes the
 // owner's own firmware file and the log files off the unit, lists the disk, and waits. This module, run by the page,
 // builds the new firmware file, decides with placement.mjs whether the write lands or needs a pad file, and writes
 // the plan: every file to put on the unit, and the whole listing the disk must show afterwards, row for row. The
@@ -123,7 +123,7 @@ export function packOrder(names) {
 
 // listing: the helper's rows, the disk as it stands for the write. image: {bytes, sha256}. packs: [{name, bytes,
 // sha256}]. pad: a pad file's {bytes} to force (a test's case), or undefined to let the model decide.
-// bootloader: the unit's bootloader version, as step 1 read it; required, and the plan records it.
+// bootloader: the unit's bootloader version. It is required, and the plan records it without its +0.
 // Returns the plan the helper carries out, or throws with a sentence the page can show.
 export function makePlan({ run, listing, image, packs = [], made = new Date().toISOString(), bootloader }) {
   if (!run) throw new Error("the plan needs the helper's run");
@@ -196,7 +196,7 @@ export function makePlan({ run, listing, image, packs = [], made = new Date().to
 
 // The disk after the helper's work, held against the plan: the same rows, and the model's verdict on the listing as
 // it is (with the exact image on it, so no image size is given), for the bootloader the plan was made for. A plan
-// that names no known bootloader is not checked. Returns {ok, lines}.
+// that names no known bootloader is refused. Returns {ok, lines}.
 export function checkAfter(plan, afterRows) {
   let bootloader;
   try { bootloader = bootloaderVersion(plan.bootloader); }
@@ -227,9 +227,10 @@ async function readJson(folder, name) {
 // What the helper says of itself, or null when it has written nothing yet.
 export async function readHelper(folder) { return readJson(folder, NAMES.helper); }
 
-// The pack files the owner put into the folder's packs sub folder, in the helper's order.
+// The pack files the owner put into the folder's packs sub folder, in the helper's order. A name that begins with "._"
+// is none of theirs: a Mac's Finder leaves files such as ._lfo.pack beside the real ones.
 export async function readPacks(folder) {
-  const entries = (await folder.list(NAMES.packs)).filter((e) => e.kind === "file" && /\.pack$/i.test(e.name));
+  const entries = (await folder.list(NAMES.packs)).filter((e) => e.kind === "file" && !e.name.startsWith("._") && /\.pack$/i.test(e.name));
   const packs = [];
   for (const name of packOrder(entries.map((e) => e.name))) {
     const bytes = await folder.readBytes(NAMES.packs + "/" + name);
@@ -253,7 +254,7 @@ export async function readPacks(folder) {
 // `chosen`: the packs the owner ticked in the listing, each downloaded and held to its entry by catalog.mjs,
 // [{name, bytes, sha256, from}]. Each is written into the folder's packs under its name the same way: left as it is
 // when the same bytes are there, the other bytes kept in `replaced` first. The way back passes them over too.
-// `bootloader`: the unit's bootloader version, as step 1 read it. Required: without it no plan is made.
+// `bootloader`: the unit's bootloader version. It is required: without one the model knows, nothing is written.
 // What a pack file the page puts into the folder's packs finds there under its name, in small letters or capitals.
 export async function packStep(folder, name, digestWanted) {
   const there = (await folder.list(NAMES.packs)).filter((e) => e.kind === "file" && e.name.toLowerCase() === name.toLowerCase());
@@ -340,11 +341,21 @@ export async function prepare(folder, { build, stock = null, made, wayBack = fal
 }
 
 // Once the helper says it is ready: its listing of the disk held against the plan, by the page as well.
-export async function checkFolder(folder) {
+// `bootloader`: the unit's, when the caller knows it; a plan made for another is refused. Without it the plan's is used.
+export async function checkFolder(folder, { bootloader } = {}) {
   const helper = await readHelper(folder);
   const plan = await readJson(folder, NAMES.plan);
   const after = await readJson(folder, NAMES.after);
   if (!helper || !plan || !after) return { ok: false, lines: ["the folder does not hold the helper's last listing yet"] };
   if (plan.run !== helper.run) return { ok: false, lines: ["the plan in the folder is not for the helper's last run"] };
+  if (bootloader !== undefined && bootloader !== null) {
+    let unit;
+    try { unit = bootloaderVersion(bootloader); }
+    catch (e) { return { ok: false, lines: ["the folder cannot be checked for this unit: " + e.message] }; }
+    if (plan.bootloader !== unit) {
+      return { ok: false, lines: ["the plan in the folder was made for " + (plan.bootloader ? "the bootloader " + plan.bootloader : "no named bootloader")
+        + ", and this unit has " + unit + ": do not write with it. Run the helper again and make a new plan on this page"] };
+    }
+  }
   return checkAfter(plan, after);
 }

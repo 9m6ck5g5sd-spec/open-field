@@ -1,4 +1,4 @@
-"""The Linux helper's transport over USB, in builder/open-field-helper.py: its MTP disk against a stand-in unit, its
+"""The Linux and macOS helper's transport over USB, in builder/open-field-helper.py: its MTP disk against a stand-in unit, its
 USB layer against a stand-in libusb, and the whole helper run over that stand-in unit.
 
   python -I -m unittest discover -s tools/tests -p "test_linux_helper_usb.py"
@@ -10,7 +10,8 @@ packet's edge. It has its own copy of every MTP number it uses and takes none fr
 the helper is caught. It checks every container the helper sends: its length field, its type, its transaction id
 (one more for each operation, the data phase with the same id and code as its command), and the zero-length packet
 after a container that ends on a packet's edge. A fault raises AssertionError and is kept in `faults`; every test
-ends by checking that there is none. FakeLibusb answers libusb's calls with the codes a test gives it.
+ends by checking that there is none. FakeLibusb answers libusb's calls with the codes a test gives it. What the two
+systems do differently is held for both, on either: a test sets the helper's MAC, and killall is never run.
 
 Responder is ported from open-xy's tests/test_usbmtp.py at commit f10f6bd.
 Copyright (c) 2026 Open-XY contributors. MIT licence: builder/open-xy.LICENSE.
@@ -33,8 +34,8 @@ import unittest
 from unittest import mock
 
 if not sys.platform.startswith(("linux", "darwin")):
-    # Before the helper is loaded: it is for Linux, and these tests use os.O_NOFOLLOW, named pipes and symbolic links.
-    raise unittest.SkipTest("the Linux helper is tried on Linux only")
+    # Before the helper is loaded: it is for Linux and macOS, and these tests use os.O_NOFOLLOW, named pipes and links.
+    raise unittest.SkipTest("the helper for Linux and macOS is tried on those two only")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HELPER = os.path.join(ROOT, "builder", "open-field-helper.py")
@@ -58,11 +59,22 @@ def load():
 H = load()
 REAL_LIBUSB = H.Libusb      # the class itself, for the one test of its bulk_in; never made with its __init__
 H.Libusb = NoRealLibusb     # the guard, set as the module is loaded: no test can reach the system's libusb
+REAL_END = H.end_ptpcamerad     # the function itself, for the one test of it, with subprocess.run replaced
+
+
+def no_real_killall():
+    raise AssertionError("a test would have ended ptpcamerad")
+
+
+H.end_ptpcamerad = no_real_killall
 DiskError, Usb, UsbDevice, UsbDisk = H.DiskError, H.Usb, H.UsbDevice, H.UsbDisk
 
 
 def setUpModule():
     H.SECOND = 0.002        # every wait of the helper, 500 times shorter
+
+
+SEVERAL_SECONDS = '5000'    # --find-seconds where the wait should succeed: 10 seconds here, ended by the unit
 
 # The stand-in unit's own copy of MTP. Nothing here comes from the helper.
 TE_VENDOR = 0x2367
@@ -365,9 +377,12 @@ class Responder:
 class FakeLibusb:
     """libusb's calls as Usb makes them, answering with the codes a test sets."""
 
-    def __init__(self, devices, responder=None, open_code=0, claim_code=0, active=1):
+    def __init__(self, devices, responder=None, open_code=0, claim_code=0, active=1, open_codes=(), claim_codes=(),
+                 configuration_code=0):
         self.list, self.responder = devices, responder
         self.open_code, self.claim_code, self.active = open_code, claim_code, active
+        self.open_codes, self.claim_codes = list(open_codes), list(claim_codes)     # the first answers, one a call
+        self.configuration_code = configuration_code
         # The next bulk transfers: 0 is a normal one, a code fails with nothing moved, (code, part) fails after part.
         self.in_codes, self.out_codes = [], []
         self.calls = []
@@ -381,10 +396,10 @@ class FakeLibusb:
 
     def open(self, ref):
         self.calls.append(('open', ref))
-        return self.open_code, ('handle', ref)
+        return (self.open_codes.pop(0) if self.open_codes else self.open_code), ('handle', ref)
 
     def configuration(self, handle):
-        return 0, self.active
+        return self.configuration_code, self.active
 
     def set_configuration(self, handle, value):
         self.calls.append(('set_configuration', value))
@@ -395,7 +410,7 @@ class FakeLibusb:
 
     def claim(self, handle, number):
         self.calls.append(('claim', number))
-        return self.claim_code
+        return self.claim_codes.pop(0) if self.claim_codes else self.claim_code
 
     def release(self, handle, number):
         self.calls.append(('release', number))
@@ -639,7 +654,7 @@ class ReadTests(Base):
         for name in ('old', 'link'):
             with self.assertRaisesRegex(DiskError, 'could not be made new on this computer') as caught:
                 disk.read('logs/Ünïcode name.log', self.local(name))
-            self.assertEqual(caught.exception.kind, 'local')
+            self.assertEqual(caught.exception.kind, 'name')     # this name's failure, not the disk's
         self.assertEqual((self.bytes_of('old'), self.bytes_of('victim')), (b'something there already', b'untouched'))
         self.assertTrue(os.path.islink(self.local('link')))
         self.assertEqual(self.unit.ops.count(GET_OBJECT), asked)
@@ -784,6 +799,38 @@ class ChangeTests(Base):
         self.assertNotIn(DELETE_OBJECT, self.unit.ops)
         self.assertEqual(self.unit.paths(), ['logs/', 'logs/x.log'])
 
+    def test_a_file_of_the_same_name_that_is_not_at_the_top_is_never_the_one_removed(self):
+        for what in ('remove', 'replace'):
+            with self.subTest(what):
+                disk = self.disk({'a/os.ldr': b'nested first', 'os.ldr': b'top', 'b/os.ldr': b'nested last',
+                                  'upgrade/firmware/blackfin/bin/os.ldr': b'the owner\'s'})
+                if what == 'remove':
+                    disk.remove_file('os.ldr')
+                    self.assertIsNone(self.unit.at('os.ldr'))
+                else:
+                    disk.write(self.local('new', b'new'), '', 'os.ldr')
+                    self.assertEqual(self.unit.at('os.ldr').data, b'new')
+                self.assertEqual(self.unit.ops.count(DELETE_OBJECT), 1)
+                for path, data in (('a/os.ldr', b'nested first'), ('b/os.ldr', b'nested last'),
+                                   ('upgrade/firmware/blackfin/bin/os.ldr', b'the owner\'s')):
+                    self.assertEqual(self.unit.at(path).data, data)
+
+    def test_a_stale_handle_of_a_nested_file_is_not_taken_for_the_top_ones(self):
+        disk = self.disk({'os.ldr': b'top', 'a/os.ldr': b'nested'})
+        disk.children('')
+        disk._handles['os.ldr'] = H.Entry(self.unit.find(self.unit.make('a'), 'os.ldr'), False, 6)
+        with self.assertRaisesRegex(DiskError, 'no longer where it was listed'):
+            disk.remove_file('os.ldr')
+        self.assertNotIn(DELETE_OBJECT, self.unit.ops)
+
+    def test_parent_0_stands_for_the_top_alone(self):
+        disk = self.disk({'os.ldr': b'top', 'a/os.ldr': b'nested'})
+        disk.children('a')
+        top, folder = self.unit.find(TOP, 'os.ldr'), self.unit.find(TOP, 'a')
+        with self.assertRaisesRegex(DiskError, 'no longer where it was listed'):
+            disk._delete(top, folder, 'os.ldr', 'a/os.ldr')         # its ObjectInfo says 0: never a folder's file
+        self.assertNotIn(DELETE_OBJECT, self.unit.ops)
+
     def test_the_one_delete_refuses_0_and_ffffffff_whoever_asks(self):
         disk = self.disk({'a': b'1'})
         for bad in (0, TOP):
@@ -804,7 +851,7 @@ class ChangeTests(Base):
         with self.assertRaisesRegex(DiskError, 'the unit has no nowhere'):
             disk.make_folder('nowhere', 'pk')
 
-    def test_the_cache_of_handles_is_dropped_after_every_change(self):
+    def test_the_cache_of_handles_after_every_change(self):
         disk = self.disk({'user/pk/a.pack': b'old', 'logs/one.log': b'1'})
         disk.read('user/pk/a.pack', self.local('r1'))
         self.assertIn('user/pk/a.pack', disk._handles)
@@ -812,11 +859,15 @@ class ChangeTests(Base):
         disk.read('user/pk/a.pack', self.local('r2'))
         self.assertEqual(self.unit.ops.count(OBJECT_HANDLES), listings)   # Known: not listed again.
         for change in (lambda: disk.write(self.local('n', b'newer'), 'user/pk', 'a.pack'),
-                       lambda: disk.make_folder('user', 'more'),
-                       lambda: disk.remove_file('logs/one.log')):
+                       lambda: disk.make_folder('user', 'more')):
             disk.children('user')
             change()
             self.assertEqual(disk._handles, {'': H.Entry(TOP, True, 0)})
+        disk.children('logs')
+        kept = dict(disk._handles)
+        disk.remove_file('logs/one.log')
+        del kept['logs/one.log']
+        self.assertEqual(disk._handles, kept)   # The removed file alone: each change asks about its folder first.
         self.assertEqual(disk.read('user/pk/a.pack', self.local('r3')), 5)   # The new handle, not the old one.
         self.assertEqual(self.bytes_of('r3'), b'newer')
 
@@ -964,8 +1015,21 @@ class UsbTests(Base):
     def open_with(self, devices, **options):
         self.libusb = FakeLibusb(devices, Responder({'a': b'1'}), **options)
         with self.assertRaises(DiskError) as caught:
-            Usb(self.libusb)
+            Usb(self.libusb, note=self.fail)
         return caught.exception
+
+    def open_as(self, mac, **options):
+        """A unit opened as on the one system or the other: (the error or None, what was done, in order)."""
+        done = []
+        self.libusb = FakeLibusb([unit()], Responder({'a': b'1'}), **options)
+        with mock.patch.object(H, 'MAC', mac), \
+                mock.patch.object(H, 'end_ptpcamerad', lambda: done.append('killall')):
+            try:
+                usb = Usb(self.libusb, note=done.append)
+            except DiskError as error:
+                return error, done
+            usb.close()
+        return None, done
 
     def test_no_unit(self):
         for devices in ([], [unit(vendor=0x1234)], [unit(interfaces=AUDIO_INTERFACES)]):
@@ -989,7 +1053,7 @@ class UsbTests(Base):
                 with self.assertRaises(DiskError) as caught:
                     change()
                 self.assertEqual(caught.exception.kind, 'unproven')
-                for words_ in ('product id is 0x%04x' % product, 'has run on a unit with the id 0x0102 only', '--list-only',
+                for words_ in ('product id is 0x%04x' % product, 'was tried with the id 0x0102 only', '--list-only',
                                'send what it prints'):
                     self.assertIn(words_, str(caught.exception))
             self.assertFalse(set(self.unit.ops) & CHANGING, self.unit.ops)
@@ -1001,7 +1065,7 @@ class UsbTests(Base):
         self.assertEqual((error.kind, str(error)), ('several', H.SEVERAL))
         self.assertNotIn(('open', 'one'), self.libusb.calls)
 
-    @unittest.skipIf(H.MAC, "asserts the Linux texts; the macOS ones are held in test_mac_claim_retry")
+    @mock.patch.object(H, 'MAC', False)
     def test_no_permission(self):
         for options in ({'open_code': -3}, {'claim_code': -3}):
             error = self.open_with([unit()], **options)
@@ -1013,16 +1077,69 @@ class UsbTests(Base):
         self.assertEqual(self.libusb.calls[-2:], ['close', 'exit'])
         self.assertNotIn(('release', 0), self.libusb.calls)
 
-    @unittest.skipUnless(H.MAC, "macOS only")
-    def test_mac_claim_retry(self):
-        # ptpcamerad holds the unit for good: every retry is refused, and the owner reads the macOS text.
-        error = self.open_with([unit()], claim_code=-3)
-        self.assertEqual(error.kind, 'permission')
-        for words_ in ('product id 0102', 'another program holds it', 'killall ptpcamerad'):
-            self.assertIn(words_, str(error))
-        self.assertEqual(self.libusb.calls.count(('claim', 0)), 6)   # the first claim and five after a kill
+    def test_linux_never_ends_a_program(self):
+        for options in ({'open_code': -3}, {'open_code': -6}, {'claim_code': -3}, {'claim_code': -6}):
+            error, done = self.open_as(False, **options)
+            self.assertEqual(done, [])
+            self.assertEqual(self.libusb.calls.count(('open', 'unit')), 1)
+            self.assertNotIn('ptpcamerad', str(error))
 
-    @unittest.skipIf(H.MAC, "asserts the Linux texts; the macOS ones are held in test_mac_claim_retry")
+    def test_a_mac_refused_for_good_says_one_line_first_and_tries_five_times(self):
+        # ptpcamerad holds the unit for good: every try is refused, and the owner reads the macOS text.
+        for step, code in (('open', -3), ('open', -6), ('claim', -3), ('claim', -6)):
+            with self.subTest('%s %d' % (step, code)):
+                error, done = self.open_as(True, **{step + '_code': code})
+                self.assertEqual(error.kind, 'permission' if code == -3 else 'busy')
+                self.assertEqual(done, [H.ENDS_CAMERA_HELPER] + ['killall'] * 5)
+                self.assertIn('ptpcamerad', done[0])
+                self.assertEqual(self.libusb.calls.count(('open', 'unit') if step == 'open' else ('claim', 0)), 6)
+                text = str(error)
+                for words_ in ('bus 007, device 042', 'product id 0102', 'another program holds it', 'Image Capture',
+                               'killall ptpcamerad', 'then run the command again'):
+                    self.assertIn(words_, text)
+                for linux in ('udev', 'uaccess', 'sudo', 'gio mount', 'file manager', 'Linux'):
+                    self.assertNotIn(linux, text + done[0])
+                self.assertEqual(self.libusb.calls[-1], 'exit')
+                self.assertNotIn(('release', 0), self.libusb.calls)
+
+    def test_a_mac_that_gives_way_is_opened(self):
+        for options, ends in (({'claim_codes': [-3, -6]}, 2), ({'open_codes': [-3]}, 1),
+                              ({'open_codes': [-3], 'claim_codes': [-3]}, 2)):
+            with self.subTest(options=options):
+                error, done = self.open_as(True, **options)
+                self.assertIsNone(error)
+                self.assertEqual(done, [H.ENDS_CAMERA_HELPER] + ['killall'] * ends, 'the line is said once')
+                self.assertEqual(self.libusb.calls[-3:], [('release', 0), 'close', 'exit'])
+
+    def test_a_mac_ends_nothing_unless_the_open_or_the_claim_is_refused(self):
+        for options in ({}, {'open_code': -4}, {'open_code': -12}, {'claim_code': -5}, {'claim_code': -1},
+                        {'configuration_code': -3}):
+            with self.subTest(options=options):
+                error, done = self.open_as(True, **options)
+                self.assertEqual(done, [])
+                self.assertEqual(error is None, not options)
+                if error is not None:
+                    self.assertNotIn('udev', str(error))
+        done = []
+        with mock.patch.object(H, 'MAC', True):
+            for devices in ([], [unit(vendor=0x1234)]):
+                with self.assertRaises(DiskError):
+                    Usb(FakeLibusb(devices, claim_code=-3), note=done.append)
+        self.assertEqual(done, [])
+
+    def test_ptpcamerad_is_ended_by_the_systems_killall_and_never_as_another_user(self):
+        with mock.patch.object(H.subprocess, 'run') as run:
+            REAL_END()
+        (command,), options = run.call_args
+        self.assertEqual(command, ['/usr/bin/killall', 'ptpcamerad'])
+        self.assertIs(options['stdin'], H.subprocess.DEVNULL)      # standard input is the pipe the helper came through
+        self.assertFalse(options.get('shell', False))
+        self.assertGreater(options['timeout'], 0)
+        for failure in (FileNotFoundError(2, 'none'), H.subprocess.TimeoutExpired('killall', 10)):
+            with mock.patch.object(H.subprocess, 'run', side_effect=failure):
+                REAL_END()
+
+    @mock.patch.object(H, 'MAC', False)
     def test_the_interface_is_busy(self):
         error = self.open_with([unit()], claim_code=-6)
         self.assertEqual(error.kind, 'busy')
@@ -1091,6 +1208,54 @@ class UsbTests(Base):
         disk.close()
         self.assertEqual(self.unit.ops[-1], CLOSE_SESSION)
         self.assertEqual(self.libusb.calls[-3:], [('release', 0), 'close', 'exit'])
+
+
+class LibraryTests(unittest.TestCase):
+    """load_libusb, with ctypes' loading replaced: no library of this computer is loaded."""
+
+    def load(self, mac, loads=(), there=(), found=None):
+        tried = []
+
+        def cdll(name):
+            tried.append(name)
+            if name not in loads:
+                raise OSError('made up: incompatible architecture' if name in there else 'made up: no such file')
+            return ('loaded', name)
+        with mock.patch.object(H, 'MAC', mac), mock.patch.object(H.ct, 'CDLL', cdll), \
+                mock.patch.object(H.ctypes.util, 'find_library', lambda name: found), \
+                mock.patch.object(H.os.path, 'exists', lambda name: name in there):
+            try:
+                return H.load_libusb(), tried
+            except DiskError as error:
+                self.assertEqual(error.kind, 'library')
+                return str(error), tried
+
+    def test_a_mac_without_it_is_told_the_homebrew_line(self):
+        said, tried = self.load(True)
+        self.assertEqual(said, H.NO_LIBRARY_MAC)
+        self.assertIn('brew install libusb', said)
+        for linux in ('apt', 'Debian', 'libusb-1.0-0', 'sudo'):
+            self.assertNotIn(linux, said)
+        self.assertEqual(tried, list(H.MAC_LIBRARIES))
+
+    def test_linux_without_it_is_told_the_package(self):
+        said, tried = self.load(False)
+        self.assertIn('sudo apt install libusb-1.0-0', said)
+        self.assertNotIn('brew', said)
+        self.assertEqual(tried, list(H.LINUX_LIBRARIES))
+
+    def test_one_of_the_other_processor_type_is_named(self):
+        intel = '/usr/local/lib/libusb-1.0.0.dylib'
+        said, tried = self.load(True, there=(intel,), found=intel)
+        self.assertIn(intel, said)
+        self.assertIn('other type of processor', said)
+        self.assertIn('brew install libusb', said)
+
+    def test_one_that_loads_is_taken_past_one_that_does_not(self):
+        arm, intel = '/opt/homebrew/lib/libusb-1.0.0.dylib', '/usr/local/lib/libusb-1.0.0.dylib'
+        self.assertEqual(self.load(True, loads=(arm,), there=(arm, intel), found=intel)[0], ('loaded', arm))
+        self.assertEqual(self.load(True, loads=(intel,))[0], ('loaded', intel))
+        self.assertEqual(self.load(False, loads=('found.so',), found='found.so')[0], ('loaded', 'found.so'))
 
 
 class ListOnlyTests(Base):
@@ -1211,12 +1376,14 @@ class OverUsb(Base):
 
     def setUp(self):
         super().setUp()
-        self.shared = os.path.join(self.temp, 'open-field')
+        self.shared = os.path.join(self.temp, 'any folder')
         self.home = os.path.join(self.temp, 'home')       # Never made: nothing may be written into it.
         for patch in (mock.patch.object(H, 'Libusb', self.libusb_of),
                       mock.patch.dict(os.environ, {'HOME': self.home})):
             patch.start()
             self.addCleanup(patch.stop)
+        for name in ('OPEN_FIELD_PAGE', 'OPEN_FIELD_FOLDER'):
+            os.environ.pop(name, None)
         self.found = []             # The FakeLibusb of every search, in order.
         self.devices = [[unit()]]   # The devices each search finds; the last stays.
         self.options = {}
@@ -1235,12 +1402,12 @@ class OverUsb(Base):
     def run_helper(self, page=None, args=()):
         """The helper run in a thread; `page()` is called once it has listed the disk. (code, helper.json, lines)."""
         out, res = [], {}
-        argv = ['--folder', self.shared, '--wait-minutes', '1', '--find-seconds', '1'] + list(args)
+        argv = ['--folder', self.shared, '--wait-minutes', '60' if page else '1', '--find-seconds', '1'] + list(args)
         thread = threading.Thread(target=lambda: res.setdefault(
             'code', H.main(argv, echo=lambda line, color: out.append(line))))
         thread.start()
         if page is not None:
-            until = time.monotonic() + 5
+            until = time.monotonic() + 20
             while time.monotonic() < until and self.state() not in ('listed', 'stopped'):
                 time.sleep(0.001)
             self.assertEqual(self.state(), 'listed', out)
@@ -1300,7 +1467,7 @@ class FullRunOverUsb(OverUsb):
                                                                                       ('lfo.pack', lfo)]))
         self.assertEqual(code, 0, h['lines'])
         self.assertEqual((h['state'], h['message'], h['unit']), ('ready', 'ready to write', 'OP-1'))
-        self.assertTrue(out[-3].endswith('READY TO WRITE.'), out[-3:])
+        self.assertTrue(out[-4].endswith('READY TO WRITE.'), out[-4:])
         want = dict(before)
         for gone in ('logs/one.txt', 'logs/two.txt', 'open-field-pad.bin'):
             del want[gone]
@@ -1309,10 +1476,66 @@ class FullRunOverUsb(OverUsb):
         self.assertEqual((self.unit.deleted_folders, self.unit.deleted_everything), ([], False))
         self.assertEqual(h['logs'], {'folder': 'logs-' + h['run'], 'copied': 2, 'left_on_unit': 0})
         self.assertEqual(h['oldPads'], {'found': 1, 'taken_off': 1, 'left_on_unit': 0})
+        self.assertEqual(h['waiting'], {'found': 0, 'taken_off': 0, 'left_on_unit': 0})
         self.assertEqual(h['stock']['sha256'], sha(STOCK))
         # Two logs, one old pad, the old os.ldr and the old lfo.pack.
         self.assertEqual(self.unit.ops.count(DELETE_OBJECT), 5)
         self.assertLetGo()
+
+    def test_user_pkin_is_emptied_over_usb_and_the_folder_stays(self):
+        files = dict(UNIT_FILES, **{'user/pkin/.apply': b'', 'user/pkin/next.pack': made_up(70, 5),
+                                    'user/pkin/A.pack': b'A', 'user/pkin/a.pack': b'a',
+                                    'user/pkin/sub/kept': b'k', 'user/pk/.apply': b'kept'})
+        before = self.plug(files)
+        code, h, out = self.run_helper(lambda: page_plan(self.shared, packs=[('base.pack', b'B' * 55)]))
+        self.assertEqual(code, 0, h['lines'])
+        self.assertEqual(h['waiting'], {'found': 4, 'taken_off': 4, 'left_on_unit': 0})
+        want = dict(before)
+        for gone in ('logs/one.txt', 'logs/two.txt', 'open-field-pad.bin', 'user/pkin/.apply', 'user/pkin/next.pack',
+                     'user/pkin/A.pack', 'user/pkin/a.pack'):
+            del want[gone]
+        want.update({'os.ldr': IMAGE, 'user/pk/base.pack': b'B' * 55})
+        self.assertEqual(snapshot(self.unit), want)
+        self.assertIn('user/pkin', want)
+        self.assertEqual((self.unit.deleted_folders, self.unit.deleted_everything), ([], False))
+
+    def test_a_file_the_unit_keeps_in_user_pkin_stops_the_run(self):
+        self.plug(dict(UNIT_FILES, **{'user/pkin/.apply': b'note'}))
+        self.unit.refuse[DELETE_OBJECT] = [None, None, None, GENERAL_ERROR]     # two logs and a pad, then the note
+        code, h, out = self.run_helper()
+        self.assertStopped(code, h, '1' + H.WAITING_LEFT + '. The cause: user/pkin/.apply: the unit refused to remove '
+                           'user/pkin/.apply: it gave a general error (MTP answer 0x2002)')
+        self.assertEqual(self.unit.at('user/pkin/.apply').data, b'note')
+        self.assertIsNone(h['listing'])
+
+    def test_a_mac_says_its_line_in_the_window_and_the_state(self):
+        self.plug(claim_codes=[-3])
+        ended = []
+        with mock.patch.object(H, 'MAC', True), mock.patch.object(H, 'end_ptpcamerad', lambda: ended.append(1)):
+            code, h, out = self.run_helper(lambda: page_plan(self.shared))
+        self.assertEqual((code, h['state'], ended), (0, 'ready', [1]), out)
+        self.assertEqual(h['lines'].count(H.ENDS_CAMERA_HELPER), 1)
+        self.assertLess(h['lines'].index(H.ENDS_CAMERA_HELPER), h['lines'].index("Found the unit's drive (OP-1)."))
+
+    def test_a_mac_that_stays_refused_stops_with_its_own_text(self):
+        for options in ({'open_code': -3}, {'claim_code': -3}, {'claim_code': -6}):
+            self.plug(**options)
+            shutil.rmtree(self.shared, ignore_errors=True)
+            with mock.patch.object(H, 'MAC', True), mock.patch.object(H, 'end_ptpcamerad', lambda: None):
+                code, h, out = self.run_helper()
+            self.assertEqual(code, 1)
+            self.assertIn('another program holds it', h['message'])
+            self.assertNotIn('udev', '\n'.join(out))
+            self.assertEqual(self.unit.ops, [])
+
+    def test_a_missing_library_stops_without_a_traceback(self):
+        self.plug()
+
+        def none():
+            raise DiskError(H.NO_LIBRARY_MAC, 'library')
+        with mock.patch.object(H, 'MAC', True), mock.patch.object(H, 'Libusb', none):
+            code, h, out = self.run_helper()
+        self.assertStopped(code, h, H.NO_LIBRARY_MAC)
 
     def test_a_proven_unit_gets_the_pack_folder_the_plan_makes(self):
         files = {k: v for k, v in UNIT_FILES.items() if not k.startswith('user/')}
@@ -1375,7 +1598,13 @@ class FullRunOverUsb(OverUsb):
     def test_r2b_no_unit_in_find_seconds(self):
         self.plug()
         self.devices = [[]]
-        code, h, out = self.run_helper()
+        searched = self.libusb_of
+
+        def slow():
+            time.sleep(0.01)        # a search longer than the whole wait, as on a busy computer
+            return searched()
+        with mock.patch.object(H, 'Libusb', slow):
+            code, h, out = self.run_helper()
         self.assertStopped(code, h, H.NOT_SHOWN)
         self.assertIn(H.WAITING, h['lines'])
         self.assertEqual(self.unit.ops, [])
@@ -1383,7 +1612,7 @@ class FullRunOverUsb(OverUsb):
     def test_a_unit_that_shows_after_a_wait_is_taken(self):
         self.plug()
         self.devices = [[], [], [unit(product=OTHER)]]
-        code, h, out = self.run_helper(args=['--find-seconds', '60'])
+        code, h, out = self.run_helper(args=['--find-seconds', SEVERAL_SECONDS])
         self.assertIn(H.WAITING, h['lines'])
         self.assertEqual(h['message'], H.UNPROVEN.format(product=OTHER))
         self.assertEqual(len(self.found), 3)
@@ -1396,7 +1625,7 @@ class FullRunOverUsb(OverUsb):
         self.assertFalse([c for c in self.found[-1].calls if c[0] == 'open'])
         self.assertEqual(self.unit.ops, [])
 
-    @unittest.skipIf(H.MAC, "asserts the Linux texts; the macOS ones are held in test_mac_claim_retry")
+    @mock.patch.object(H, 'MAC', False)
     def test_no_permission_and_busy_show_the_transports_texts_and_stop(self):
         for options, kind, words_ in (({'open_code': -3}, 'permission', 'uaccess'),
                                       ({'claim_code': -3}, 'permission', '70-op1-field.rules'),
@@ -1441,12 +1670,31 @@ class ListOnlyOverUsb(OverUsb):
     def test_list_only_waits_for_the_unit(self):
         self.plug()
         self.devices = [[], [], [unit()]]
-        code, out = self.list_only(['--find-seconds', '60'])
+        code, out = self.list_only(['--find-seconds', SEVERAL_SECONDS])
         self.assertEqual(code, 0, out)
         self.assertEqual(out[0], H.WAITING)
         self.assertNothingMade()
 
-    @unittest.skipIf(H.MAC, "asserts the Linux texts; the macOS ones are held in test_mac_claim_retry")
+    def test_list_only_on_a_mac_says_its_line_and_changes_no_file(self):
+        before = self.plug(claim_codes=[-3])
+        ended = []
+        with mock.patch.object(H, 'MAC', True), mock.patch.object(H, 'end_ptpcamerad', lambda: ended.append(1)):
+            code, out = self.list_only()
+        self.assertEqual((code, ended, out[0]), (0, [1], H.ENDS_CAMERA_HELPER))
+        self.assertTrue(out[1].startswith('Vendor id 2367'), out)
+        self.assertEqual(snapshot(self.unit), before)
+        self.assertNothingMade()
+
+    def test_list_only_ends_in_no_traceback(self):
+        self.plug()
+        for failure in (DiskError(H.NO_LIBRARY_MAC, 'library'), AttributeError('made up: an old libusb')):
+            with mock.patch.object(H, 'Libusb', mock.Mock(side_effect=failure)):
+                code, out = self.list_only()
+            self.assertEqual(code, 1)
+            self.assertIn(str(failure), out[-1])
+        self.assertNothingMade()
+
+    @mock.patch.object(H, 'MAC', False)
     def test_list_only_stops_with_the_texts_of_the_transport(self):
         cases = (([[]], {}, H.NOT_SHOWN), ([[unit(ref='one'), unit(ref='two', address=43)]], {}, H.MORE_THAN_ONE),
                  ([[unit()]], {'open_code': -3}, None), ([[unit()]], {'claim_code': -6}, H.BUSY))
@@ -1467,6 +1715,308 @@ class ListOnlyOverUsb(OverUsb):
     def test_list_only_takes_no_source(self):
         self.assertEqual(self.list_only(['--source', self.temp])[0], 2)
         self.assertEqual(self.found, [])
+
+
+class TakenOffUnderOneName(OverUsb):
+    def one_name_for_both_letters(self):
+        """This computer's disk takes capitals and small letters for one name, as a Mac's does, in the folders that
+        take files off the unit."""
+        def one(path):
+            folder, name = os.path.split(str(path))
+            if os.path.basename(folder).startswith(('logs-', 'old-')) and os.path.isdir(folder):
+                for there in os.listdir(folder):
+                    if there.lower() == name.lower():
+                        return os.path.join(folder, there)
+            return path
+        new_file, lexists, remove = H.new_file, os.path.lexists, os.remove
+        for patch in (mock.patch.object(H, 'new_file', lambda path: new_file(one(path))),
+                      mock.patch.object(H.os.path, 'lexists', lambda path: lexists(one(path))),
+                      mock.patch.object(H.os, 'remove', lambda path, *a, **k: remove(one(path), *a, **k))):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def test_two_names_of_the_unit_that_are_one_here(self):
+        self.one_name_for_both_letters()
+        files = dict(UNIT_FILES, **{'logs/LOG.txt': b'FIRST, the only copy', 'logs/log.txt': b'second', 'logs/Log.txt': b'3',
+                                    'OPEN-FIELD-PAD-2.BIN': b'a pad', 'open-field-pad-2.bin': b'another',
+                                    'user/pkin/A.pack': b'A', 'user/pkin/a.pack': b'a'})
+        self.plug(files)
+        code, h, out = self.run_helper()
+        self.assertEqual(code, 1)           # no plan came
+        folder = os.path.join(self.shared, h['logs']['folder'])
+        kept = {}
+        for name in os.listdir(folder):
+            with open(os.path.join(folder, name), 'rb') as f:
+                kept[name] = f.read()
+        self.assertEqual(sorted(kept.values()), sorted([b'first log', b'second', b'3', b'FIRST, the only copy', b'second']))
+        self.assertEqual(len({name.lower() for name in kept}), 5, 'each under a name of its own')
+        self.assertEqual(h['logs'], {'folder': 'logs-' + h['run'], 'copied': 5, 'left_on_unit': 0})
+        self.assertEqual(h['oldPads'], {'found': 3, 'taken_off': 3, 'left_on_unit': 0})
+        self.assertEqual(h['waiting'], {'found': 2, 'taken_off': 2, 'left_on_unit': 0})
+
+
+class CauseOverUsb(OverUsb):
+    """The first failure's words, and no try after it."""
+
+    def pulled(self, at, files=None):
+        """The cable is pulled at the first GetObject for which `at(responder)` is true."""
+        before = self.plug(dict(UNIT_FILES, **(files or {})))
+        usual, self.pulls = self.unit.answer, []
+
+        def answer(code, *args):
+            if self.pulls:
+                self.pulls.append(code)
+            if code == GET_OBJECT and not self.pulls and at(self.unit, self.unit.objects[args[1][0]]):
+                self.pulls.append(code)
+                raise DiskError(H.GONE.format(action='receiving from the unit'), 'gone')
+            return usual(code, *args)
+        self.unit.answer = answer
+        return before
+
+    def test_the_cable_goes_while_a_log_comes_off(self):
+        self.pulled(lambda u, o: o.name == 'one.txt')
+        code, h, out = self.run_helper()
+        self.assertStopped(code, h, H.GONE.format(action='receiving from the unit'))
+        self.assertEqual(self.pulls, [GET_OBJECT])
+        self.assertEqual(self.unit.at('logs/one.txt').data, b'first log')
+
+    def test_the_cable_goes_while_the_firmware_file_comes_off(self):
+        self.pulled(lambda u, o: o.data == STOCK)
+        code, h, out = self.run_helper()
+        self.assertEqual(code, 1)
+        self.assertTrue(h['message'].endswith(H.GONE.format(action='receiving from the unit')), h['message'])
+
+    def test_the_cable_goes_during_the_read_back(self):
+        self.pulled(lambda u, o: o.data == b'B' * 55)
+        code, h, out = self.run_helper(lambda: page_plan(self.shared, packs=[('base.pack', b'B' * 55)]))
+        self.assertStopped(code, h, H.GONE.format(action='receiving from the unit'))
+        self.assertEqual(self.pulls, [GET_OBJECT])
+
+    def test_this_computers_disk_fills_while_a_log_comes_off(self):
+        self.plug()
+        real, tried = H.new_file, []
+
+        class Full:
+            def __init__(self, f):
+                self.f = f
+
+            def write(self, data):
+                raise OSError(28, 'No space left on device')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                self.f.close()
+
+        def new_file(path):
+            if os.sep + 'logs-' in path:
+                tried.append(path)
+                return Full(real(path))
+            return real(path)
+        with mock.patch.object(H, 'new_file', new_file):
+            code, h, out = self.run_helper()
+        self.assertEqual((code, len(tried)), (1, 1))
+        self.assertIn('could not be written on this computer', h['message'])
+        self.assertIn('No space left on device', h['message'])
+        self.assertNotIn('earlier failure', '\n'.join(out))
+        self.assertEqual(self.unit.at('logs/one.txt').data, b'first log')
+
+    def test_a_broken_session_gives_its_first_cause(self):
+        disk = UsbDisk(self.watch(Responder({'a': b'1'})))
+        self.addCleanup(disk.close)
+        with mock.patch.object(self.unit, 'read', side_effect=DiskError('the first cause', 'gone')):
+            with self.assertRaisesRegex(DiskError, 'the first cause'):
+                disk.children('')
+        with self.assertRaisesRegex(DiskError, 'the first cause'):
+            disk.children('')
+
+
+class WhichUnit(OverUsb):
+    def test_another_mtp_device_of_the_maker_beside_the_op1_is_let_be(self):
+        other = unit(product=OTHER, bus=8, ref='other')
+        for devices in ([unit(), other], [other, unit()]):
+            with self.subTest([d.ref for d in devices]):
+                libusb = FakeLibusb(devices, self.watch(Responder({'a': b'1'})))
+                try:
+                    usb = Usb(libusb)
+                except DiskError as error:
+                    self.fail(str(error))
+                self.assertEqual((usb.product, usb.bus), (PRODUCT, 7))
+                usb.close()
+                self.assertNotIn(('open', 'other'), libusb.calls)
+
+    def test_a_unit_with_no_storage_yet_is_waited_for(self):
+        for mode in ('run', 'list only'):
+            with self.subTest(mode):
+                self.plug()
+                searches = []
+
+                def libusb():
+                    searches.append(1)
+                    self.unit.next_transaction = 0      # each search opens a session of its own
+                    self.unit.storages = [] if len(searches) < 3 else [STORAGE]
+                    self.found.append(FakeLibusb([unit()], self.unit))
+                    return self.found[-1]
+                with mock.patch.object(H, 'Libusb', libusb):
+                    if mode == 'run':
+                        code, h, out = self.run_helper(args=['--find-seconds', SEVERAL_SECONDS])
+                        self.assertIn("Found the unit's drive (OP-1).", h['lines'])
+                    else:
+                        out = []
+                        self.assertEqual(H.main(['--list-only', '--find-seconds', SEVERAL_SECONDS],
+                                                echo=lambda line, color: out.append(line)), 0, out)
+                self.assertEqual(len(searches), 3)
+
+    def test_a_mac_says_its_line_once_while_the_storage_is_waited_for(self):
+        self.plug()
+        searches = []
+
+        def libusb():
+            searches.append(1)
+            self.unit.next_transaction = 0
+            self.unit.storages = [] if len(searches) < 3 else [STORAGE]
+            self.found.append(FakeLibusb([unit()], self.unit, claim_codes=[-3]))
+            return self.found[-1]
+        with mock.patch.object(H, 'Libusb', libusb), mock.patch.object(H, 'MAC', True), \
+                mock.patch.object(H, 'end_ptpcamerad', lambda: None):
+            code, h, out = self.run_helper(args=['--find-seconds', SEVERAL_SECONDS])
+        self.assertEqual((len(searches), h['lines'].count(H.ENDS_CAMERA_HELPER)), (3, 1))
+
+    def test_list_only_on_a_mac_says_its_line_once_while_it_polls(self):
+        self.plug()
+        searches = []
+
+        def libusb():
+            searches.append(1)
+            self.unit.next_transaction = 0
+            self.unit.storages = [] if len(searches) < 3 else [STORAGE]
+            self.found.append(FakeLibusb([unit()], self.unit, claim_codes=[-3]))
+            return self.found[-1]
+        out = []
+        with mock.patch.object(H, 'Libusb', libusb), mock.patch.object(H, 'MAC', True), \
+                mock.patch.object(H, 'end_ptpcamerad', lambda: None):
+            code = H.main(['--list-only', '--find-seconds', SEVERAL_SECONDS], echo=lambda line, color: out.append(line))
+        self.assertEqual((code, len(searches)), (0, 3), out)
+        self.assertEqual((out.count(H.ENDS_CAMERA_HELPER), out.count(H.WAITING)), (1, 1), out)
+
+    def test_a_storage_that_never_shows_is_the_reason_of_the_stop(self):
+        for mode in ('run', 'list only'):
+            with self.subTest(mode):
+                self.plug()
+
+                def libusb():
+                    self.unit.next_transaction = 0
+                    self.unit.storages = []
+                    self.found.append(FakeLibusb([unit()], self.unit))
+                    return self.found[-1]
+                with mock.patch.object(H, 'Libusb', libusb):
+                    if mode == 'run':
+                        code, h, out = self.run_helper()
+                        said = h['message']
+                    else:
+                        out = []
+                        code = H.main(['--list-only', '--find-seconds', '1'], echo=lambda line, color: out.append(line))
+                        said = out[-1]
+                self.assertEqual(code, 1)
+                self.assertIn('the unit shows no storage', said)
+                self.assertNotIn('the unit did not show', said)
+                self.assertTrue(any(line.endswith(H.WAITING) for line in out), out)
+
+
+class CachedFolders(Base):
+    """Before a change through a cached folder handle the unit is asked what that handle is."""
+
+    def moved(self, files, path, to):
+        """A disk whose cached handle of the folder `path` is now that of the folder `to`."""
+        disk = self.disk(files)
+        for folder in (path, to):
+            disk.children(folder)
+        disk._handles[path] = disk._handles[to]
+        self.before = {h: (o.parent, o.name, o.data) for h, o in self.unit.objects.items()}
+        return disk
+
+    def assertNothingChanged(self):
+        self.assertFalse(set(self.unit.ops) & CHANGING, self.unit.ops)
+        self.assertEqual({h: (o.parent, o.name, o.data) for h, o in self.unit.objects.items()}, self.before)
+
+    def test_a_replace_into_a_folder_that_is_another_now(self):
+        for what, to in (('another name', 'user/synth'), ('the same name elsewhere', 'content/pk')):
+            with self.subTest(what):
+                disk = self.moved({'user/pk/a.pack': b'old', to + '/a.pack': b'the owner\'s'}, 'user/pk', to)
+                with self.assertRaisesRegex(DiskError, 'the unit changed'):
+                    disk.write(self.local('new', b'new'), 'user/pk', 'a.pack')
+                self.assertNothingChanged()
+
+    def test_a_send_into_a_folder_that_is_another_now(self):
+        disk = self.moved({'user/pk/a.pack': b'old', 'user/synth/x.aif': b'x'}, 'user/pk', 'user/synth')
+        with self.assertRaisesRegex(DiskError, 'the unit changed'):
+            disk.write(self.local('new', b'new'), 'user/pk', 'b.pack')
+        self.assertNothingChanged()
+
+    def test_a_folder_made_in_a_folder_that_is_another_now(self):
+        disk = self.moved({'user/x': b'x', 'content/y': b'y'}, 'user', 'content')
+        with self.assertRaisesRegex(DiskError, 'the unit changed'):
+            disk.make_folder('user', 'pk')
+        self.assertNothingChanged()
+
+    def test_a_removal_in_a_folder_that_is_another_now(self):
+        disk = self.moved({'logs/a.txt': b'log', 'user/synth/a.txt': b'own'}, 'logs', 'user/synth')
+        disk._handles['logs/a.txt'] = disk._handles['user/synth/a.txt']
+        with self.assertRaisesRegex(DiskError, 'the unit changed'):
+            disk.remove_file('logs/a.txt')
+        self.assertNothingChanged()
+
+    def test_a_file_of_another_size_than_was_copied_stays(self):
+        disk = self.disk({'logs/a.txt': b'log'})
+        disk.children('logs')
+        self.assertEqual(disk.read('logs/a.txt', self.local('a')), 3)
+        grown = self.unit.at('logs/a.txt')
+        grown.data, grown.size = b'log, and more', 13
+        with self.assertRaisesRegex(DiskError, 'the unit changed'):
+            disk.remove_file('logs/a.txt')
+        self.assertNotIn(DELETE_OBJECT, self.unit.ops)
+
+
+class ManyLogs(OverUsb):
+    def test_taking_logs_off_is_not_quadratic(self):
+        count = 120
+        self.plug(dict(UNIT_FILES, **{'logs/log_%04d.txt' % i: b'l' for i in range(count)}))
+        code, h, out = self.run_helper()
+        self.assertEqual(h['logs']['left_on_unit'], 0)
+        self.assertEqual(h['logs']['copied'], count + 2)
+        self.assertLess(len(self.unit.ops), 8 * count + 200)
+
+
+class ShownOverUsb(OverUsb):
+    def test_list_only_prints_no_control_character(self):
+        name = 'a\x1b[2J\r\nb\x7f\x9bH c'
+        self.plug(dict(UNIT_FILES, **{'content/' + name: b'1'}))
+        direct = io.StringIO()
+        H.usb_list_only(direct, self.unit)
+        self.unit.closed, self.unit.next_transaction = False, 0
+        out = []
+        self.assertEqual(H.main(['--list-only', '--find-seconds', '1'], echo=lambda line, color: out.append(line)), 0)
+        for lines in (direct.getvalue().split('\n'), out):
+            for line in lines:
+                self.assertFalse([c for c in line if ord(c) < 32 or 127 <= ord(c) < 160 or c == ' '], ascii(line))
+            rows = [json.loads(line) for line in lines if line.startswith('{')]
+            self.assertIn({'path': 'content/' + name, 'size': 1, 'dir': False}, rows)
+
+    @mock.patch.object(H, 'MAC', False)
+    def test_the_helpers_own_text_of_several_lines_keeps_them(self):
+        self.plug(open_code=-3)
+        code, h, out = self.run_helper()
+        stopped = [line for line in out if 'STOPPED' in line]
+        self.assertIn('\n  SUBSYSTEM=="usb", ATTR{idVendor}=="2367", TAG+="uaccess"\n', stopped[0])
+
+
+class UnknownId(unittest.TestCase):
+    def test_the_id_that_was_tried_is_an_earlier_helpers(self):
+        said = H.UNPROVEN.format(product=OTHER)
+        self.assertIn('An earlier helper', said)
+        self.assertIn('0.3', said)
+        self.assertNotIn('This helper has', said)
 
 
 if __name__ == '__main__':

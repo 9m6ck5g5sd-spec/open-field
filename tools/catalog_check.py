@@ -16,7 +16,8 @@ What is held, with nothing but this repository:
 
 - the form of every entry, and that it holds the fields its status asks for and no other;
 - that no two entries share an id or a folder, in small letters or capitals, and that no folder takes a name the
-  firmware, the loader or the base already shows in the disk mode;
+  firmware, the loader or the base already shows in the disk mode; the names fx and lfo are kept for open-field's
+  own packs (an entry by open-field may take them, once);
 - that every pack an entry needs is in the listing, and that no pack needs a level the listed base does not offer.
 
 A bundled entry is always held to its file in this repository. With a pack file at hand (`--files`, or `--fetch`,
@@ -72,6 +73,8 @@ KEYS = set(ALWAYS + LOCATION + FILE_FACTS + OPTIONAL)
 TOP_KEYS = {"about", "categories", "packs"}
 TOP_OPTIONAL = {"ours"}                                         # the repositories of open-field's own packs
 OURS = "open-field"                                             # the author of open-field's own packs
+KEPT_FOR_OURS = {name: "kept for %s's own packs: the base showed it itself up to version 20, and from 21 it is the folder of the pack %r"
+                 % (OURS, pack) for name, pack in (("fx", "fx train"), ("lfo", "lfo"))}   # only an entry by open-field takes these
 
 NOT_IN_A_NAME = set('/\\:*?"<>|')                              # what no file name on the unit or on a computer holds
 AUTHOR_FORM = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")             # a GitHub user or organisation
@@ -244,6 +247,8 @@ def listing_faults(listing, known_firmwares):
                 word = folder[part].casefold()
                 if word in taken:
                     each.setdefault(number, []).append("its folder's %s %r is %s" % (part, folder[part], taken[word]))
+                elif word in KEPT_FOR_OURS and entry["author"] != OURS:
+                    each.setdefault(number, []).append("its folder's %s %r is %s" % (part, folder[part], KEPT_FOR_OURS[word]))
                 elif (part, word) in held_folders and held_folders[(part, word)] != entry["id"]:
                     each.setdefault(number, []).append("its folder's %s %r is held by %r" % (part, folder[part], held_folders[(part, word)]))
                 held_folders.setdefault((part, word), entry["id"])

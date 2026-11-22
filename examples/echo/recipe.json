@@ -1,0 +1,45 @@
+{
+  "about": "The example of level 5 (docs/level-5.md): a sequencer of its own, echo, at the end of the unit's list for the synth and the drum. Chosen and switched on, every key played (MIDI notes too) sounds and then repeats in time, each repeat a quarter softer; a repeat that falls due while its note still sounds is left out, so no echo cuts a held key. On its page, the base's blank page painted by the pack, the blue knob sets the repeats and the second knob the step. While the unit's own SEQ OFF notice is up, the page is painted as usual and the base darkens it under the notice. It keeps its two values in echo.bin, in a folder the computer does not see. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "echo",
+  "version": 2,
+  "interface": 1,
+  "build": "build_r4c_echo",
+  "sources": [
+    "examples/echo/echo.cpp",
+    "examples/echo/echo_card.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [],
+  "card": {
+    "level": 5,
+    "frame": "echo_frame",
+    "pick": null,
+    "pictures": false,
+    "input": "echo_input",
+    "folders": [
+      {
+        "shown": false
+      }
+    ],
+    "asks": [
+      {
+        "kind": "sequencer",
+        "name": "echo",
+        "synth_only": false,
+        "all_midi": true,
+        "shown": "echo_shown",
+        "tick": "echo_tick",
+        "key": "echo_key",
+        "run": "echo_run",
+        "octave": null,
+        "playing": null
+      }
+    ]
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

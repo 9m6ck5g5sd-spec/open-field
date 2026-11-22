@@ -1,5 +1,5 @@
 {
-  "about": "What tools/build_all.py builds. The loader, our small piece inside the firmware file, is linked by itself from its sources; its binary is the file the installer's builder adds to an owner's firmware file, named under `blob`. The packs are built from their recipes in packs/: the base (base.pack), which every unit with open-field needs, and the four features. Each example is a pack in a folder of its own, with its own recipe, built into out/examples/; the one that changes places of the firmware has a profile of its own. The sizes and hashes of the results are kept in packs/built.json.",
+  "about": "What tools/build_all.py builds. The loader, our small piece inside the firmware file, is linked by itself from its sources; its binary is the file the installer's builder adds to an owner's firmware file, named under `blob`. The base (base.pack), which every unit with open-field needs, is built from its recipe in packs/. No feature is built here: a feature is a pack in a repository of its own, the project's four in open-field-packs. Each example is a pack in a folder of its own, with its own recipe, built into out/examples/; the one that changes places of the firmware has a profile of its own. The sizes and hashes of the results are kept in packs/built.json.",
   "profile": "profiles/op1f-1.7.3.json",
   "loader": {
     "name": "build_m4_loader",
@@ -16,17 +16,41 @@
     ]
   },
   "packs": [
-    "8 tracks",
-    "base",
-    "fx train",
-    "lfo",
-    "sidechain"
+    "base"
   ],
   "blob": "loader-1.7.3-v1.bin",
   "examples": [
     {
+      "name": "crush",
+      "recipe": "examples/crush/recipe.json"
+    },
+    {
+      "name": "dub",
+      "recipe": "examples/dub/recipe.json"
+    },
+    {
+      "name": "echo",
+      "recipe": "examples/echo/recipe.json"
+    },
+    {
+      "name": "fold",
+      "recipe": "examples/fold/recipe.json"
+    },
+    {
       "name": "list",
       "recipe": "examples/list/recipe.json"
+    },
+    {
+      "name": "ping",
+      "recipe": "examples/ping/recipe.json"
+    },
+    {
+      "name": "pluck",
+      "recipe": "examples/pluck/recipe.json"
+    },
+    {
+      "name": "sketch",
+      "recipe": "examples/sketch/recipe.json"
     },
     {
       "name": "trampolines",

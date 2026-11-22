@@ -2,11 +2,10 @@
 //
 //   node builder/validate-install.mjs
 //
-// And plays the page's part on a folder a helper works in, so that the helper can be run whole without a
-// unit and without a browser (open-field-helper.ps1 -Source <a folder standing for the unit's disk> -Folder <folder>,
-// or open-field-helper.py --source <a folder standing for the unit's disk> --folder <folder>):
+// And plays the page's part on a folder the Windows helper works in, so that the helper can be run whole without a
+// unit and without a browser (open-field-helper.ps1 -Source <a folder standing for the unit's disk> -Folder <folder>):
 //
-//   node builder/validate-install.mjs --play <folder> --bootloader <the unit's bootloader version> --stock <your own os.ldr>
+//   node builder/validate-install.mjs --play <folder> --stock <your own os.ldr> --bootloader <version>
 //
 // --play waits for the helper to list the disk, builds the new firmware file with the same code as the page
 // (patch.mjs, the manifest loader.json and the loader's file beside this file), makes and writes the plan with the same
@@ -14,13 +13,15 @@
 // waits for the helper to finish, and holds its last listing against the plan with the placement model. Exit 0: the
 // helper said ready and the page's check agrees. With --way-back it plays the page's second choice: the owner's own
 // original file written back, nothing built and no pack file copied.
+// --bootloader is required (1000.1.1 or 1000.2.0): it stands for what the page reads from the unit. The other helper
+// is played the same way: open-field-helper.py --source <that folder> --folder <folder>.
 import { readFileSync, writeFileSync, readdirSync, renameSync, existsSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   NAMES, PACK_FOLDER, makePlan, checkAfter, compareListings, normalRows, padBytes, padName, packOrder, packNameProblem,
-  prepare, readHelper, checkFolder, sha256,
+  prepare, readHelper, readPacks, checkFolder, sha256,
 } from "./install.mjs";
 import { analyzeListing, fileTnodes, placement, recommendPad, mountEndFor, plainBuffer, bootloaderVersion, SEEN_RESTS } from "./placement.mjs";
 import { RAW, NOTICE, readListing, rawLink, isOurs, fileName, withNeeds, neededBy, download } from "./catalog.mjs";
@@ -335,44 +336,58 @@ async function selfChecks() {
   ]) await download(good, get).then(() => check(what, false), (e) => check(what, words.test(e.message) && e.message.startsWith("one: "), e.message));
 
   // the bootloader: every verdict names one the model knows, and none is assumed
-  check("the screen's form of a version is the model's", bootloaderVersion("1000.2.0+0") === "1000.2.0" && bootloaderVersion("1000.1.1+0") === "1000.1.1" &&
-    bootloaderVersion("1000.2.0") === "1000.2.0");
+  check("a version with +0 is the model's", bootloaderVersion("1000.2.0+0") === "1000.2.0" && bootloaderVersion("1000.1.1+0") === "1000.1.1" &&
+    bootloaderVersion("1000.2.0") === "1000.2.0" && bootloaderVersion("1000.1.1") === "1000.1.1");
   const few = analyzeListing(volume(), BL).counts;
-  for (const [what, given] of [["no bootloader", undefined], ["an unknown bootloader", "1000.3.0"], ["a bootloader with another build number", "1000.2.0+1"], ["an empty bootloader", ""]]) {
-    throws("the placement refuses " + what, () => placement(few, given === undefined ? {} : { bootloader: given }), /knows the bootloaders/);
-    throws("the pad search refuses " + what, () => recommendPad(few, given === undefined ? {} : { bootloader: given }), /knows the bootloaders/);
-    throws("the mount's end refuses " + what, () => mountEndFor(10, 3, given === undefined ? {} : { bootloader: given }), /knows the bootloaders/);
-    throws("the listing's verdict refuses " + what, () => analyzeListing(volume(), given === undefined ? {} : { bootloader: given }), /knows the bootloaders/);
+  for (const [what, given] of [["no bootloader", undefined], ["a null bootloader", null], ["an unknown bootloader", "1000.3.0"], ["a bootloader with another build number", "1000.2.0+1"],
+    ["an empty bootloader", ""], ["a name every object has", "constructor"]]) {
+    const options = given === undefined ? {} : { bootloader: given };
+    throws("the placement refuses " + what, () => placement(few, options), /knows the bootloaders/);
+    throws("the pad search refuses " + what, () => recommendPad(few, options), /knows the bootloaders/);
+    throws("the mount's end refuses " + what, () => mountEndFor(10, 3, options), /knows the bootloaders/);
+    throws("the listing's verdict refuses " + what, () => analyzeListing(volume(), options), /knows the bootloaders/);
     throws("a plan refuses " + what, () => makePlan({ run: "r", listing: volume(), image, bootloader: given }), /knows the bootloaders/);
     const untouched = listed("bl-x");
     await prepare(untouched, { build: stand, base, bootloader: given }).then(() => check("prepare refuses " + what, false),
       (e) => check("prepare refuses " + what + ", and writes nothing", /knows the bootloaders/.test(e.message) && untouched.writes.length === 0, e.message));
   }
+  check("a plan for 1000.1.1 records it", r1.plan.bootloader === "1000.1.1");
   const on2 = listed("bl-2");
   const { plan: plan2 } = await prepare(on2, { build: stand, base, bootloader: "1000.2.0+0" });
   check("the plan records the bootloader, in the model's form", plan2.bootloader === "1000.2.0" && JSON.parse(new TextDecoder().decode(on2.store.get(NAMES.plan))).bootloader === "1000.2.0");
-  check("a plan for 1000.2.0 lands by 1000.2.0's model", analyzeListing(plan2.expected, { bootloader: "1000.2.0" }).current.pass && checkAfter(plan2, plan2.expected).ok);
-  // the check after uses the plan's bootloader: the same listing judged as for the other bootloader moves every buffer
-  // by 8 modulo 32, so a plan that lands on one cannot land on the other
+  check("a plan for 1000.2.0 lands by its profile", analyzeListing(plan2.expected, { bootloader: "1000.2.0" }).current.pass && checkAfter(plan2, plan2.expected).ok);
+  // the check after uses the plan's bootloader: judged for the other one, a listing that lands stands 8 modulo 32 off
   const as1 = checkAfter({ ...plan2, bootloader: "1000.1.1" }, plan2.expected);
-  check("the check after uses the plan's bootloader", !as1.ok && as1.analysis.current.perRest.every((r) => r.mod === 24), JSON.stringify(as1.analysis.current.perRest));
+  check("the check after uses the plan's bootloader", !as1.ok && as1.analysis.current.perRest.every((r) => r.mod === 24), JSON.stringify(as1.analysis?.current.perRest));
+  const as2 = checkAfter({ ...r1.plan, bootloader: "1000.2.0" }, r1.plan.expected);
+  check("and the other way round", !as2.ok && as2.analysis.current.perRest.every((r) => r.mod === 8), JSON.stringify(as2.analysis?.current.perRest));
   const { bootloader: _gone, ...noBl } = plan2;
   const c4 = checkAfter(noBl, plan2.expected);
   check("a plan that names no bootloader is not checked, with a line that says so", !c4.ok && c4.lines.length === 1 && /cannot be checked.*none/.test(c4.lines[0]), c4.lines.join("; "));
   check("a plan that names an unknown bootloader is not checked", !checkAfter({ ...plan2, bootloader: "1000.3.0" }, plan2.expected).ok);
-  // The one write made on 1000.2.0 (2026-11-20, it landed the first time): its disk, with os.ldr and base.pack as the
-  // plan put them, counted 541 records and 2547 index nodes before the pad. Only these counts are kept here, nothing of
-  // that unit's files. The model must choose the pad that write used, and 1000.1.1's model must see that disk otherwise.
+  // the folder's check, with the unit's bootloader and without it
+  await on2.writeText(NAMES.after, JSON.stringify(plan2.expected));
+  check("the folder's check with no bootloader given uses the plan's", (await checkFolder(on2)).ok);
+  check("the folder's check passes for the plan's bootloader, with or without +0",
+    (await checkFolder(on2, { bootloader: "1000.2.0" })).ok && (await checkFolder(on2, { bootloader: "1000.2.0+0" })).ok);
+  const c5 = await checkFolder(on2, { bootloader: "1000.1.1+0" });
+  check("the folder's check refuses another bootloader, with a line that says so", !c5.ok && c5.lines.length === 1 && /1000\.2\.0.*1000\.1\.1/.test(c5.lines[0]), c5.lines.join("; "));
+  const c6 = await checkFolder(on2, { bootloader: "1000.3.0" });
+  check("the folder's check refuses a bootloader the model does not know", !c6.ok && /knows the bootloaders/.test(c6.lines[0]), c6.lines.join("; "));
+  await on2.writeText(NAMES.plan, JSON.stringify(noBl));
+  check("the folder's check refuses a plan with no bootloader", !(await checkFolder(on2)).ok && !(await checkFolder(on2, { bootloader: "1000.2.0" })).ok);
+  // The one write reported on 1000.2.0 (2026-11-20, it landed): its disk, with os.ldr and base.pack as the plan put
+  // them, counted 541 records and 2547 index nodes before the pad. Only these counts are kept here.
   const landed = { records: 541, nodes: 2547, recordBatches: 6, nodeBatches: 26 };
   const landedPad = recommendPad(landed, { bootloader: "1000.2.0" });
-  check("the counts of the write that landed on 1000.2.0 get its pad, 14,400,000 bytes", landedPad && landedPad.bytes === 14_400_000, JSON.stringify(landedPad && landedPad.bytes));
-  check("1000.1.1's model sees that disk as landing with no pad", placement(landed, { bootloader: "1000.1.1" }).pass && !placement(landed, { bootloader: "1000.2.0" }).pass);
-  // 1000.2.0's heap starts 0x60c8 above 1000.1.1's and is otherwise the same: every buffer is that much higher
+  check("the counts of the write reported on 1000.2.0 get its pad, 14,400,000 bytes", landedPad?.bytes === 14_400_000, String(landedPad?.bytes));
+  check("on 1000.1.1 that disk lands with no pad", placement(landed, BL).pass && !placement(landed, { bootloader: "1000.2.0" }).pass);
+  // the two profiles differ in the heap's base alone, so a buffer of 1000.2.0's stands 0x60c8 above 1000.1.1's
   let cases = 0, off = 0;
   for (let nodeBatches = 0; nodeBatches <= 400; nodeBatches += 7) {
     for (let recordBatches = 1; recordBatches <= 60; recordBatches += 3) {
       for (const rest of SEEN_RESTS) {
-        const end1 = mountEndFor(nodeBatches, recordBatches, { bootloader: "1000.1.1", rest });
+        const end1 = mountEndFor(nodeBatches, recordBatches, { ...BL, rest });
         const end2 = mountEndFor(nodeBatches, recordBatches, { bootloader: "1000.2.0", rest });
         for (const withComputer of [true, false]) {
           cases++;
@@ -382,6 +397,14 @@ async function selfChecks() {
     }
   }
   check("on 1000.2.0 every buffer stands 0x60c8 above 1000.1.1's", cases === 58 * 20 * 2 * 2 && off === 0, off + " of " + cases + " cases differ");
+
+  // what a Mac's Finder leaves in the packs folder is no pack
+  const mac = listed("mac-1", { [NAMES.packs + "/._lfo.pack"]: new Uint8Array(4096), [NAMES.packs + "/._base.pack"]: new Uint8Array(4096),
+    [NAMES.packs + "/.hidden.PACK"]: new Uint8Array(10), [NAMES.packs + "/.DS_Store"]: new Uint8Array(6148), [NAMES.packs + "/lfo.pack"]: oldLfo });
+  check("a file whose name begins with ._ is no pack, and any other dot's is, as on Windows", (await readPacks(mac)).map((p) => p.name).join("|") === ".hidden.PACK|lfo.pack");
+  const m1 = await prepare(mac, { ...BL, build: stand, base, chosen: [lfo] });
+  check("no ._ file gets into the plan or takes a pack's place", m1.plan.packs.map((p) => p.name).join("|") === ".hidden.PACK|lfo.pack|base.pack" && m1.base.state === "added" &&
+    m1.chosen[0].found === "lfo.pack" && !m1.plan.expected.some((r) => r.path.startsWith("user/pk/._")) && !mac.writes.some((w) => /(^|\/)\._/.test(w)), mac.writes.join(", "));
 
   const helperGone = memoryFolder({});
   await prepare(helperGone, { ...BL, build: async () => ({ image: fakeImage }) }).then(() => check("no helper, no plan", false), (e) => check("no helper, no plan", /written nothing/.test(e.message), e.message));
@@ -408,6 +431,8 @@ function pageOwnBase() {
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function play(root, { stockPath, manifestName = "loader.json", timeout = 900, wayBack = false, bootloader }) {
+  try { bootloaderVersion(bootloader); }                 // asked first: nothing is waited for without it
+  catch (e) { console.log("play: no plan: " + e.message); return 1; }
   const { buildImage, ours } = await import("./patch.mjs");
   const manifest = JSON.parse(readFileSync(join(here, manifestName), "utf8"));
   const loader = new Uint8Array(readFileSync(join(here, ours(manifest).file)));
@@ -445,7 +470,7 @@ async function play(root, { stockPath, manifestName = "loader.json", timeout = 9
     await pause(500);
   }
   if (helper.state !== "ready") { console.log("play: the helper stopped: " + helper.message); return 1; }
-  const result = await checkFolder(folder);
+  const result = await checkFolder(folder, { bootloader });
   for (const line of result.lines) console.log("play: " + line);
   console.log(result.ok ? "play: READY, the page agrees" : "play: the page does NOT agree");
   return result.ok ? 0 : 1;

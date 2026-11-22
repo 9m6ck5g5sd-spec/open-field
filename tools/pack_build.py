@@ -113,7 +113,8 @@ place is where it lies on the disk, inside user/pf/; `shown` says whether the co
 folder leaves out: the name is the pack's own where the pack lists one folder and does not name it; the place is the
 name; a folder is shown. A name and a place are one to fifteen characters of A-Z, a-z, 0-9, space, '_', '-' and '.',
 not beginning with a space, a dot or a dash and not ending with a space or a dot; a shown folder may not take a name
-of the firmware's (synth, drum, tapes, mixdown), the loader's (packs) or the base's (fx, lfo); and two folders of a
+of the firmware's (synth, drum, tapes, mixdown) or the loader's (packs) (a base before version 21 kept fx and lfo for
+itself as well, and does not show a pack's folder under either); and two folders of a
 pack may not share a name or a place, capitals counted as small letters. `card` writes the card of 56 bytes, the
 list's address and count behind level 2's four addresses, and the list as constant data under the card's name and
 _folders, 36 bytes a folder; the word in front of the card names op1f_level_3. `build3` holds the list and its address
@@ -127,6 +128,92 @@ recipe is refused. `card` writes the card of 64 bytes, the list of asks' address
 (0 and 0: no ask), and the word in front of the card names the mark op1f_level_4. `build3` holds the two words as it
 holds the card's other fields; `check` prints the asks, `asks: none` for a card of level 4 without any. A card of
 level 1, 2 or 3 and every earlier pack file are written as they were, to the last byte.
+
+Since R3 (module/build_r3_card.h) a card may be of level 5: a card of level 4's 64 bytes whose asks have two kinds, a
+sequencer and the notes heard. A recipe's asks are then
+  {"kind": "sequencer", "name": ..., "synth_only": false, "all_midi": false, "shown": a function's symbol or null,
+   "tick": ..., "key": ..., "run": ..., "octave": ..., "playing": ...}   (tick or key at the least)
+  {"kind": "notes", "name": ..., "note": a function's symbol}
+A name is one to fifteen characters of a-z, 0-9, '-' and '_'. `card` writes the list under the card's name and _asks,
+twelve bytes an ask (its kind's number, its table's bytes, its table), and each ask's table under the card's name and
+_ask_<n> (from 0): for a sequencer 48 bytes, its bytes, its name in sixteen, its flags (1 synth only, 2 every MIDI
+note), shown, then tick, key, run, octave and playing; for the notes heard 32 bytes, its bytes, its name, 0, 0, then
+note; 0 for each function the recipe leaves out. The word in front of the card names op1f_level_5. What a base of level 5
+would leave aside is refused: an unknown kind or key, a name it does not take or one of the unit's own seven sequencers,
+a sequencer named twice, one with neither tick nor key, the notes heard with no note or with a shown, more than sixteen
+asks or more than eight that hear the notes. `build3` holds the list and the tables as it holds the card (each
+function a function of the pack, each address a place of the pack's own); `check` prints each ask. A card of level 4
+keeps its refusal of every ask, and every earlier card and pack file is written as it was.
+
+Since R4 (module/build_r4_card.h) a card may be of level 6 or 7: a card of level 4's 64 bytes whose asks have more kinds.
+Level 6 adds three, level 7 one more (each table begins with level 5's head, its `shown` 0):
+  {"kind": "stage", "name": ..., "point": "instrument", "master_in" or "master_out", "cycles": 1 to 116000,
+   "listens": false, "memory": the name of a memory ask of the card or null, "process": a function's symbol}
+  {"kind": "memory", "name": ..., "bytes": 1 to 16 MiB, "align": a power of two from 4 to 4096 (4 if left out)}
+  {"kind": "places", "name": ..., "names": [the names of the unit's own pictures this pack's pictures take the place of]}
+  {"kind": "keeps", "name": ..., "changed": a function's symbol or null,
+   "keys": [{"name": 1 to 31 characters of a-z, 0-9 and '_', "files": ["synth", "drum", "tape"], some of them}]}   (level 7)
+`card` writes each table under the card's name and _ask_<n>: a stage 44 bytes (the head, then its point 1 to 3, its
+cycles, the number of the memory ask it needs plus 1 or 0, its process; the head's flags 1 for a stage that listens);
+memory 36 (the head, its bytes, its alignment); places 36 (the head, the count, the address of its list of names, which
+follows the table under _ask_<n>_names, 24 bytes a name, zero padded); keeps 324 (the head, changed, the count, eight
+keys of 36 bytes, a name in 32 and its files: 1 synth, 2 drum, 4 tape; the keys left out zero). The word in front of the
+card names op1f_level_6 or op1f_level_7. What a base would leave aside is refused: a kind of a later level, a key such
+an ask has not, a point or a cost or a size or an alignment out of range, a stage that names no memory ask of its card,
+more than sixteen stages or memory asks, stages whose costs come to more than 174000 cycles a block (a stage at the
+instrument counted twice: it is called for the synth and for the drum), memory asks of more than 16 MiB together, two
+asks of places or of keeps, a name of a picture that is not plain or does not end in .svg, a name twice, a key named
+twice or with no file, and (since R4b, base.pack 26, the first base of level 7) a key that is a name the unit's own
+preset, slots or tape files hold at their top (name, type, fx_type, mixer_params, original_folder and the rest of
+KEY_NAMES_OF_THE_UNIT): the base never writes one.
+With places, `card` also holds each name to the unit's own pictures (`--display`, the backup's
+by default): the unit must have a picture of that name, and a picture of it the pack carries must hold every part the
+unit's own holds, as tools/picture_make.py census holds it. `build3` holds the list and every table as it holds the
+card; `check` prints each ask. Cards of levels 1 to 5 and every pack file built before are written as they were.
+
+Since R5 (module/build_r5_card.h) a card may be of level 8: a card of level 4's 64 bytes whose asks have one kind more,
+an effect in the unit's own lists of effects (its table begins with level 5's head, whose `shown` it may name):
+  {"kind": "effect", "name": 1 to 15 characters of a-z, 0-9, ' ', '-' and '_', "rides": the unit's own effect it stands
+   on, one of delay, grid, punch, phone, spring, nitro, cwo and terminal, "mono": false, "tails": false, "cycles": 1 to
+   84000, "state_bytes": 0 to 8 MiB (0 if left out), "state_align": a power of two from 4 to 4096 (4 if left out),
+   "process": a function's symbol, "reset": the same or null, "shown": the same or null,
+   "params": [{"name": 1 to 15 characters as the name's, "low": ..., "high": ..., "start": ...}, one to four of them]}
+`card` writes its table under the card's name and _ask_<n>, 180 bytes: the head (its flags 1 for mono, 2 for tails), the
+effect it stands on in sixteen bytes, its cycles, its working memory's bytes and alignment, process, reset, the count of
+values, then four values of 28 bytes, a name in sixteen and the lowest, the highest and the start as signed words (the
+values left out zero). The word in front of the card names op1f_level_8. What a base of level 8 would leave aside is
+refused, in the words of its line: a name that is not one the lists can show, a name of the unit's own effects or of an
+earlier effect of the card, an effect it may not stand on, a cost out of range, and a table not in order (its working
+memory, its alignment, its values: a name, low < high, high - low at most 65535, a start inside). A card of level 8 may
+also keep values with the master (`"files": [..., "master"]` in a key of its keeps); a card of an earlier level may
+not. Since R5 no card keeps a member named op1f_effect, the base's own. `build3` holds every table as it holds the
+card; `check` prints each ask. Cards of levels 1 to 7 and every pack file built before are written as they were.
+
+Since R6 (module/build_r6_card.h) a card may be of level 9: a card of level 4's 64 bytes whose asks have one kind more,
+a synth engine in the unit's list of engines (its table begins with level 5's head, whose `shown` it may name):
+  {"kind": "engine", "name": 1 to 15 characters of a-z, 0-9, ' ', '-' and '_', "stereo": false, "cycles": 1 to 40000,
+   "voice_bytes": 0 to 1 MiB (0 if left out), "voice_align": a power of two from 4 to 4096 (4 if left out),
+   "render": a function's symbol, "reset": the same or null, "shown": the same or null,
+   "params": [{"name", "low", "high", "start"}, one to eight of them, as an effect's],
+   "sounds": [{"name": 1 to 23 characters as a name's, "file": a sound's file, from the recipe's folder}, none to 32]}
+`card` writes its table under the card's name and _ask_<n>, 284 bytes: the head (its flag 1 for stereo), its cycles, its
+working memory's bytes and alignment a voice, render, reset, the count of values, eight values of 28 bytes (those left
+out zero), the count of sounds and the list of sounds (or 0); the list under _ask_<n>_sounds, 32 bytes a sound (its
+name in 24, its text and its bytes), each text under _ask_<n>_sound_<k>. The word in front of the card names
+op1f_level_9. What a base of level 9 would leave aside is refused, in the words of its line: a name that is not one the
+engine list can show, a name of the unit's own engines (or sampler, or fazer) or of an earlier engine of the card, a cost
+out of range, a ninth engine, and a table not in order (its memory, its alignment, its values, its sounds: a name, one
+named twice, a text of more than 2048 bytes); and a sound the base would not write (one JSON object of the unit's own
+synth sounds' members and op1f_engine, its type dsynth, its knobs eight whole numbers from 0 to 32767; op1f_engine, if it
+is there, this engine's name), in the words of its line. No card keeps a member named op1f_engine, the base's own.
+`build3` holds every table, the list of sounds and each text as it holds the card; `check` prints each ask. Cards of
+levels 1 to 8 and every pack file built before are written as they were.
+
+Since R6d (base 30, module/build_r6e_card.h) a card may be of level 10: a card of level 9, the same 64 bytes and the same
+eight kinds of ask, held as level 9 holds them. Level 10 adds no kind and no field: its mark, op1f_level_10, is that of a
+base that offers op1f_param_heard (the value as the sound plays it), so a pack that calls that helper asks for level 10
+in its recipe, {"level": 10, ...}, and the word in front of its card names op1f_level_10; a base of an earlier level
+then leaves the pack out for the mark. Cards of levels 1 to 9 and every pack file built before are written as they were.
 
 The readers are module/build_j_pack.cpp (format 1) and the bases (module/build_j5c_base.cpp for formats 2 and 3).
 A pack file holds the module's own code and whatever the module carries. Whether one holds anything of the firmware
@@ -202,7 +289,7 @@ FOLDER = struct.Struct("<16s16sI")              # 36 bytes a folder
 FOLDERS_MOST = 8
 FOLDER_FORM = re.compile(r"[A-Za-z0-9_](?:[A-Za-z0-9 _.-]{0,13}[A-Za-z0-9_-])?")    # one to fifteen characters, as the base takes them
 FOLDER_NAMES_TAKEN = {"synth": "the firmware's", "drum": "the firmware's", "tapes": "the firmware's", "mixdown": "the firmware's",
-                      "packs": "the loader's", "fx": "the base's", "lfo": "the base's"}
+                      "packs": "the loader's"}    # fx and lfo were the base's until version 21; since then they are folders of packs, like any
 # since R1: a card of level 4 has the address of its list of asks and their count behind
 # level 3's two words; an ask is its kind, its bytes and the address of what it points at. Level 4 defines no kind.
 CARD_4 = struct.Struct("<4I16s4I2I2I")
@@ -212,6 +299,101 @@ ASK = struct.Struct("<3I")                      # 12 bytes an ask
 ASKS_MOST, ASK_BYTES_MOST = 16, 4096
 ASK_KINDS = {}                                  # the kinds of ask this tool knows, by number: none at level 4
 SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")  # a name as a source defines it
+# since R3 (module/build_r3_card.h): a card of level 5 is a card of level 4's 64 bytes, and its asks have two kinds, a
+# sequencer and the notes heard. Each ask's table is a head (its bytes, its name in sixteen bytes, its flags, the
+# function told when its page shows) and then the functions the base calls for that kind.
+CARD_LEVELS = CARD_LEVELS + (5,)
+KIND_HEAD = struct.Struct("<I16sII")            # 28 bytes: bytes, name, flags, shown
+ASK_KINDS_5 = {"sequencer": 1, "notes": 2}      # the kinds of a card of level 5, by their recipe's word and their number
+KIND_WORDS = {1: "sequencer", 2: "notes"}
+ASK_TABLE_BYTES = {1: 48, 2: 32}                # a table's bytes at level 5
+ASK_FUNCTIONS = {1: ("tick", "key", "run", "octave", "playing"), 2: ("note",)}
+ASK_KEYS = {1: ("kind", "name", "synth_only", "all_midi", "shown") + ASK_FUNCTIONS[1], 2: ("kind", "name") + ASK_FUNCTIONS[2]}
+SEQ_SYNTH_ONLY, SEQ_ALL_MIDI = 1, 2             # a sequencer's flags
+NOTES_MOST = 8                                  # the asks that may hear the notes, in all
+KIND_NAME_FORM = re.compile(r"[a-z0-9_-]{1,15}")                # an ask's name: one to fifteen characters, as the base takes them
+STOCK_SEQUENCERS = ("pattern", "endless", "tombola", "finger", "sketch", "arpeggio", "hold")   # the unit's own seven, by their saved names
+# since R4 (module/build_r4_card.h): a card of level 6 is a card of level 4's 64 bytes whose asks have three kinds more, a
+# sound stage, working memory and pictures that take a place; a card of level 7 one more, values kept in the unit's files.
+CARD_LEVELS = CARD_LEVELS + (6, 7)
+ASK_KINDS_OF_LEVEL = {5: ASK_KINDS_5, 6: dict(ASK_KINDS_5, stage=3, memory=4, places=5)}
+ASK_KINDS_OF_LEVEL[7] = dict(ASK_KINDS_OF_LEVEL[6], keeps=6)
+KIND_WORDS_6 = {3: "stage", 4: "memory", 5: "places", 6: "keeps"}
+TABLE_BYTES_6 = {3: 44, 4: 36, 5: 36, 6: 324}                    # a table's bytes at levels 6 and 7
+ASK_KEYS_6 = {3: ("kind", "name", "point", "cycles", "listens", "memory", "process"), 4: ("kind", "name", "bytes", "align"),
+              5: ("kind", "name", "names"), 6: ("kind", "name", "changed", "keys")}
+ASK_ADDRESSES_6 = {3: (("shown", 24), ("process", 40)), 4: (("shown", 24),), 5: (("shown", 24), ("names", 32)),
+                   6: (("shown", 24), ("changed", 28))}         # the words of a table that hold an address of the pack's own
+STAGE_POINTS = {"instrument": 1, "master_in": 2, "master_out": 3}
+STAGE_POINT_WORDS = {1: "the synth and the drum after their effects", 2: "the master before its effect", 3: "the master after its effect"}
+STAGE_LISTENS = 1                                                # a stage's flag
+STAGE_CYCLES_MOST, STAGE_CYCLES_ALL, STAGES_MOST = 116000, 174000, 16
+MEMORY_MOST, MEMORY_ALIGN_MOST, MEMORIES_MOST = 16 << 20, 4096, 16
+PLACES_MOST, PLACE_NAME = 256, 24
+KEEP_FILES = {"synth": 1, "drum": 2, "tape": 4}
+KEEP_WORDS = {1: "synth sounds", 2: "drum sounds", 4: "tapes"}
+KEY_BYTES, KEYS_MOST = 32, 8
+KEY_FORM = re.compile(r"[a-z0-9_]{1,31}")                       # a member a pack keeps, as the base takes it
+# since R4b (base.pack 26, module/build_r4_keeps.cpp's NAMES_OF_THE_UNIT): the names the unit's own preset, slots and tape
+# files hold at their top. A base of level 7 leaves aside a key of one of them ("is a name of the unit's own files"),
+# so the tool refuses it too; a test holds the two lists the same.
+KEY_NAMES_OF_THE_UNIT = (
+    "adsr", "attack", "base_freq", "clips", "dbox_data", "drum_version", "dyna_env", "end", "fade", "fademode", "fx_active",
+    "fx_params", "fx_type", "knobs", "lfo_active", "lfo_params", "lfo_type", "loop", "loop_in", "loop_out", "mixer_params",
+    "mtime", "name", "octave", "original_folder", "pan", "pan_ab", "pitch", "playmode", "pos", "reverse", "start", "stereo",
+    "synth_version", "tape_type", "tempobpmdecimal", "tempometronomelevel", "tempometronometype", "temposyncout",
+    "temposynctype", "track", "type", "version", "volume")
+# since R5 (module/build_r5_card.h): a card of level 8 is a card of level 4's 64 bytes whose asks have one kind more, an
+# effect in the unit's own lists of effects (its table 180 bytes, the head's `shown` its own); and its keeps may name the
+# master as a place for values. The words a refusal says are the base's own line's (module/build_r5_effects.cpp).
+CARD_LEVELS = CARD_LEVELS + (8,)
+ASK_KINDS_OF_LEVEL[8] = dict(ASK_KINDS_OF_LEVEL[7], effect=7)
+KIND_WORDS_6[7] = "effect"
+TABLE_BYTES_6[7] = 180
+ASK_KEYS_6[7] = ("kind", "name", "rides", "mono", "tails", "cycles", "state_bytes", "state_align", "process", "reset", "shown", "params")
+ASK_ADDRESSES_6[7] = (("shown", 24), ("process", 56), ("reset", 60))
+KINDS_COUNTED = {6: "five", 7: "six", 8: "seven"}                # how many kinds of ask a level knows, as a refusal says it
+EFFECT_MONO, EFFECT_TAILS = 1, 2                                 # an effect's flags
+EFFECT_VALUES_MOST, EFFECT_CYCLES_MOST, EFFECT_STATE_MOST = 4, 84000, 8 << 20
+EFFECT_ALIGN_LEAST = 4
+STOCK_EFFECTS = ("delay", "grid", "punch", "phone", "spring", "mother", "nitro", "cwo", "vocoder", "terminal", "fazer")   # the unit's own, in its order
+EFFECTS_RIDDEN = ("delay", "grid", "punch", "phone", "spring", "nitro", "cwo", "terminal")   # the eight an effect may stand on
+EFFECT_NAME_FORM = re.compile(r"[a-z0-9 _-]{1,15}")             # an effect's name and its values' names, as the base takes them
+PARAM = struct.Struct("<16s3i")                                  # a value of an effect: its name, its lowest, highest and start
+KEEP_MASTER = 8
+KEEP_FILES_8 = dict(KEEP_FILES, master=KEEP_MASTER)              # where a card of level 8 may keep a value
+KEEP_WORDS[KEEP_MASTER] = "the master"
+BASE_MEMBER = "op1f_effect"                                      # the base's own member, which no pack keeps
+# since R6 (module/build_r6_card.h): a card of level 9 is a card of level 4's 64 bytes whose asks have one kind more, a
+# synth engine in the unit's list of engines (its table 284 bytes, the head's `shown` its own, its list of sounds and
+# their texts behind it). The words a refusal says are the base's own line's (module/build_r6_engines.cpp).
+CARD_LEVELS = CARD_LEVELS + (9,)
+ASK_KINDS_OF_LEVEL[9] = dict(ASK_KINDS_OF_LEVEL[8], engine=8)
+KIND_WORDS_6[8] = "engine"
+TABLE_BYTES_6[8] = 284
+ASK_KEYS_6[8] = ("kind", "name", "stereo", "cycles", "voice_bytes", "voice_align", "render", "reset", "shown", "params", "sounds")
+ASK_ADDRESSES_6[8] = (("shown", 24), ("render", 40), ("reset", 44), ("sounds", 280))
+KINDS_COUNTED[9] = "eight"
+ENGINE_STEREO = 1                                                # an engine's flag
+ENGINE_VALUES_MOST, ENGINE_CYCLES_MOST, ENGINE_VOICE_MOST, ENGINES_MOST = 8, 40000, 1 << 20, 8
+ENGINE_SOUNDS_MOST, ENGINE_SOUND_MOST, ENGINE_SOUND_NAME = 32, 2048, 24
+ENGINE_ALIGN_LEAST = 4
+# since R6d (base 30, module/build_r6e_card.h): a card of level 10 is a card of level 9, the same 64 bytes and the same kinds
+# of ask; its mark, op1f_level_10, is that of a base that offers op1f_param_heard, the value as the sound plays it.
+CARD_LEVELS = CARD_LEVELS + (10,)
+ASK_KINDS_OF_LEVEL[10] = dict(ASK_KINDS_OF_LEVEL[9])
+KINDS_COUNTED[10] = KINDS_COUNTED[9]
+STOCK_ENGINES = ("cluster", "digital", "drwave", "dr.wave", "fm", "phase", "pulse", "dna", "string", "dsynth", "voltage", "dimension", "amp",
+                 "vocoder", "sampler", "fazer")                 # the names no engine of a pack's may take, as the base refuses them
+SOUND = struct.Struct("<24sII")                                  # a sound of an engine's list: its name, its text, its bytes
+SOUND_NAME_FORM = re.compile(r"[a-z0-9 _-]{1,23}")               # a sound's name, as the base takes it
+SOUND_MEMBERS = ("adsr", "fx_active", "fx_params", "fx_type", "knobs", "lfo_active", "lfo_params", "lfo_type", "mtime", "name", "octave",
+                 "original_folder", "synth_version", "type", "op1f_engine")   # what a sound of an engine's may hold, as the base holds it
+SOUND_EFFECTS = ("delay", "grid", "punch", "phone", "spring", "mother", "nitro", "cwo", "terminal")
+SOUND_LFOS = ("tremolo", "value", "random", "element", "midi", "velocity", "crank")
+ENGINE_MEMBER = "op1f_engine"                                    # the base's second own member, which no pack keeps
+DISPLAY =os.path.join(ROOT, "op-1field backup", "content", "display")          # the unit's own pictures, for the census of places
+PICTURE_SOURCES = 8                                              # the stock pictures one set of instructions may take from (since P3)
 RELEASE_NAME, RELEASE_BYTES = "op1f_release", 16                # the text a base pack carries for the start screen, zeros behind it
 RELEASE_FORM = re.compile(r"[0-9A-Za-z._-]{1,8}")               # what the tool takes for one
 LOADER_NAME, LOADER_ADDRESS = "op1f_loader_1", 0x8d2e36cc       # the one name the loader answers for itself: its own first byte
@@ -657,7 +839,7 @@ def layout3(elf, origin):
     binary = data["address"] + data["size"] - origin
     if values["__module_initialized_end"] - origin != binary:
         raise ValueError("The pack's initialised data does not end where the linker says")
-    align = max(elf.section(name)["align"] for name in (".text", ".rodata", ".data", ".bss"))
+    align = max(s["align"] for s in elf.sections if s["name"] in (".text", ".rodata", ".data", ".bss"))   # ld drops an empty .rodata or .bss
     return data["address"] - origin, binary, values["__module_end"] - origin - binary, align, values
 
 
@@ -708,6 +890,13 @@ def read_recipe(path):
     recipe.setdefault("sum", False)
     recipe.setdefault("path", None)
     recipe.setdefault("link_address", "0x%08x" % ROOM_START)
+    card = recipe.get("card")                               # since R6: an engine's sounds read from the recipe's folder, beside their files' names
+    for ask in (card.get("asks") or []) if isinstance(card, dict) else []:
+        if isinstance(ask, dict) and ask.get("kind") == "engine" and isinstance(ask.get("sounds"), list):
+            for sound in ask["sounds"]:
+                if isinstance(sound, dict) and isinstance(sound.get("file"), str) and "text" not in sound:
+                    with open(os.path.join(os.path.dirname(os.path.abspath(path)), sound["file"]), encoding="ascii", newline="") as f:
+                        sound["text"] = f.read()
     return recipe
 
 
@@ -954,7 +1143,7 @@ def card_of(recipe):
     if "asks" in card and level < 4:                        # since R1
         raise ValueError("Only a card of level 4 or later lists asks: it is level 4's")
     if "asks" in card:
-        asks_of_card(card["asks"])
+        asks_of_card(card["asks"], level)
     for key in ("frame", "pick", "input"):
         if card.get(key) is not None and not (isinstance(card[key], str) and SYMBOL.fullmatch(card[key])):
             raise ValueError("A card's %s is the symbol of a function of the pack, or null: %r" % (key, card[key]))
@@ -977,23 +1166,594 @@ def card_size(level):
     return CARD_2_BYTES if level >= 2 else CARD_BYTES
 
 
-def asks_of_card(asks):
+def asks_of_card(asks, level=4):
     """Since R1: a card's list of asks from its recipe, held to what this tool knows. Level 4 defines no kind of ask
-    yet, so the list is empty: any ask is refused, in the words of what is wrong."""
+    yet, so the list is empty: any ask is refused, in the words of what is wrong.
+    Since R3, a card of level 5: each ask as (kind's number, name, flags, {function's word: symbol or None}), the
+    functions in their table's order and `shown` among them. What a base of level 5 would leave aside is refused, and
+    the refusal says why the base would."""
     if not isinstance(asks, list) or len(asks) > ASKS_MOST:
         raise ValueError("A card's asks are a list of none to %d asks" % ASKS_MOST)
+    if level < 5:
+        for number, ask in enumerate(asks, 1):
+            kind = ask.get("kind") if isinstance(ask, dict) else None
+            if kind not in ASK_KINDS:
+                raise ValueError("Ask %d of the card, of the kind %r: level 4 defines no kind of ask yet, so a card's asks are an empty list" % (number, kind))
+        return []
+    if level >= 6:                                          # since R4
+        return asks_of_card_6(asks, level)
+    out = []
+    for number, ask in enumerate(asks, 1):
+        out.append(ask_of_card(number, ask, out))
+    if sum(1 for ask in out if ask[0] == ASK_KINDS_5["notes"]) > NOTES_MOST:
+        raise ValueError("The card asks to hear the notes more than %d times: the base takes %d such asks in all and leaves the next aside" % (NOTES_MOST, NOTES_MOST))
+    return out
+
+
+def ask_of_card(number, ask, earlier):
+    """Since R3: one ask of a card of level 5, held as a base of level 5 holds it (`earlier`: the asks before it)."""
+    kind = ask.get("kind") if isinstance(ask, dict) else None
+    if not isinstance(kind, str) or kind not in ASK_KINDS_5:
+        raise ValueError("Ask %d of the card, of the kind %r: level 5 knows two kinds of ask, 'sequencer' and 'notes', and the base leaves any other aside" % (number, kind))
+    what = ASK_KINDS_5[kind]
+    words = "a sequencer" if what == 1 else "the notes heard"
+    name = ask.get("name")
+    if what == 2 and "shown" in ask:
+        raise ValueError("Ask %d of the card, %s %r, names `shown`: the notes heard have no page, so their head's shown is 0" % (number, words, name))
+    unknown = sorted(set(ask) - set(ASK_KEYS[what]))
+    if unknown:
+        raise ValueError("Ask %d of the card, %s %r, has %s, which such an ask has not: it is {%s}"
+                         % (number, words, name, ", ".join("'%s'" % key for key in unknown), ", ".join('"%s"' % key for key in ASK_KEYS[what])))
+    if not isinstance(name, str) or not KIND_NAME_FORM.fullmatch(name):
+        raise ValueError("Ask %d of the card, %s %r: it is not a name %s: one to fifteen characters of a-z, 0-9, '-' and '_'; the base leaves it aside"
+                         % (number, words, name, "the list can show" if what == 1 else "the base takes"))
+    flags = 0
+    if what == 1:
+        if name in STOCK_SEQUENCERS:
+            raise ValueError("Ask %d of the card, a sequencer %r: a sequencer of the firmware has that name; the base leaves it aside" % (number, name))
+        for other_number, other in enumerate(earlier, 1):
+            if other[0] == 1 and other[1] == name:
+                raise ValueError("Ask %d of the card, a sequencer %r: ask %d asked for it first; the base leaves the later aside" % (number, name, other_number))
+        for key, bit in (("synth_only", SEQ_SYNTH_ONLY), ("all_midi", SEQ_ALL_MIDI)):
+            if not isinstance(ask.get(key, False), bool):
+                raise ValueError("Ask %d of the card, a sequencer %r: its %s is true or false, not %r" % (number, name, key, ask[key]))
+            flags |= bit if ask.get(key, False) else 0
+    functions = {}
+    for key in ASK_FUNCTIONS[what] + (("shown",) if what == 1 else ()):
+        symbol = ask.get(key)
+        if symbol is not None and not (isinstance(symbol, str) and SYMBOL.fullmatch(symbol)):
+            raise ValueError("Ask %d of the card, %s %r: its %s is the symbol of a function of the pack, or null: %r" % (number, words, name, key, symbol))
+        functions[key] = symbol
+    if what == 1 and functions["tick"] is None and functions["key"] is None:
+        raise ValueError("Ask %d of the card, a sequencer %r, has neither tick nor key: its table is not in order, and the base leaves it aside" % (number, name))
+    if what == 2 and functions["note"] is None:
+        raise ValueError("Ask %d of the card, the notes heard %r, has no note: its table is not in order, and the base leaves it aside" % (number, name))
+    return what, name, flags, functions
+
+
+def whole(value, low, high):
+    """Whether a recipe's value is a whole number from `low` to `high` (true and false are not numbers)."""
+    return isinstance(value, int) and not isinstance(value, bool) and low <= value <= high
+
+
+def a_symbol(value):
+    return value is None or (isinstance(value, str) and SYMBOL.fullmatch(value) is not None)
+
+
+def asks_of_card_6(asks, level):
+    """Since R4: a card of level 6 or 7's asks. A sequencer and the notes heard as at level 5; a stage, memory, places
+    and (level 7) keeps each as (kind's number, name, flags, {function's word: symbol or None}, {what else its table
+    holds}). Then what a base would leave aside across the card's asks: the memory a stage names, the counts, the
+    stages' cycles and the memory's bytes in all, one ask of places and one of keeps."""
+    known = ASK_KINDS_OF_LEVEL[level]
+    out = []
     for number, ask in enumerate(asks, 1):
         kind = ask.get("kind") if isinstance(ask, dict) else None
-        if kind not in ASK_KINDS:
-            raise ValueError("Ask %d of the card, of the kind %r: level 4 defines no kind of ask yet, so a card's asks are an empty list" % (number, kind))
-    return []
+        if not isinstance(kind, str) or kind not in known:
+            later = " ('keeps' is level 7's)" if kind == "keeps" and level == 6 else ""
+            raise ValueError("Ask %d of the card, of the kind %r: level %d knows %s kinds of ask, %s%s, and the base leaves any other aside"
+                             % (number, kind, level, KINDS_COUNTED[level],
+                                ", ".join("'%s'" % k for k in list(known)[:-1]) + " and '%s'" % list(known)[-1], later))
+        what = known[kind]
+        out.append(ask_of_card(number, ask, out) if what <= 2 else ask_of_card_6(number, ask, level, out))
+    if sum(1 for ask in out if ask[0] == ASK_KINDS_5["notes"]) > NOTES_MOST:
+        raise ValueError("The card asks to hear the notes more than %d times: the base takes %d such asks in all and leaves the next aside" % (NOTES_MOST, NOTES_MOST))
+    memories = [(number, ask[1]) for number, ask in enumerate(out) if ask[0] == 4]
+    for number, ask in enumerate(out, 1):
+        if ask[0] != 3:
+            continue
+        if ask[4]["memory"] is None:
+            ask[4]["memory"] = 0                            # no memory: the table's word is 0
+            continue
+        named = [at for at, name in memories if name == ask[4]["memory"]]
+        if not named:
+            raise ValueError("Ask %d of the card, a stage %r, needs the memory %r, which no memory ask of the card is: the base leaves it aside"
+                             % (number, ask[1], ask[4]["memory"]))
+        if len(named) > 1:
+            raise ValueError("Ask %d of the card, a stage %r, needs the memory %r, which %d memory asks of the card are named: name each once"
+                             % (number, ask[1], ask[4]["memory"], len(named)))
+        ask[4]["memory"] = named[0] + 1                     # the table holds the ask's number in the list, from 0, plus 1
+    stages = [ask for ask in out if ask[0] == 3]
+    if len(stages) > STAGES_MOST:
+        raise ValueError("The card asks for %d stages: the base takes %d in all and leaves the next aside" % (len(stages), STAGES_MOST))
+    cycles = sum(ask[4]["cycles"] * (2 if ask[4]["point"] == 1 else 1) for ask in stages)
+    if cycles > STAGE_CYCLES_ALL:
+        raise ValueError("The card's stages would take %d cycles a block (a stage at the instrument counted twice, for the synth and the drum): "
+                         "the base takes %d in all and leaves the later aside" % (cycles, STAGE_CYCLES_ALL))
+    if len(memories) > MEMORIES_MOST:
+        raise ValueError("The card asks for memory %d times: the base takes %d such asks in all and leaves the next aside" % (len(memories), MEMORIES_MOST))
+    if sum(ask[4]["bytes"] for ask in out if ask[0] == 4) > MEMORY_MOST:
+        raise ValueError("The card's memory asks come to more than 16 MiB together: the base gives %d bytes in all and refuses the later" % MEMORY_MOST)
+    for what in (5, 6):
+        found = [number for number, ask in enumerate(out, 1) if ask[0] == what]
+        if len(found) > 1:
+            raise ValueError("Ask %d of the card is a second ask of %s: the base takes one such ask a card and leaves the later aside" % (found[1], KIND_WORDS_6[what]))
+    return out
+
+
+def ask_of_card_6(number, ask, level=7, earlier=()):
+    """Since R4: one ask of a stage, memory, places or keeps, held as a base of level 6 or 7 holds it. Since R5: an
+    effect, held as a base of level 8 holds it (`earlier`: the card's asks before it), and the keeps of a card of level
+    8, which may name the master."""
+    what = ASK_KINDS_OF_LEVEL[9][ask["kind"]]
+    words = {3: "a stage", 4: "a memory", 5: "the places", 6: "the keeps", 7: "an effect", 8: "an engine"}[what]
+    name = ask.get("name")
+    unknown = sorted(set(ask) - set(ASK_KEYS_6[what]))
+    if unknown:
+        raise ValueError("Ask %d of the card, %s %r, has %s, which such an ask has not: it is {%s}"
+                         % (number, words, name, ", ".join("'%s'" % key for key in unknown), ", ".join('"%s"' % key for key in ASK_KEYS_6[what])))
+    if what == 7:                                           # since R5
+        return effect_of_card(number, ask, earlier)
+    if what == 8:                                           # since R6
+        return engine_of_card(number, ask, earlier)
+    if not isinstance(name, str) or not KIND_NAME_FORM.fullmatch(name):
+        raise ValueError("Ask %d of the card, %s %r: it is not a name the base takes: one to fifteen characters of a-z, 0-9, '-' and '_'; the base leaves it aside"
+                         % (number, words, name))
+    said = "Ask %d of the card, %s %r" % (number, words, name)
+    flags, functions, extra = 0, {}, {}
+    if what == 3:
+        if ask.get("point") not in STAGE_POINTS:
+            raise ValueError("%s: its point is %s, not %r; the base leaves it aside" % (said, ", ".join("'%s'" % p for p in STAGE_POINTS), ask.get("point")))
+        if not whole(ask.get("cycles"), 1, STAGE_CYCLES_MOST):
+            raise ValueError("%s: its cost is not between 1 and %d cycles a call, %r; the base leaves it aside" % (said, STAGE_CYCLES_MOST, ask.get("cycles")))
+        if not isinstance(ask.get("listens", False), bool):
+            raise ValueError("%s: its listens is true or false, not %r" % (said, ask["listens"]))
+        memory = ask.get("memory")
+        if memory is not None and not isinstance(memory, str):
+            raise ValueError("%s: its memory is the name of a memory ask of the card, or null: %r" % (said, memory))
+        if ask.get("process") is None:
+            raise ValueError("%s has no process: its table is not in order, and the base leaves it aside" % said)
+        if not a_symbol(ask["process"]):
+            raise ValueError("%s: its process is the symbol of a function of the pack: %r" % (said, ask["process"]))
+        flags = STAGE_LISTENS if ask.get("listens", False) else 0
+        functions = {"process": ask["process"]}
+        extra = {"point": STAGE_POINTS[ask["point"]], "cycles": ask["cycles"], "memory": memory}
+    elif what == 4:
+        if not whole(ask.get("bytes"), 1, MEMORY_MOST):
+            raise ValueError("%s: its bytes are not between 1 and %d (16 MiB), %r; the base refuses it" % (said, MEMORY_MOST, ask.get("bytes")))
+        align = ask.get("align", 4)
+        if not whole(align, 4, MEMORY_ALIGN_MOST) or align & (align - 1):
+            raise ValueError("%s: its alignment is a power of two from 4 to %d, not %r; the base leaves it aside" % (said, MEMORY_ALIGN_MOST, align))
+        extra = {"bytes": ask["bytes"], "align": align}
+    elif what == 5:
+        names = ask.get("names")
+        if not isinstance(names, list) or not 1 <= len(names) <= PLACES_MOST:
+            raise ValueError("%s: its names are a list of one to %d names of the unit's own pictures" % (said, PLACES_MOST))
+        for place, text in enumerate(names, 1):
+            raw = text.encode("ascii", "replace") if isinstance(text, str) else b""
+            if (not isinstance(text, str) or not 0 < len(raw) < PLACE_NAME or any(not 0x20 < c < 0x7f or c in b'"\\' for c in raw)
+                    or not text.endswith(".svg")):
+                raise ValueError("%s: its name %d, %r, is not the name of a picture: one to %d plain characters ending in .svg" % (said, place, text, PLACE_NAME - 1))
+            if text in names[:place - 1]:
+                raise ValueError("%s: its name %d, %r, is there before" % (said, place, text))
+        extra = {"names": list(names)}
+    else:
+        if not a_symbol(ask.get("changed")):
+            raise ValueError("%s: its changed is the symbol of a function of the pack, or null: %r" % (said, ask.get("changed")))
+        keys = ask.get("keys")
+        if not isinstance(keys, list) or not 1 <= len(keys) <= KEYS_MOST:
+            raise ValueError("%s: its keys are a list of one to %d keys" % (said, KEYS_MOST))
+        held = []
+        for place, key in enumerate(keys, 1):
+            if not isinstance(key, dict) or set(key) != {"name", "files"}:
+                raise ValueError('%s: its key %d is {"name": a member\'s name, "files": ["synth", "drum", "tape"], some of them}' % (said, place))
+            if not isinstance(key["name"], str) or not KEY_FORM.fullmatch(key["name"]):
+                raise ValueError("%s: its key %d, %r, is not a name a file can hold: one to 31 characters of a-z, 0-9 and '_'" % (said, place, key["name"]))
+            if key["name"] in KEY_NAMES_OF_THE_UNIT:            # since R4b: as base 26 leaves it aside
+                raise ValueError("%s: its key %d, %r, is a name of the unit's own files, which the base leaves aside: choose one of the pack's own (its name and a word)"
+                                 % (said, place, key["name"]))
+            if key["name"] == ENGINE_MEMBER:                    # since R6: the base keeps it for the engines
+                raise ValueError("Ask %d of the card, the keeps %r: its key %d %r is a name of the base's own, which no pack keeps; the base leaves it aside"
+                                 % (number, name, place, key["name"]))
+            if key["name"] == BASE_MEMBER:                      # since R5: the base keeps it for the effects
+                raise ValueError("%s: its key %d, %r, is a name of the base's own, which the base leaves aside: choose one of the pack's own (its name and a word)"
+                                 % (said, place, key["name"]))
+            if key["name"] in [n for n, _bits in held]:
+                raise ValueError("%s: its key %d, %r, is there before" % (said, place, key["name"]))
+            files, kept_in = key["files"], KEEP_FILES_8 if level >= 8 else KEEP_FILES
+            if level < 8 and isinstance(files, list) and "master" in files:      # since R5
+                raise ValueError("%s: its key %r is kept with the master, which a card of level 8 may name: a card of level %d keeps a value in %s"
+                                 % (said, key["name"], level, ", ".join('"%s"' % f for f in KEEP_FILES)))
+            if (not isinstance(files, list) or not files or any(not isinstance(f, str) or f not in kept_in for f in files)
+                    or len(set(files)) != len(files)):
+                raise ValueError("%s: its key %r is kept in %r: some of %s, each once, and one at the least" % (said, key["name"], files, ", ".join('"%s"' % f for f in kept_in)))
+            held.append((key["name"], sum(kept_in[f] for f in files)))
+        functions = {"changed": ask.get("changed")}
+        extra = {"keys": held}
+    return what, name, flags, functions, extra
+
+
+def word_of(value):
+    """A number as a word of the table holds it, as the base reads it back: its 32 low bits."""
+    return value & 0xffffffff
+
+
+def effect_of_card(number, ask, earlier):
+    """Since R5: one ask of an effect, held as a base of level 8 holds it, in the order its check runs, and refused in
+    the words of the base's line (`... is left aside: <the reason>`): (7, name, flags, {"process", "reset", "shown"},
+    {"rides", "cycles", "state_bytes", "state_align", "params": [(name, low, high, start)]})."""
+    name = ask.get("name")
+    said = "Ask %d of the card, an effect %r" % (number, name)
+    aside = "the base leaves it aside"
+    if not isinstance(name, str) or not EFFECT_NAME_FORM.fullmatch(name):
+        raise ValueError("%s: its name is not one the lists can show: one to fifteen characters of a-z, 0-9, ' ', '-' and '_'; %s" % (said, aside))
+    flags = 0
+    for key, bit in (("mono", EFFECT_MONO), ("tails", EFFECT_TAILS)):
+        if not isinstance(ask.get(key, False), bool):
+            raise ValueError("%s: its %s is true or false, not %r" % (said, key, ask[key]))
+        flags |= bit if ask.get(key, False) else 0
+    for key in ("shown", "reset"):
+        if not a_symbol(ask.get(key)):
+            raise ValueError("%s: its %s is the symbol of a function of the pack, or null: %r" % (said, key, ask[key]))
+    if ask.get("process") is None:
+        raise ValueError("%s has no process: its table is not in order, and %s" % (said, aside))
+    if not a_symbol(ask["process"]):
+        raise ValueError("%s: its process is the symbol of a function of the pack: %r" % (said, ask["process"]))
+    state, align = ask.get("state_bytes", 0), ask.get("state_align", EFFECT_ALIGN_LEAST)
+    if not whole(state, -0x80000000, 0xffffffff):
+        raise ValueError("%s: its working memory is a whole number of bytes from 0 to %d (8 MiB), not %r: its table is not in order, and %s"
+                         % (said, EFFECT_STATE_MOST, state, aside))
+    if not 0 <= state <= EFFECT_STATE_MOST:
+        raise ValueError("%s: its working memory is not between 0 and %d bytes (8 MiB), %r: its table is not in order (%d, %d), and %s"
+                         % (said, EFFECT_STATE_MOST, state, word_of(state), EFFECT_STATE_MOST, aside))
+    if not whole(align, 0, 0xffffffff):
+        raise ValueError("%s: its working memory's alignment is a whole number, not %r: its table is not in order, and %s" % (said, align, aside))
+    if state and (not EFFECT_ALIGN_LEAST <= align <= MEMORY_ALIGN_MOST or align & (align - 1)):
+        raise ValueError("%s: its working memory's alignment is a power of two from %d to %d, not %r: its table is not in order (%d, %d), and %s"
+                         % (said, EFFECT_ALIGN_LEAST, MEMORY_ALIGN_MOST, align, align, MEMORY_ALIGN_MOST, aside))
+    params = ask.get("params")
+    if not isinstance(params, list) or not 1 <= len(params) <= EFFECT_VALUES_MOST:
+        raise ValueError('%s: its values are a list of one to %d values, each {"name", "low", "high", "start"}: its table is not in order (%d, %d), and %s'
+                         % (said, EFFECT_VALUES_MOST, len(params) if isinstance(params, list) else 0, EFFECT_VALUES_MOST, aside))
+    held = []
+    for place, param in enumerate(params, 1):
+        order = "its table is not in order (%d, 0), and %s" % (0x100 + place - 1, aside)
+        if not isinstance(param, dict) or set(param) != {"name", "low", "high", "start"}:
+            raise ValueError('%s: its value %d is {"name": its name, "low": ..., "high": ..., "start": ...}: %s' % (said, place, order))
+        if not isinstance(param["name"], str) or not EFFECT_NAME_FORM.fullmatch(param["name"]):
+            raise ValueError("%s: its value %d's name %r is not one a page can show: one to fifteen characters of a-z, 0-9, ' ', '-' and '_': %s"
+                             % (said, place, param["name"], order))
+        low, high, start = param["low"], param["high"], param["start"]
+        if not all(whole(v, -0x80000000, 0x7fffffff) for v in (low, high, start)):
+            raise ValueError("%s: its value %d, %r: its lowest, highest and start are whole numbers of 32 bits with a sign: %s" % (said, place, param["name"], order))
+        if not low < high or high - low > 65535:
+            raise ValueError("%s: its value %d, %r, goes from %d to %d: the lowest is below the highest, and the two at most 65535 apart: %s"
+                             % (said, place, param["name"], low, high, order))
+        if not low <= start <= high:
+            raise ValueError("%s: its value %d, %r, starts at %d, outside %d to %d: %s" % (said, place, param["name"], start, low, high, order))
+        held.append((param["name"], low, high, start))
+    if name in STOCK_EFFECTS:
+        raise ValueError("%s: its name is a stock effect's or an earlier pack's (the unit's own effect %s); %s" % (said, name, aside))
+    for other_number, other in enumerate(earlier, 1):
+        if other[0] == 7 and other[1] == name:
+            raise ValueError("%s: its name is a stock effect's or an earlier pack's (ask %d of the card registers it first); %s" % (said, other_number, aside))
+    rides = ask.get("rides")
+    if rides not in EFFECTS_RIDDEN:
+        shown_as = rides if isinstance(rides, str) and EFFECT_NAME_FORM.fullmatch(rides) else "?"
+        raise ValueError("%s: it stands on %s, which is not one an effect can stand on (it is one of %s); %s"
+                         % (said, shown_as, ", ".join(EFFECTS_RIDDEN[:-1]) + " and " + EFFECTS_RIDDEN[-1], aside))
+    cycles = ask.get("cycles")
+    if not whole(cycles, 1, EFFECT_CYCLES_MOST):
+        raise ValueError("%s: its cost is not between 1 and %d cycles a call, %r; %s" % (said, EFFECT_CYCLES_MOST, cycles, aside))
+    functions = {"process": ask["process"], "reset": ask.get("reset"), "shown": ask.get("shown")}
+    extra = {"rides": rides, "cycles": cycles, "state_bytes": state, "state_align": align, "params": held}
+    return 7, name, flags, functions, extra
+
+
+def sound_fault(text, name):
+    """Since R6: why a base of level 9 would not write a sound's text into the engine `name`'s folder, in the words of its
+    line, or None (module/build_r6_engines.cpp, sound_check)."""
+    import json as _json
+    try:
+        pairs = _json.loads(text, object_pairs_hook=lambda items: items)
+    except ValueError:
+        return "it is not one JSON object"
+    if not isinstance(pairs, list) or text.strip()[:1] != "{":
+        return "it is not one JSON object"
+    if any(ord(c) > 0x7e or (ord(c) < 0x20 and c not in "\n\r\t ") for c in text) or "\\" in text:
+        return "it is not one JSON object"
+    seen = set()
+    for key, value in pairs:
+        if key not in SOUND_MEMBERS:
+            return "it holds a member the unit's sounds do not hold"
+        if key in seen:
+            return "it holds a member twice"
+        seen.add(key)
+        if key == "knobs":
+            if not isinstance(value, list) or len(value) != 8 or any(not whole(v, 0, 32767) for v in value):
+                return "its knobs are not eight whole numbers inside dsynth's rows"
+        elif key in ("adsr", "fx_params", "lfo_params"):
+            if not isinstance(value, list) or len(value) != 8 or any(not whole(v, -32768, 32767) for v in value):
+                return "one of its members does not hold what the unit's sounds hold there"
+        elif key == "type":
+            if value != "dsynth":
+                return "its type is not dsynth"
+        elif key == ENGINE_MEMBER:
+            if value != name:
+                return "it names another engine"
+        elif key in ("fx_type", "lfo_type"):
+            if value not in (SOUND_EFFECTS if key == "fx_type" else SOUND_LFOS):
+                return "one of its members does not hold what the unit's sounds hold there"
+        elif key in ("name", "original_folder"):
+            if not isinstance(value, str):
+                return "one of its members does not hold what the unit's sounds hold there"
+        elif key in ("fx_active", "lfo_active"):
+            if not (isinstance(value, bool) or whole(value, 0, 1)):
+                return "one of its members does not hold what the unit's sounds hold there"
+        elif key == "octave":
+            if not whole(value, -8, 8):
+                return "one of its members does not hold what the unit's sounds hold there"
+        elif key == "synth_version":
+            if not whole(value, 0, 1000):
+                return "one of its members does not hold what the unit's sounds hold there"
+        elif not isinstance(value, (int, float)) or isinstance(value, bool):
+            return "one of its members does not hold what the unit's sounds hold there"
+    if "type" not in seen:
+        return "its type is not dsynth"
+    if "knobs" not in seen:
+        return "its knobs are not eight whole numbers inside dsynth's rows"
+    return None
+
+
+def engine_of_card(number, ask, earlier):
+    """Since R6: one ask of a synth engine, held as a base of level 9 holds it, in the order its check runs, and refused
+    in the words of the base's line (`... is left aside: <the reason>`): (8, name, flags, {"render", "reset", "shown"},
+    {"cycles", "voice_bytes", "voice_align", "params": [(name, low, high, start)], "sounds": [(name, text)]}). A sound's
+    text is the recipe's file (read_recipe puts it beside the file's name as "text")."""
+    name = ask.get("name")
+    said = "Ask %d of the card, an engine %r" % (number, name)
+    aside = "the base leaves it aside"
+    if not isinstance(name, str) or not EFFECT_NAME_FORM.fullmatch(name):
+        raise ValueError("%s: its name is not one the engine list can show: one to fifteen characters of a-z, 0-9, ' ', '-' and '_'; %s" % (said, aside))
+    if not isinstance(ask.get("stereo", False), bool):
+        raise ValueError("%s: its stereo is true or false, not %r" % (said, ask["stereo"]))
+    flags = ENGINE_STEREO if ask.get("stereo", False) else 0
+    for key in ("shown", "reset"):
+        if not a_symbol(ask.get(key)):
+            raise ValueError("%s: its %s is the symbol of a function of the pack, or null: %r" % (said, key, ask[key]))
+    if ask.get("render") is None:
+        raise ValueError("%s has no render: its table is not in order, and %s" % (said, aside))
+    if not a_symbol(ask["render"]):
+        raise ValueError("%s: its render is the symbol of a function of the pack: %r" % (said, ask["render"]))
+    voice, align = ask.get("voice_bytes", 0), ask.get("voice_align", ENGINE_ALIGN_LEAST)
+    if not whole(voice, -0x80000000, 0xffffffff):
+        raise ValueError("%s: its working memory a voice is a whole number of bytes from 0 to %d (1 MiB), not %r: its table is not in order, and %s"
+                         % (said, ENGINE_VOICE_MOST, voice, aside))
+    if not 0 <= voice <= ENGINE_VOICE_MOST:
+        raise ValueError("%s: its working memory a voice is not between 0 and %d bytes (1 MiB), %r: its table is not in order (%d, %d), and %s"
+                         % (said, ENGINE_VOICE_MOST, voice, word_of(voice), ENGINE_VOICE_MOST, aside))
+    if not whole(align, 0, 0xffffffff):
+        raise ValueError("%s: its working memory's alignment is a whole number, not %r: its table is not in order, and %s" % (said, align, aside))
+    if voice and (not ENGINE_ALIGN_LEAST <= align <= MEMORY_ALIGN_MOST or align & (align - 1)):
+        raise ValueError("%s: its working memory's alignment is a power of two from %d to %d, not %r: its table is not in order (%d, %d), and %s"
+                         % (said, ENGINE_ALIGN_LEAST, MEMORY_ALIGN_MOST, align, align, MEMORY_ALIGN_MOST, aside))
+    params = ask.get("params")
+    if not isinstance(params, list) or not 1 <= len(params) <= ENGINE_VALUES_MOST:
+        raise ValueError('%s: its values are a list of one to %d values, each {"name", "low", "high", "start"}: its table is not in order (%d, %d), and %s'
+                         % (said, ENGINE_VALUES_MOST, len(params) if isinstance(params, list) else 0, ENGINE_VALUES_MOST, aside))
+    held = []
+    for place, param in enumerate(params, 1):
+        order = "its table is not in order (%d, 0), and %s" % (0x100 + place - 1, aside)
+        if not isinstance(param, dict) or set(param) != {"name", "low", "high", "start"}:
+            raise ValueError('%s: its value %d is {"name": its name, "low": ..., "high": ..., "start": ...}: %s' % (said, place, order))
+        if not isinstance(param["name"], str) or not EFFECT_NAME_FORM.fullmatch(param["name"]):
+            raise ValueError("%s: its value %d's name %r is not one a page can show: one to fifteen characters of a-z, 0-9, ' ', '-' and '_': %s"
+                             % (said, place, param["name"], order))
+        low, high, start = param["low"], param["high"], param["start"]
+        if not all(whole(v, -0x80000000, 0x7fffffff) for v in (low, high, start)):
+            raise ValueError("%s: its value %d, %r: its lowest, highest and start are whole numbers of 32 bits with a sign: %s" % (said, place, param["name"], order))
+        if not low < high or high - low > 65535:
+            raise ValueError("%s: its value %d, %r, goes from %d to %d: the lowest is below the highest, and the two at most 65535 apart: %s"
+                             % (said, place, param["name"], low, high, order))
+        if not low <= start <= high:
+            raise ValueError("%s: its value %d, %r, starts at %d, outside %d to %d: %s" % (said, place, param["name"], start, low, high, order))
+        held.append((param["name"], low, high, start))
+    sounds = ask.get("sounds", [])
+    if not isinstance(sounds, list) or len(sounds) > ENGINE_SOUNDS_MOST:
+        raise ValueError('%s: its sounds are a list of none to %d sounds, each {"name", "file"}: its table is not in order (%d, %d), and %s'
+                         % (said, ENGINE_SOUNDS_MOST, len(sounds) if isinstance(sounds, list) else 0, ENGINE_SOUNDS_MOST, aside))
+    texts = []
+    for place, sound in enumerate(sounds, 1):
+        order = "its table is not in order (%d, 0), and %s" % (0x200 + place - 1, aside)
+        if not isinstance(sound, dict) or not {"name", "file"} <= set(sound) <= {"name", "file", "text"}:
+            raise ValueError('%s: its sound %d is {"name": its name, "file": its file from the recipe\'s folder}: %s' % (said, place, order))
+        if not isinstance(sound["name"], str) or not SOUND_NAME_FORM.fullmatch(sound["name"]):
+            raise ValueError("%s: its sound %d's name %r is not one the sound list can show: one to 23 characters of a-z, 0-9, ' ', '-' and '_': %s"
+                             % (said, place, sound["name"], order))
+        if any(sound["name"] == other for other, _t in texts):
+            raise ValueError("%s: its sound %d's name %r is an earlier sound's: %s" % (said, place, sound["name"], order))
+        text = sound.get("text")
+        if text is None:
+            with open(os.path.join(ROOT, sound["file"]), encoding="ascii") as f:
+                text = f.read()
+        if not 0 < len(text.encode("ascii", "replace")) <= ENGINE_SOUND_MOST:
+            raise ValueError("%s: its sound %d, %r, is %d bytes, not 1 to %d: %s" % (said, place, sound["name"], len(text), ENGINE_SOUND_MOST, order))
+        texts.append((sound["name"], text))
+    if name in STOCK_ENGINES:
+        raise ValueError("%s: its name is a stock engine's or an earlier pack's (the unit's own %s); %s" % (said, name, aside))
+    for other_number, other in enumerate(earlier, 1):
+        if other[0] == 8 and other[1] == name:
+            raise ValueError("%s: its name is a stock engine's or an earlier pack's (ask %d of the card registers it first); %s" % (said, other_number, aside))
+    if sum(1 for other in earlier if other[0] == 8) >= ENGINES_MOST:
+        raise ValueError("%s: it would be the ninth; %s" % (said, aside))
+    cycles = ask.get("cycles")
+    if not whole(cycles, 1, ENGINE_CYCLES_MOST):
+        raise ValueError("%s: its cost is not between 1 and %d cycles a voice, %r; %s" % (said, ENGINE_CYCLES_MOST, cycles, aside))
+    for sound_name, text in texts:
+        fault = sound_fault(text, name)
+        if fault:
+            raise ValueError("%s writes no sounds: its sound '%s' is not one the base can write: %s" % (said, sound_name, fault))
+    functions = {"render": ask["render"], "reset": ask.get("reset"), "shown": ask.get("shown")}
+    extra = {"cycles": cycles, "voice_bytes": voice, "voice_align": align, "params": held, "sounds": texts}
+    return 8, name, flags, functions, extra
 
 
 def card_asks(recipe):
     """Since R1: the asks a recipe's card lists; none for a card without asks and for a recipe without a card.
-    card_of has held them."""
+    card_of has held them. Since R3, a card of level 5's asks as asks_of_card answers them."""
     card = card_of(recipe)
-    return [] if card is None else asks_of_card(recipe["card"].get("asks", []))
+    return [] if card is None else asks_of_card(recipe["card"].get("asks", []), card[0])
+
+
+def ask_words(what, name, flags, functions, extra=None):
+    """Since R3: an ask as `check` and `card` print it: "sequencer 'echo', synth and drum, tick key run shown" or
+    "notes 'ear'". Since R4: "stage 'dub' at the master after its effect, 30000 cycles a call, the memory of ask 2",
+    "memory 'lines', 1048576 bytes on 4", "places 'own', 1 name(s): tape.svg", "keeps 'dub', 1 key(s): dub_time in tapes".
+    Since R5: "effect 'crush' on punch, 9000 cycles a call, mono, 2 value(s): bits 1..16 from 16; rate 1..64 from 8, reset"."""
+    if what == 8:                                           # since R6
+        said = "engine '%s', %d cycles a voice" % (name, extra["cycles"])
+        said += ", stereo" if flags & ENGINE_STEREO else ""
+        if extra["voice_bytes"]:
+            said += ", %d bytes a voice on %d" % (extra["voice_bytes"], extra["voice_align"])
+        said += ", %d value(s): %s" % (len(extra["params"]), "; ".join("%s %d..%d from %d" % p for p in extra["params"]))
+        said += ", %d sound(s)" % len(extra["sounds"]) + (": " + " ".join(n for n, _t in extra["sounds"]) if extra["sounds"] else "")
+        return said + "".join(", " + key for key in ("reset", "shown") if functions.get(key))
+    if what == 7:
+        said = "effect '%s' on %s, %d cycles a call" % (name, extra["rides"], extra["cycles"])
+        said += "".join(", " + word for bit, word in ((EFFECT_MONO, "mono"), (EFFECT_TAILS, "tails")) if flags & bit)
+        if extra["state_bytes"]:
+            said += ", %d bytes of memory on %d" % (extra["state_bytes"], extra["state_align"])
+        said += ", %d value(s): %s" % (len(extra["params"]), "; ".join("%s %d..%d from %d" % p for p in extra["params"]))
+        return said + "".join(", " + key for key in ("reset", "shown") if functions.get(key))
+    if what == 3:
+        said = "stage '%s' at %s, %d cycles a call" % (name, STAGE_POINT_WORDS.get(extra["point"], "the point %d" % extra["point"]), extra["cycles"])
+        said += ", listens" if flags & STAGE_LISTENS else ""
+        return said + (", the memory of ask %d" % extra["memory"] if extra["memory"] else "")
+    if what == 4:
+        return "memory '%s', %d bytes on %d" % (name, extra["bytes"], extra["align"])
+    if what == 5:
+        return "places '%s', %d name(s): %s" % (name, len(extra["names"]), " ".join(n if n is not None else "?" for n in extra["names"]))
+    if what == 6:
+        said = "keeps '%s', %d key(s): %s" % (name, len(extra["keys"]), "; ".join(
+            "%s in %s" % (key, " and ".join(KEEP_WORDS[bit] for bit in (1, 2, 4, 8) if bits & bit) or "no file") for key, bits in extra["keys"]))
+        return said + (", changed" if functions.get("changed") else "")
+    if what == 2:
+        return "notes '%s'" % name
+    said = "sequencer '%s', %s" % (name, "synth only" if flags & SEQ_SYNTH_ONLY else "synth and drum")
+    if flags & SEQ_ALL_MIDI:
+        said += ", every MIDI note"
+    present = [key for key in ASK_FUNCTIONS[1] + ("shown",) if functions.get(key)]
+    return said + (", " + " ".join(present) if present else "")
+
+
+# since R3: a named object of constant data in a generated source: its name, then its lines
+DATA_OBJECT = ".global {0}\n.type {0}, STT_{2}\n{0}:\n{1}.size {0}, .-{0}\n"     # {2}: OBJECT, the type every generated source gives its data
+
+
+def ask_table_source(label, number, ask):
+    """Since R3: the assembly of one ask's table, constant data beside the card under <card>_ask_<n>."""
+    if ask[0] > 2:                                          # since R4
+        return ask_table_source_6(label, number, ask)
+    what, name, flags, functions = ask
+    words =["    .long %d" % ASK_TABLE_BYTES[what], padded_text(name, 16), "    .long %d" % flags,
+             "    .long %s" % ((functions.get("shown") or "0") if what == 1 else "0")]
+    words += ["    .long %s" % (functions[key] or "0") for key in ASK_FUNCTIONS[what]]
+    return DATA_OBJECT.format("%s_ask_%d" % (label, number), "\n".join(words) + "\n", "OBJECT")
+
+
+def ask_table_words(ask, address_of=None):
+    """Since R4: the words of a table of a stage, memory, places or keeps behind its head, as assembly (`address_of`
+    None) or as numbers (`address_of(symbol)` answers a symbol's address): [(word, what it is)], where a key's name is
+    bytes of 32 and the keys left out are zero bytes."""
+    what, _name, _flags, functions, extra = ask
+    def address(symbol):
+        if symbol is None:
+            return "0" if address_of is None else 0
+        return symbol if address_of is None else address_of(symbol)
+    if what == 3:
+        return [extra["point"], extra["cycles"], extra["memory"], address(functions["process"])]
+    if what == 4:
+        return [extra["bytes"], extra["align"]]
+    if what == 5:
+        return [len(extra["names"]), address(extra["names_symbol"])]
+    if what == 8:                                           # since R6: an engine, its values as signed words, its list of sounds
+        words = [extra["cycles"], extra["voice_bytes"], extra["voice_align"], address(functions["render"]), address(functions["reset"]), len(extra["params"])]
+        for value_name, low, high, start in extra["params"]:
+            words += [value_name.encode("ascii").ljust(16, b"\0"), low, high, start]
+        left = ENGINE_VALUES_MOST - len(extra["params"])
+        words += [bytes(left * PARAM.size)] if left else []
+        return words + [len(extra["sounds"]), address(extra.get("sounds_symbol")) if extra["sounds"] else (0 if address_of is not None else "0")]
+    if what == 7:                                           # since R5: an effect, its values as signed words
+        words = [extra["rides"].encode("ascii").ljust(16, b"\0"), extra["cycles"], extra["state_bytes"], extra["state_align"],
+                 address(functions["process"]), address(functions["reset"]), len(extra["params"])]
+        for value_name, low, high, start in extra["params"]:
+            words += [value_name.encode("ascii").ljust(16, b"\0"), low, high, start]
+        left = EFFECT_VALUES_MOST - len(extra["params"])
+        return words + ([bytes(left * PARAM.size)] if left else [])
+    words = [address(functions["changed"]), len(extra["keys"])]
+    for key, bits in extra["keys"]:
+        words += [key.encode("ascii").ljust(KEY_BYTES, b"\0"), bits]
+    return words + [bytes((KEYS_MOST - len(extra["keys"])) * (KEY_BYTES + 4))] if len(extra["keys"]) < KEYS_MOST else words
+
+
+def ask_table_source_6(label, number, ask):
+    """Since R4: the assembly of a table of a stage, memory, places or keeps; for places, its list of names behind it
+    under <card>_ask_<n>_names, 24 bytes a name."""
+    what, name, flags, _functions, extra = ask
+    table = "%s_ask_%d" % (label, number)
+    if what == 5:
+        extra = dict(extra, names_symbol=table + "_names")
+    if what == 8:                                           # since R6
+        extra = dict(extra, sounds_symbol=table + "_sounds")
+    lines = ["    .long %d" % TABLE_BYTES_6[what], padded_text(name, 16), "    .long %d" % flags, "    .long %s" % (_functions.get("shown") or "0")]
+    for word in ask_table_words((what, name, flags, _functions, extra)):
+        if isinstance(word, bytes) and not word.strip(b"\0"):
+            lines.append("    .fill %d, 1, 0" % len(word))
+        elif isinstance(word, bytes):
+            lines.append(padded_text(word.rstrip(b"\0").decode("ascii"), len(word)))
+        else:
+            lines.append("    .long %s" % word)
+    text = DATA_OBJECT.format(table, "\n".join(lines) + "\n", "OBJECT")
+    if what == 5:
+        text += DATA_OBJECT.format(table + "_names", "".join(padded_text(n, PLACE_NAME) + "\n" for n in extra["names"]), "OBJECT")
+    if what == 8 and extra["sounds"]:                       # since R6: the list of sounds, 32 bytes a sound, then each text
+        rows = "".join("%s\n    .long %s_sound_%d\n    .long %d\n" % (padded_text(n, ENGINE_SOUND_NAME), table, k, len(t)) for k, (n, t) in enumerate(extra["sounds"]))
+        text += DATA_OBJECT.format(table + "_sounds", rows, "OBJECT")
+        for k, (_n, t) in enumerate(extra["sounds"]):
+            text += DATA_OBJECT.format("%s_sound_%d" % (table, k), ascii_lines(t), "OBJECT")
+        text += ".balign 4\n"                               # what follows the texts (another ask's table) on a word again
+    return text
+
+
+def ascii_lines(text):
+    """Since R6: a text as lines of assembly, its bytes exactly, eighty at most a line: a quote, a backslash and the
+    control characters written as octal escapes, which the assembler reads back as the same bytes."""
+    out = []
+    for at in range(0, len(text), 80):
+        part = text[at:at + 80]
+        out.append('    .ascii "%s"\n' % "".join("\\%03o" % ord(c) if ord(c) < 0x20 or c in '"\\' else c for c in part))
+    return "".join(out)
+
+
+def table_bytes_of(ask):
+    """Since R3, R4: a table's bytes at its kind's level."""
+    return TABLE_BYTES_6[ask[0]] if ask[0] > 2 else ASK_TABLE_BYTES[ask[0]]
+
+
+def asks_source(label, asks):
+    """Since R3: the list of asks, twelve bytes an ask (its kind, its table's bytes, its table), and each table."""
+    rows = "".join("    .long %d, %d, %s_ask_%d\n" % (ask[0], table_bytes_of(ask), label, number) for number, ask in enumerate(asks))
+    return DATA_OBJECT.format(label + "_asks", rows, "OBJECT") + "".join(ask_table_source(label, number, ask) for number, ask in enumerate(asks))
 
 
 def folders_of_card(pack_name, folders):
@@ -1086,12 +1846,40 @@ def render_card(recipe, recipe_name):
         table = (".global " + table_label + "\n.type " + table_label + ", STT_OBJECT\n" + table_label + ":\n" + rows + ".size " + table_label + ", .-" + table_label + "\n") if folders else ""
         text = text.replace(end, "    .long " + (card_input(recipe) or "0") + "\n    .long " + (table_label if folders else "0") + "\n    .long " + str(len(folders)) + "\n"
                             + size_line + table, 1)
-    if level >= 4:                                          # since R1: the list of asks and its count behind level 3's two; level 4 knows no kind, so none
+    if level == 4:                                          # since R1: the list of asks and its count behind level 3's two; level 4 knows no kind, so none
         card_asks(recipe)
         count_line = "    .long " + str(len(folders)) + "\n" + size_line                # level 3's last word and the card's last line
         text = text.replace(" */\n.section", " * Level 4: behind them, the pack's list of asks and how many it holds; level 4 defines no kind of ask yet, so both are 0.\n */\n.section", 1)
         text = text.replace("0x%08x, %d, " % (CARD_MARK, CARD_3_BYTES), "0x%08x, %d, " % (CARD_MARK, CARD_4_BYTES), 1)    # the card's bytes: 64
         text = text.replace(count_line, "    .long " + str(len(folders)) + "\n    .long 0\n    .long 0\n" + size_line, 1)
+    if level >= 5:                                          # since R3: the list of asks and its count, then the list and each ask's table
+        asks = card_asks(recipe)
+        count_line = "    .long " + str(len(folders)) + "\n" + size_line
+        if level == 5:
+            text = text.replace(" */\n.section", " * Level 4: behind them, the pack's list of asks and how many it holds. Level 5 (module/build_r3_card.h): an ask is\n"
+                                " * a sequencer or the notes heard; the list follows the card, and each ask's table follows the list.\n */\n.section", 1)
+        else:                                               # since R4: levels 6 and 7; since R5 level 8
+            kinds = (" * a sequencer, the notes heard, a sound stage, working memory or pictures that take a place; the list follows the\n"
+                     " * card, each ask's table follows the list, and the list of names of an ask of places follows its table.\n" if level == 6 else
+                     " * a sequencer, the notes heard, a sound stage, working memory, pictures that take a place or values kept in the\n"
+                     " * unit's files; the list follows the card, each ask's table follows the list, and the list of names of an ask of\n"
+                     " * places follows its table.\n" if level == 7 else
+                     " * a sequencer, the notes heard, a sound stage, working memory, pictures that take a place, values kept in the\n"
+                     " * unit's files or an effect in the unit's lists of effects; the list follows the card, each ask's table follows\n"
+                     " * the list, and the list of names of an ask of places follows its table.\n" if level == 8 else
+                     " * a sequencer, the notes heard, a sound stage, working memory, pictures that take a place, values kept in the\n"
+                     " * unit's files, an effect in the unit's lists of effects or a synth engine in its list of engines; the list follows\n"
+                     " * the card, each ask's table follows the list, the list of names of an ask of places follows its table, and an\n"
+                     " * engine's list of sounds and their texts follow its table.\n")
+            if level >= 10:                                 # since R6d: level 9's kinds; the mark is that of a base with op1f_param_heard
+                kinds += " * Level 10 adds no kind of ask: its mark is that of a base that offers op1f_param_heard, the value as heard.\n"
+            text = text.replace(" */\n.section", " * Level 4: behind them, the pack's list of asks and how many it holds. Level %d (%s): an ask is\n"
+                                % (level, "module/build_r4_card.h" if level < 8 else "module/build_r5_card.h" if level == 8 else "module/build_r6_card.h" if level == 9
+                                   else "module/build_r6e_card.h") + kinds + " */\n.section", 1)
+        text = text.replace("0x%08x, %d, " % (CARD_MARK, CARD_3_BYTES), "0x%08x, %d, " % (CARD_MARK, CARD_4_BYTES), 1)    # 64 bytes, as at level 4
+        text = text.replace(count_line, "    .long " + str(len(folders)) + "\n    .long " + (label + "_asks" if asks else "0") + "\n    .long " + str(len(asks)) + "\n"
+                            + size_line, 1)
+        text += asks_source(label, asks) if asks else ""
     return text
 
 
@@ -1147,6 +1935,286 @@ def asks_in(data):
     if at < 0 or at % 4 or at + ASK.size * card["ask_count"] > len(body):
         return []
     return [ASK.unpack_from(body, at + ASK.size * number) for number in range(card["ask_count"])]
+
+
+def ask_tables(data):
+    """Since R3: each ask of a card of level 5 read from its table as linked: (kind, bytes, what, the ask as
+    asks_of_card answers it or None, what is not in order with it or None). Its functions are their linked addresses."""
+    fields, body, _extra = parse3(data)
+    out = []
+    card = card_in(data)
+    if card is not None and card["level"] >= 6:              # since R4: a card of level 6 or 7
+        return ask_tables_6(data, card["level"])
+    for kind, size, what in asks_in(data):
+        if kind not in KIND_WORDS:
+            out.append((kind, size, what, None, "a kind the base does not know"))
+            continue
+        out.append(ask_table_5(fields, body, kind, size, what))
+    return out
+
+
+def ask_table_5(fields, body, kind, size, what):
+    """Since R3: one table of a sequencer or of the notes heard, as ask_tables answers it."""
+    at = what - linked_at(fields, 0)
+    if size != ASK_TABLE_BYTES[kind] or not what or at < 0 or at + size > len(body):
+        return (kind, size, what, None, "its table is not of its kind's %d bytes in the pack" % ASK_TABLE_BYTES[kind])
+    head_bytes, name, flags, shown = KIND_HEAD.unpack_from(body, at)
+    words = struct.unpack_from("<%dI" % len(ASK_FUNCTIONS[kind]), body, at + KIND_HEAD.size)
+    text = name.split(b"\0")[0].decode("latin-1")
+    functions = dict(zip(ASK_FUNCTIONS[kind], words), shown=shown)
+    wrong = None
+    if head_bytes != size:
+        wrong = "its head's bytes are not its table's"
+    elif not KIND_NAME_FORM.fullmatch(text) or name[len(text):].strip(b"\0"):
+        wrong = "its name is not one the base takes"
+    elif flags & ~((SEQ_SYNTH_ONLY | SEQ_ALL_MIDI) if kind == 1 else 0):
+        wrong = "a flag the base does not know"
+    elif kind == 1 and not (functions["tick"] or functions["key"]):
+        wrong = "neither tick nor key"
+    elif kind == 2 and (shown or not functions["note"]):
+        wrong = "the notes heard with a shown or with no note"
+    return (kind, size, what, (kind, text, flags, functions), wrong)
+
+
+def ask_tables_6(data, level):
+    """Since R4: each ask of a card of level 6 or 7 read from its table as linked, as ask_tables answers it; a stage,
+    memory, places and keeps as (kind, name, flags, {function's word: its address}, {what else the table holds}), the
+    list of names of places read from the pack. What is not in order is said as a base of that level would leave it
+    aside, the asks taken together too (the memory a stage needs, one ask of places and of keeps a card)."""
+    fields, body, _extra = parse3(data)
+    known = set(ASK_KINDS_OF_LEVEL[min(level, max(ASK_KINDS_OF_LEVEL))].values())     # a later level's card: the kinds this tool knows
+    out = []
+    for kind, size, what in asks_in(data):
+        if kind not in known:
+            out.append((kind, size, what, None, "a kind the base does not know"))
+            continue
+        if kind <= 2:
+            out.append(ask_table_5(fields, body, kind, size, what))
+            continue
+        if kind == 7:                                        # since R5: an effect, read as a base of level 8 reads it
+            out.append(effect_table(fields, body, size, what, out))
+            continue
+        if kind == 8:                                        # since R6: an engine, read as a base of level 9 reads it
+            out.append(engine_table(fields, body, size, what, out))
+            continue
+        at = what - linked_at(fields, 0)
+        if size != TABLE_BYTES_6[kind] or not what or what % 4 or at < 0 or at + size > len(body):
+            out.append((kind, size, what, None, "its table is not of its kind's %d bytes in the pack on a word" % TABLE_BYTES_6[kind]))
+            continue
+        head_bytes, name, flags, shown = KIND_HEAD.unpack_from(body, at)
+        text = name.split(b"\0")[0].decode("latin-1")
+        words = struct.unpack_from("<4I", body, at + KIND_HEAD.size)
+        functions, extra, wrong = {"shown": shown}, {}, None
+        if kind == 3:
+            extra = {"point": words[0], "cycles": words[1], "memory": words[2]}
+            functions["process"] = words[3]
+        elif kind == 4:
+            extra = {"bytes": words[0], "align": words[1]}
+        elif kind == 5:
+            extra, names_at = {"names": [], "names_address": words[1]}, words[1] - linked_at(fields, 0)
+            if 1 <= words[0] <= PLACES_MOST and words[1] % 4 == 0 and 0 <= names_at and names_at + PLACE_NAME * words[0] <= len(body):
+                for n in range(words[0]):
+                    raw = bytes(body[names_at + PLACE_NAME * n:names_at + PLACE_NAME * (n + 1)])
+                    extra["names"].append(raw.split(b"\0")[0].decode("latin-1"))
+                    if raw[len(raw.split(b"\0")[0]):].strip(b"\0") or not raw.endswith(b"\0"):
+                        extra["names"][-1] = None
+            else:
+                wrong = "its list of names does not lie in its pack on a word"
+        else:
+            functions["changed"] = words[0]
+            keys = []
+            for n in range(min(words[1], KEYS_MOST)):
+                key_name, bits = struct.unpack_from("<%dsI" % KEY_BYTES, body, at + 36 + (KEY_BYTES + 4) * n)
+                keys.append((key_name.split(b"\0")[0].decode("latin-1"), bits, key_name))
+            extra = {"keys": [(k, b) for k, b, _raw in keys]}
+        if wrong:
+            pass
+        elif head_bytes != size:
+            wrong = "its head's bytes are not its table's"
+        elif not KIND_NAME_FORM.fullmatch(text) or name[len(text):].strip(b"\0"):
+            wrong = "its name is not one the base takes"
+        elif flags & ~(STAGE_LISTENS if kind == 3 else 0):
+            wrong = "a flag the base does not know"
+        elif shown:
+            wrong = "a shown, which an ask of its kind has not"
+        elif kind == 3 and extra["point"] not in STAGE_POINT_WORDS:
+            wrong = "a point the base does not know"
+        elif kind == 3 and not 1 <= extra["cycles"] <= STAGE_CYCLES_MOST:
+            wrong = "its cost is not between 1 and %d" % STAGE_CYCLES_MOST
+        elif kind == 3 and not functions["process"]:
+            wrong = "a stage with no process"
+        elif kind == 4 and not 1 <= extra["bytes"] <= MEMORY_MOST:
+            wrong = "its bytes are not between 1 and %d" % MEMORY_MOST
+        elif kind == 4 and (not 4 <= extra["align"] <= MEMORY_ALIGN_MOST or extra["align"] & (extra["align"] - 1)):
+            wrong = "its alignment is no power of two from 4 to %d" % MEMORY_ALIGN_MOST
+        elif kind == 5 and any(n is None or not 0 < len(n) < PLACE_NAME or not n.endswith(".svg") for n in extra["names"]):
+            wrong = "a name of its list is not the name of a picture"
+        elif kind == 6 and not 1 <= words[1] <= KEYS_MOST:
+            wrong = "its count of keys is not between 1 and %d" % KEYS_MOST
+        elif kind == 6 and any(not KEY_FORM.fullmatch(k) or raw[len(k):].strip(b"\0") or not b or b & ~(15 if level >= 8 else 7) for k, b, raw in keys):
+            wrong = "a key that is not in order"                                       # since R5 a card of level 8 may keep with the master (8)
+        elif kind == 6 and len(set(k for k, _b, _raw in keys)) != len(keys):
+            wrong = "a key named twice"
+        elif kind == 6 and any(k in KEY_NAMES_OF_THE_UNIT for k, _b, _raw in keys):     # since R4b
+            wrong = "a key that is a name of the unit's own files"
+        elif kind == 6 and any(k == BASE_MEMBER for k, _b, _raw in keys):                # since R5
+            wrong = "a key that is a name of the base's own"
+        out.append((kind, size, what, (kind, text, flags, functions, extra), wrong))
+    for number, item in enumerate(out):                      # what the base holds across the card's asks
+        kind, ask, wrong = item[0], item[3], item[4]
+        if ask is None or wrong:
+            continue
+        if kind == 3 and ask[4]["memory"] and not (ask[4]["memory"] <= len(out) and out[ask[4]["memory"] - 1][0] == 4):
+            out[number] = item[:4] + ("its memory names no memory ask of its card",)
+        elif kind in (5, 6) and any(other[0] == kind for other in out[:number]):
+            out[number] = item[:4] + ("a second ask of %s, where the base takes one a card" % KIND_WORDS_6[kind],)
+    return out
+
+
+def effect_name(raw):
+    """Since R5: a name of sixteen bytes as a base of level 8 takes it (an effect's, a value's): one to fifteen characters
+    of a-z, 0-9, ' ', '-' and '_' up to its first zero, or None."""
+    text = raw.split(b"\0")[0]
+    if not 0 < len(text) < 16 or any(c >= 0x80 for c in text):
+        return None
+    return text.decode("ascii") if EFFECT_NAME_FORM.fullmatch(text.decode("ascii")) else None
+
+
+def effect_table(fields, body, size, what, earlier):
+    """Since R5: one table of an effect read from a pack file as linked, held as a base of level 8 holds it, in the order
+    of its check and in the words of its line (`is left aside: <the reason>`), its numbers (a, b) as the line says them:
+    an address as its place from the pack's first byte, the pack's bytes its body and its zeroed data. `earlier` is the
+    card's asks before it, as ask_tables answers them. Answers (7, size, what, the ask as effect_of_card answers it, its
+    functions their linked addresses, or None, what is not in order or None)."""
+    first, span = linked_at(fields, 0), fields["body_bytes"] + fields["bss_bytes"]
+
+    def inside(address, count):
+        return first <= address < first + span and first + span - address >= count
+
+    def order(a, b):
+        return "its table is not in order (%d, %d)" % (word_of(a), word_of(b))
+
+    table = TABLE_BYTES_6[7]
+    if not what or size < table or size > ASK_BYTES_MOST:
+        return (7, size, what, None, order(size, table))
+    if not inside(what, table) or what % 4:
+        return (7, size, what, None, order(what - first, span))
+    raw = bytes(body[what - first:what - first + table]).ljust(table, b"\0")       # a table in the zeroed data reads as zeros
+    head_bytes, name_raw, flags, shown = KIND_HEAD.unpack_from(raw, 0)
+    cycles, state, align, process, reset, count = struct.unpack_from("<6I", raw, 44)
+    rides = raw[28:44].split(b"\0")[0].decode("latin-1")
+    params = [PARAM.unpack_from(raw, 68 + PARAM.size * n) for n in range(min(count, EFFECT_VALUES_MOST))]
+    name = effect_name(name_raw)
+    ask = (7, name if name is not None else name_raw.split(b"\0")[0].decode("latin-1"), flags, {"shown": shown, "process": process, "reset": reset},
+           {"rides": rides, "cycles": cycles, "state_bytes": state, "state_align": align,
+            "params": [(p[0].split(b"\0")[0].decode("latin-1"), p[1], p[2], p[3]) for p in params]})
+    wrong = None
+    if name is None:
+        wrong = "its name is not one the lists can show"
+    elif head_bytes != size:
+        wrong = order(head_bytes, size)
+    elif flags & ~(EFFECT_MONO | EFFECT_TAILS):
+        wrong = order(flags, EFFECT_MONO | EFFECT_TAILS)
+    elif shown and (not inside(shown, 2) or shown & 1):
+        wrong = order(shown - first, span)
+    elif not inside(process, 2) or process & 1:
+        wrong = order(process - first, span)
+    elif reset and (not inside(reset, 2) or reset & 1):
+        wrong = order(reset - first, span)
+    elif state > EFFECT_STATE_MOST:
+        wrong = order(state, EFFECT_STATE_MOST)
+    elif state and (not EFFECT_ALIGN_LEAST <= align <= MEMORY_ALIGN_MOST or align & (align - 1)):
+        wrong = order(align, MEMORY_ALIGN_MOST)
+    elif not 1 <= count <= EFFECT_VALUES_MOST:
+        wrong = order(count, EFFECT_VALUES_MOST)
+    else:
+        for n, (value_name, low, high, start) in enumerate(params):
+            if effect_name(value_name) is None or low >= high or high - low > 65535 or not low <= start <= high:
+                wrong = order(0x100 + n, 0)
+                break
+    if wrong is None and (name in STOCK_EFFECTS or any(o[0] == 7 and o[3] is not None and o[4] is None and o[3][1] == name for o in earlier)):
+        wrong = "its name is a stock effect's or an earlier pack's"
+    elif wrong is None and rides not in EFFECTS_RIDDEN:
+        wrong = "it stands on %s, which is not one an effect can stand on" % (effect_name(raw[28:44]) or "?")
+    elif wrong is None and not 1 <= cycles <= EFFECT_CYCLES_MOST:
+        wrong = "its cost is not between 1 and %d" % EFFECT_CYCLES_MOST
+    return (7, size, what, ask, wrong)
+
+
+def engine_table(fields, body, size, what, earlier):
+    """Since R6: one table of an engine read from a pack file as linked, held as a base of level 9 holds it, in the order
+    of its check and in the words of its line, its numbers as the line says them (as effect_table). Answers (8, size,
+    what, the ask as engine_of_card answers it, its functions and its list's address linked, or None, what is not in
+    order or None)."""
+    first, span = linked_at(fields, 0), fields["body_bytes"] + fields["bss_bytes"]
+
+    def inside(address, count):
+        return first <= address < first + span and first + span - address >= count
+
+    def order(a, b):
+        return "its table is not in order (%d, %d)" % (word_of(a), word_of(b))
+
+    table = TABLE_BYTES_6[8]
+    if not what or size < table or size > ASK_BYTES_MOST:
+        return (8, size, what, None, order(size, table))
+    if not inside(what, table) or what % 4:
+        return (8, size, what, None, order(what - first, span))
+    raw = bytes(body[what - first:what - first + table]).ljust(table, b"\0")
+    head_bytes, name_raw, flags, shown = KIND_HEAD.unpack_from(raw, 0)
+    cycles, voice, align, render, reset, count = struct.unpack_from("<6I", raw, 28)
+    params = [PARAM.unpack_from(raw, 52 + PARAM.size * n) for n in range(min(count, ENGINE_VALUES_MOST))]
+    sounds_count, sounds_at = struct.unpack_from("<2I", raw, 276)
+    name = effect_name(name_raw)
+    sounds = []
+    list_ok = sounds_count <= ENGINE_SOUNDS_MOST and (sounds_count == 0 or (sounds_at and inside(sounds_at, SOUND.size * sounds_count) and sounds_at % 4 == 0))
+    if list_ok:
+        for k in range(sounds_count):
+            s_name, s_text, s_bytes = SOUND.unpack_from(body, sounds_at - first + SOUND.size * k) if sounds_at - first + SOUND.size * (k + 1) <= len(body) else (b"", 0, 0)
+            text = bytes(body[s_text - first:s_text - first + s_bytes]).decode("latin-1") if s_text and inside(s_text, s_bytes) and s_text - first + s_bytes <= len(body) else None
+            sounds.append((s_name.split(b"\0")[0].decode("latin-1"), text, s_name, s_text, s_bytes))
+    ask = (8, name if name is not None else name_raw.split(b"\0")[0].decode("latin-1"), flags, {"shown": shown, "render": render, "reset": reset},
+           {"cycles": cycles, "voice_bytes": voice, "voice_align": align, "sounds_address": sounds_at,
+            "params": [(p[0].split(b"\0")[0].decode("latin-1"), p[1], p[2], p[3]) for p in params], "sounds": [(n, t) for n, t, _r, _a, _b in sounds]})
+    wrong = None
+    if name is None:
+        wrong = "its name is not one the engine list can show"
+    elif head_bytes != size:
+        wrong = order(head_bytes, size)
+    elif flags & ~ENGINE_STEREO:
+        wrong = order(flags, ENGINE_STEREO)
+    elif shown and (not inside(shown, 2) or shown & 1):
+        wrong = order(shown - first, span)
+    elif not inside(render, 2) or render & 1:
+        wrong = order(render - first, span)
+    elif reset and (not inside(reset, 2) or reset & 1):
+        wrong = order(reset - first, span)
+    elif voice > ENGINE_VOICE_MOST:
+        wrong = order(voice, ENGINE_VOICE_MOST)
+    elif voice and (not ENGINE_ALIGN_LEAST <= align <= MEMORY_ALIGN_MOST or align & (align - 1)):
+        wrong = order(align, MEMORY_ALIGN_MOST)
+    elif not 1 <= count <= ENGINE_VALUES_MOST:
+        wrong = order(count, ENGINE_VALUES_MOST)
+    else:
+        for n, (value_name, low, high, start) in enumerate(params):
+            if effect_name(value_name) is None or low >= high or high - low > 65535 or not low <= start <= high:
+                wrong = order(0x100 + n, 0)
+                break
+    if wrong is None and not list_ok:
+        wrong = order(sounds_count, ENGINE_SOUNDS_MOST)
+    if wrong is None:
+        for k, (s_name, text, raw_name, _a, s_bytes) in enumerate(sounds):
+            plain = raw_name.split(b"\0")[0]
+            if (not 0 < len(plain) < ENGINE_SOUND_NAME or not SOUND_NAME_FORM.fullmatch(plain.decode("latin-1")) or any(o[0] == s_name for o in sounds[:k])
+                    or text is None or not 0 < s_bytes <= ENGINE_SOUND_MOST):
+                wrong = order(0x200 + k, 0)
+                break
+    if wrong is None and (name in STOCK_ENGINES or any(o[0] == 8 and o[3] is not None and o[4] is None and o[3][1] == name for o in earlier)):
+        wrong = "its name is a stock engine's or an earlier pack's"
+    elif wrong is None and sum(1 for o in earlier if o[0] == 8 and o[3] is not None and o[4] is None) >= ENGINES_MOST:
+        wrong = "it would be the ninth"
+    elif wrong is None and not 1 <= cycles <= ENGINE_CYCLES_MOST:
+        wrong = "its cost is not between 1 and %d" % ENGINE_CYCLES_MOST
+    return (8, size, what, ask, wrong)
 
 
 def linked_at(fields, offset):
@@ -1208,6 +2276,24 @@ def card_faults(data):
         elif len(listed) != card["ask_count"] or any(size > ASK_BYTES_MOST or (what and (what % 4 or not linked_at(fields, 0) <= what <= linked_at(fields, len(_body)) - size))
                                                      for _kind, size, what in listed):
             faults.append("its list of asks does not lie in its pack on a word")
+        elif card["level"] >= 5:                            # since R3: each table in order for its kind, its functions the pack's own places
+            for number, (_kind, _size, what, ask, wrong) in enumerate(ask_tables(data), 1):
+                if wrong:
+                    faults.append("its ask %d is not in order: %s" % (number, wrong))
+                    continue
+                if (card["asks"] - linked_at(fields, 0) + ASK.size * (number - 1) + 8, KIND_WORD, None, what) not in lists["places"]:
+                    faults.append("its ask %d's table is no address of the pack's own, which would move with the pack" % number)
+                if ask[0] > 2:                              # since R4: a stage's process, the places' list, keeps' changed
+                    for key, offset in ASK_ADDRESSES_6[ask[0]]:
+                        address = ask[4]["names_address"] if key == "names" else ask[4]["sounds_address"] if key == "sounds" else ask[3].get(key)
+                        if address and (what - linked_at(fields, 0) + offset, KIND_WORD, None, address) not in lists["places"]:
+                            faults.append("its ask %d's %s is no address of the pack's own, which would move with the pack"
+                                          % (number, "list of names" if key == "names" else "list of sounds" if key == "sounds" else key))
+                    continue
+                for place, key in enumerate(("shown",) + ASK_FUNCTIONS[ask[0]]):
+                    address = ask[3].get(key)
+                    if address and (what - linked_at(fields, 0) + 24 + 4 * place, KIND_WORD, None, address) not in lists["places"]:
+                        faults.append("its ask %d's %s is no address of the pack's own, which would move with the pack" % (number, key))
     return faults
 
 
@@ -1241,7 +2327,12 @@ def card_lines(data):
         if "folder_count" in card:                          # since M3: a card of level 3's size, with its folders
             listed = folders_in(data) if 0 < card["folder_count"] <= FOLDERS_MOST and card["folders"] else []
             lines.append("card: %d folder(s)%s" % (card["folder_count"], "".join("; '%s' at user/pf/%s/, %s" % (n, p, "shown" if s else "not shown") for n, p, s in listed)))
-        if "ask_count" in card:                             # since R1: a card of level 4's size, with its asks
+        if card.get("ask_count") and card["level"] >= 5:    # since R3: a card of level 5 says each ask by its kind
+            tables = ask_tables(data)
+            lines.append("card: %d ask(s): %s" % (card["ask_count"], "; ".join(
+                ask_words(*ask) if ask is not None else "kind %d, %d bytes at 0x%08x, which the base leaves aside" % (kind, size, what)
+                for kind, size, what, ask, _wrong in tables) or "a list that does not lie in its pack"))
+        elif "ask_count" in card:                           # since R1: a card of level 4's size, with its asks
             asked = asks_in(data)
             lines.append("card: asks: none" if not card["ask_count"] else "card: %d ask(s)%s; level 4 defines no kind of ask, so the base leaves them aside"
                          % (card["ask_count"], "".join("; kind %d, %d bytes at 0x%08x" % ask for ask in asked)))
@@ -1257,6 +2348,98 @@ def card_lines(data):
         lines.append("release: NOT in order: %s" % problem)
         in_order = False
     return lines, in_order
+
+
+def linked_asks(asks, label, has, values, body, origin, code_end, places):
+    """Since R3: a card of level 5's list of asks and their tables as linked, held against the recipe's asks: the list
+    and each table the recipe's to the byte, each function a function of this pack, and each address in them a place of
+    the pack's own, which moves with it. Answers the list's address, or 0 for a card without asks."""
+    stale = "The card's asks in the sources are not the recipe's: write it again with `card`"
+    if bool(asks) != has(label + "_asks") or has("%s_ask_%d" % (label, len(asks))):
+        raise ValueError(stale)
+    if not asks:
+        return 0
+    list_at = values[label + "_asks"]
+    for number, ask in enumerate(asks):
+        if ask[0] > 2:                                      # since R4
+            linked_ask_6(number, ask, label, has, values, body, origin, code_end, places, list_at)
+            continue
+        what, name, flags, functions = ask
+        table = "%s_ask_%d" % (label, number)
+        if not has(table) or values[table] % 4:
+            raise ValueError(stale)
+        at, size = values[table], ASK_TABLE_BYTES[what]
+        row = list_at - origin + ASK.size * number
+        if bytes(body[row:row + ASK.size]) != ASK.pack(what, size, at) or (row + 8, KIND_WORD, None, at) not in places:
+            raise ValueError(stale)
+        keys = (("shown",) if what == 1 else ()) + ASK_FUNCTIONS[what]
+        addresses = {}
+        for key in keys:
+            function = functions.get(key)
+            if function is not None and not (has(function) and values[function] < code_end and values[function] % 2 == 0):
+                raise ValueError("Ask %d's %s, %s, is not a function of this pack" % (number + 1, key, function))
+            addresses[key] = values[function] if function is not None else 0
+        words = [addresses.get("shown", 0)] + [addresses[key] for key in ASK_FUNCTIONS[what]]
+        expected = KIND_HEAD.pack(size, name.encode("ascii"), flags, words[0]) + struct.pack("<%dI" % (len(words) - 1), *words[1:])
+        if len(expected) != size or bytes(body[at - origin:at - origin + size]) != expected:
+            raise ValueError(stale)
+        for place, address in enumerate(words):
+            if address and (at - origin + 24 + 4 * place, KIND_WORD, None, address) not in places:
+                raise ValueError("Ask %d's functions are no addresses of the pack's own, which would move with the pack" % (number + 1))
+    return list_at
+
+
+def linked_ask_6(number, ask, label, has, values, body, origin, code_end, places, list_at):
+    """Since R4: one table of a stage, memory, places or keeps as linked, held against the recipe's ask: its row in the
+    list, its bytes, each function a function of this pack, the list of names of places in the pack on a word, and
+    each address a place of the pack's own."""
+    stale = "The card's asks in the sources are not the recipe's: write it again with `card`"
+    what, name, flags, functions, extra = ask
+    table = "%s_ask_%d" % (label, number)
+    if not has(table) or values[table] % 4:
+        raise ValueError(stale)
+    at, size = values[table], TABLE_BYTES_6[what]
+    row = list_at - origin + ASK.size * number
+    if bytes(body[row:row + ASK.size]) != ASK.pack(what, size, at) or (row + 8, KIND_WORD, None, at) not in places:
+        raise ValueError(stale)
+    for key, function in functions.items():
+        if function is not None and not (has(function) and values[function] < code_end and values[function] % 2 == 0):
+            raise ValueError("Ask %d's %s, %s, is not a function of this pack" % (number + 1, key, function))
+    if what == 5:
+        names = table + "_names"
+        if not has(names) or values[names] % 4:
+            raise ValueError(stale)
+        listed = b"".join(n.encode("ascii").ljust(PLACE_NAME, b"\0") for n in extra["names"])
+        if bytes(body[values[names] - origin:values[names] - origin + len(listed)]) != listed:
+            raise ValueError(stale)
+        extra = dict(extra, names_symbol=names)
+    if what == 8 and extra["sounds"]:                       # since R6: the list of sounds and each text as linked
+        sounds = table + "_sounds"
+        if not has(sounds) or values[sounds] % 4:
+            raise ValueError(stale)
+        for k, (sound_name, text) in enumerate(extra["sounds"]):
+            label_k = "%s_sound_%d" % (table, k)
+            if not has(label_k):
+                raise ValueError(stale)
+            row = values[sounds] - origin + SOUND.size * k
+            if bytes(body[row:row + SOUND.size]) != SOUND.pack(sound_name.encode("ascii"), values[label_k], len(text)):
+                raise ValueError(stale)
+            if (row + 24, KIND_WORD, None, values[label_k]) not in places:
+                raise ValueError("Ask %d's sound %d is no address of the pack's own, which would move with the pack" % (number + 1, k + 1))
+            if bytes(body[values[label_k] - origin:values[label_k] - origin + len(text)]) != text.encode("ascii"):
+                raise ValueError(stale)
+        extra = dict(extra, sounds_symbol=sounds)
+    words = ask_table_words((what, name, flags, functions, extra), lambda symbol: values[symbol])
+    shown = values[functions["shown"]] if functions.get("shown") else 0       # since R5: an effect's head names its own
+    expected = KIND_HEAD.pack(size, name.encode("ascii"), flags, shown) + b"".join(
+        w if isinstance(w, bytes) else struct.pack("<i" if w < 0 else "<I", w) for w in words)
+    if len(expected) != size or bytes(body[at - origin:at - origin + size]) != expected:
+        raise ValueError(stale)
+    for key, offset in ASK_ADDRESSES_6[what]:
+        address = struct.unpack_from("<I", expected, offset)[0]
+        if address and (at - origin + offset, KIND_WORD, None, address) not in places:
+            raise ValueError("Ask %d's %s is no address of the pack's own, which would move with the pack"
+                             % (number + 1, "list of names" if key == "names" else "list of sounds" if key == "sounds" else "function" if key != "shown" else "shown"))
 
 
 def build3(recipe, target_os, out_dir=None, objects=None, log=print, serve=None):
@@ -1367,10 +2550,16 @@ def build3(recipe, target_os, out_dir=None, objects=None, log=print, serve=None)
             if folders and (bytes(body[table_at - origin:table_at - origin + FOLDER.size * len(folders)]) != folder_table(folders)
                             or (card_place + CARD_2_BYTES, KIND_WORD, None, table_at) not in places):
                 raise ValueError("The card's list of folders in the sources is not the recipe's: write it again with `card`")
-        if level >= 4:                                      # since R1: 64 bytes, the list of asks and its count behind; level 4 knows no kind, so none
+        if level == 4:                                      # since R1: 64 bytes, the list of asks and its count behind; level 4 knows no kind, so none
             if card_asks(recipe) or has(label + "_asks"):
                 raise ValueError("The card's list of asks in the sources is not the recipe's: write it again with `card`")
             linked = linked[:4] + struct.pack("<I", CARD_4_BYTES) + linked[8:] + struct.pack("<2I", 0, 0)
+        if level >= 5:                                      # since R3: the list of asks and each ask's table, held against the recipe
+            asks = card_asks(recipe)
+            list_at = linked_asks(asks, label, has, values, body, origin, code_end, places)
+            linked = linked[:4] + struct.pack("<I", CARD_4_BYTES) + linked[8:] + struct.pack("<2I", list_at, len(asks))
+            if asks and (card_place + CARD_3_BYTES, KIND_WORD, None, list_at) not in places:
+                raise ValueError("The card's list of asks is no address of the pack's own, which would move with the pack")
         if bytes(body[card_place:card_place + len(linked)]) != linked or level_place not in places:
             raise ValueError("The card in the sources is not the recipe's: write it again with `card`")
         if not card_place:
@@ -1576,7 +2765,9 @@ def cmd_card(args):
     holds what was linked against the recipe, sets the header's word and refuses a card that is not the recipe's."""
     from_the_root()
     recipe = read_recipe(args.recipe)
-    write_source(args.out, render_card(recipe, from_root(args.recipe)), "card")           # the recipe named from the root: the same source on any machine
+    text = render_card(recipe, from_root(args.recipe))
+    census_said = places_census(recipe, args.display)       # since R4: refuses before anything is written
+    write_source(args.out, text, "card")                    # the recipe named from the root: the same source on any machine
     level, frame, pictures, pick = card_of(recipe)
     print("wrote %s: the card of '%s' version %d, level %d: %s, %s, %s"
           % (args.out, recipe["name"], int(recipe["version"]), level, "the frame function %s" % frame if frame else "no frame function",
@@ -1585,9 +2776,51 @@ def cmd_card(args):
         print("  and level 2's input function: %s" % (card_input(recipe) or "none"))
     if level >= 3:                                          # since M3
         print("  and level 3's folders: %s" % ("; ".join("'%s' at user/pf/%s/, %s" % (n, p, "shown" if s else "not shown") for n, p, s in card_folders(recipe)) or "none"))
-    if level >= 4:                                          # since R1
+    if level == 4:                                          # since R1
         print("  and level 4's asks: %s" % ("none" if not card_asks(recipe) else "%d" % len(card_asks(recipe))))
+    if level >= 5:                                          # since R3; since R4 the level the card says
+        print("  and level %d's asks: %s" % (level, "; ".join(ask_words(*ask) for ask in card_asks(recipe)) or "none"))
+    for line in census_said:
+        print("  " + line)
     return 0
+
+
+def places_census(recipe, display):
+    """Since R4: a card's ask of places held to the unit's own pictures in `display`: each name must be one of them,
+    spelt as the unit spells it, and a picture of that name the pack carries must hold every part the unit's own picture
+    holds (tools/picture_make.py's census: the firmware's screen looks the parts up by their names). A name the pack
+    carries no picture of is served only through its `pick`, which the census cannot follow: a recipe with no pick is
+    refused for it, and one with a pick is said. Answers the lines to print; ValueError for what is refused."""
+    card = card_of(recipe)
+    places = [ask for ask in card_asks(recipe) if ask[0] == 5] if card is not None else []
+    if not places:
+        return []
+    sys.path.insert(0, os.path.join(ROOT, "tools"))         # since R4b: under -I the script's own folder is not on the path
+    import picture_make
+    if display is None or not os.path.isdir(display) or not any(n.lower().endswith(".svg") for n in os.listdir(display)):
+        raise ValueError("A card that takes the place of the unit's pictures is held to the unit's own: --display names no folder of them (%s)" % display)
+    carried = dict(read_pictures(recipe))
+    lines = []
+    for name in places[0][4]["names"]:
+        own = picture_make.units_own(display, name)
+        if own is None:
+            raise ValueError("The places name %s, which is none of the unit's own pictures: a screen of the unit never asks for it" % name)
+        if own[0] != name:
+            raise ValueError("The places name %s, which the unit spells %s: a screen asks for it as the unit spells it" % (name, own[0]))
+        if name not in carried:
+            if card[3] is None:
+                raise ValueError("The places name %s, and the pack carries no picture of that name and has no pick: it would serve nothing there" % name)
+            lines.append("places: %s is served through the pick %s, which the census cannot follow: hold the picture it answers yourself" % (name, card[3]))
+            continue
+        picture = carried[name]
+        if picture_make.is_instructions(picture):
+            picture = picture_make.make(picture, picture_make.stock_reader(display), most=PICTURE_SOURCES)
+        missing = picture_make.parts_missing(picture, own[1])
+        if missing:
+            raise ValueError("The picture %s takes the place of the unit's own and has no part %s, which the unit's own has (%d missing in all): "
+                             "the firmware's screen can stop the unit at its start" % (name, ", ".join("'%s'" % m for m in missing[:5]), len(missing)))
+        lines.append("places: %s holds every part of the unit's own" % name)
+    return lines
 
 
 def cmd_release(args):
@@ -1668,6 +2901,7 @@ def main(argv=None):
     ca = sub.add_parser("card", help="the source of a pack's card, from its recipe (since M1)")
     ca.add_argument("--recipe", required=True, help="the recipe, which names a `card`")
     ca.add_argument("--out", required=True, help="the source to write, module/build_m1_<pack>_card.s: the recipe names it among its sources")
+    ca.add_argument("--display", default=DISPLAY, help="since R4: the unit's own pictures, which a card's places are held to (default: the backup's)")
     ca.set_defaults(func=cmd_card)
     rl = sub.add_parser("release", help="the source of the release a base pack carries, from its recipe (since M1)")
     rl.add_argument("--recipe", required=True, help="the recipe, which names a `release`")

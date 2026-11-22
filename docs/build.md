@@ -2,15 +2,15 @@
 
 Two words first. **The loader** is our small piece of code inside the firmware file: at every start it reads the pack files on the unit and runs them. **The base** is the shared pack every other pack relies on, the file `base.pack`.
 
-The install needs no build: the install page has everything it needs, the loader's file and `base.pack` among it. The feature files are not kept in this repository, and the one command below makes them. This page is also for those who want to see that the finished files come from these sources, `builder/base.pack` among them, or who want to change them.
+The install needs no build: the install page has everything it needs, the loader's file and `base.pack` among it. This page is for those who want to see that the finished files here come from these sources, `builder/base.pack` among them, or who want to change them. A feature is built where it lives: `8 tracks`, `fx train`, `lfo` and `sidechain` in [open-field-packs](https://github.com/LaP0573/open-field-packs), whose `build.py` uses this repository's tools and headers.
 
 ## What is built, and from what
 
 | Result | From | By |
 | --- | --- | --- |
-| The five packs: the base `base`, and the features `8 tracks`, `fx train`, `lfo` and `sidechain` | their recipes in `packs/`, the sources in `module/`, the pictures' instructions in `pictures/` | `tools/pack_build.py` |
+| The base, `base.pack` | its recipe `packs/base.json`, the sources in `module/`, the pictures' instructions in `pictures/` | `tools/pack_build.py` |
 | The loader: `build/build_m4_loader.bin`, which is the builder's file `builder/loader-1.7.3-v1.bin` byte for byte | the sources `build.json` lists | `tools/module_build.py` |
-| The example packs `wink`, `yoyo`, `list` and `trampolines` | each its own folder in `examples/` | `tools/pack_build.py` |
+| The example packs | each its own folder in `examples/` | `tools/pack_build.py` |
 | The builder's manifest, `builder/loader.json` | the loader's file, its linked file, the profile, and your own `os.ldr` for one number | `builder/write-manifest.mjs` |
 | Your firmware file | your own `os.ldr`, the loader's file and the manifest | the builder page, or `builder/build-image.mjs` |
 
@@ -44,7 +44,7 @@ python -I tools/build_all.py
 
 It builds everything into `out/` and `build/`, and compares each result with the size and SHA-256 kept in `packs/built.json`, and the install page's own files with what it built: `builder/base.pack` with the `base.pack` it made, and the loader's file in `builder/` with the loader. It answers 0 when every file is the kept one, byte for byte. The compiler is pinned by the toolchain, so the same sources give the same bytes.
 
-The pack files are then in `out/packs/` (`base.pack` among them: every unit needs it), and the example packs in `out/examples/`. The folder `out/` must be new or empty: name another with `--out` for a second build.
+`base.pack`, which every unit needs, is then in `out/packs/`, and the example packs in `out/examples/`. The folder `out/` must be new or empty: name another with `--out` for a second build.
 
 ## The steps one by one
 
@@ -53,7 +53,7 @@ python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --check
 ```
 
 ```bash
-python -I tools/pack_build.py build3 --recipe "packs/8 tracks.json" --recipe packs/base.json --recipe "packs/fx train.json" --recipe packs/lfo.json --recipe packs/sidechain.json --profile profiles/op1f-1.7.3.json --out-dir out/packs
+python -I tools/pack_build.py build3 --recipe packs/base.json --profile profiles/op1f-1.7.3.json --out-dir out/packs
 ```
 
 ```bash
@@ -88,7 +88,7 @@ It writes nothing. It answers 0 when both files are, byte for byte, what the too
 
 ## If you change something
 
-- **A place where the firmware is changed**: change `profiles/op1f-1.7.3.json`, then write the tables and the change list anew:
+- **A place where the loader or the base changes the firmware**: change `profiles/op1f-1.7.3.json`, then write the tables and the change list anew:
 
 ```bash
 python -I tools/table_build.py --profile profiles/op1f-1.7.3.json --all
@@ -105,7 +105,7 @@ python -I tools/place_sum.py --stock <your own os.ldr> 0x8c0dd488
 ```
 
 - **A pack's pictures**: a recipe names them. `python -I tools/pack_build.py pictures --recipe <recipe> --out <the pack's pictures source>` writes the directory the pack carries.
-- **A pack's card or the base's release**: `python -I tools/pack_build.py card --recipe <recipe> --out <the pack's card source>` writes a pack's card from its recipe, and `python -I tools/pack_build.py release --recipe packs/base.json --out module/build_m3_base_release.s` the release the start screen shows behind the words open-field.
+- **A pack's card or the base's release**: `python -I tools/pack_build.py card --recipe <recipe> --out <the pack's card source>` writes a pack's card from its recipe, and `python -I tools/pack_build.py release --recipe packs/base.json --out module/build_r6d_base_release.s` the release the start screen shows behind the words open-field.
 - **A function of the firmware that a source binds**: add its words to `profiles/op1f-1.7.3-interfaces.json` and write the page anew with `python -I tools/interfaces.py`.
 - **Anything in a pack, the base among them**: build again. `packs/built.json` then no longer matches, which is right: a changed pack is another file. Give it another version number in its recipe, and let the build write the new size and SHA-256:
 

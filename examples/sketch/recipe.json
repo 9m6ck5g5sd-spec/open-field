@@ -1,0 +1,36 @@
+{
+  "about": "The example of level 4 (docs/level-4.md): a drawing board, painted on the frame at every frame. Shift and the metronome key show and close its page in any mode; the blue knob moves a cross left and right and the second knob up and down, each move drawing a line; the red knob's press wipes the board and deletes its file; the third knob's press shows the board on the base's blank page and back. The title is centred and measured. It keeps the board in sketch.bin, in a folder of its own shown in the disk mode. It changes no place of the firmware and needs the base. tools/build_all.py builds it into out/examples/.",
+  "name": "sketch",
+  "version": 1,
+  "interface": 1,
+  "build": "build_r1_sketch",
+  "sources": [
+    "examples/sketch/sketch.cpp",
+    "examples/sketch/sketch_card.s",
+    "examples/sketch/sketch_pictures.s"
+  ],
+  "works_with": [],
+  "serves": [],
+  "exports": [],
+  "pictures": [
+    {
+      "name": "sketchpad.svg",
+      "file": "examples/sketch/sketchpad.svg.make"
+    }
+  ],
+  "card": {
+    "level": 4,
+    "frame": "sketch_frame",
+    "pick": null,
+    "pictures": true,
+    "input": "sketch_input",
+    "folders": [
+      {}
+    ],
+    "asks": []
+  },
+  "marks": [],
+  "named": true,
+  "sum": true,
+  "path": null
+}

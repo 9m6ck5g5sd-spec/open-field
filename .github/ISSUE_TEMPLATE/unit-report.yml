@@ -39,10 +39,10 @@ body:
     id: packs
     attributes:
       label: The pack files on the unit
-      description: The names in the folder packs, as the disk mode shows them, and where each came from (the install page, a build of this repository, someone who shared it).
+      description: The names in the folder packs, as the disk mode shows them, and where each came from (the install page, a build of open-field-packs or of this repository, someone who shared it).
       placeholder: |
         base.pack (the install page)
-        8 tracks.pack (built from this repository)
+        8 tracks.pack (built from open-field-packs)
     validations:
       required: true
 

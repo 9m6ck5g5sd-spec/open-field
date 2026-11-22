@@ -1,13 +1,13 @@
 // Made for OS 1.7.3 from this source's OS 1.7.0 form; every address the code uses is 1.7.3's; an address in a comment that the code does not use may still be 1.7.0's.
-// Pictures step P2: the geometry of a stretch of a picture moved or scaled, as text (OS 1.7.0+0;
-// analysis/picture_maker_study.md, section 9). `kit`'s picture maker calls this for an `m` instruction: the stretch
+// Pictures step P2: the geometry of a stretch of a picture moved or scaled, as text (OS 1.7.0+0).
+// `kit`'s picture maker calls this for an `m` instruction: the stretch
 // of the unit's own stock picture goes through here into the picture that is made, with every coordinate mapped:
 //     x' = scale/1000 x + dx/1000,   y' = scale/1000 y + dy/1000.
 // "Shrink the tape" is one such stretch, the whole picture, with the scale 870.
 //
 // It is tools/picture_map.py, function for function and step for step: that file is the description, and the two are
 // held against each other on the PC over every stock picture and some thousands of broken stretches
-// (tools/tests/test_packs_p2.py), in what they write and in the words they refuse with. In short:
+// (for tests this tree does not hold), in what they write and in the words they refuse with. In short:
 //   - whole numbers only: a number is a sign, a whole part up to 9,999 and up to six decimals; the scale is 1 to 4000
 //     thousandths, an offset up to 99,999,999 thousandths either way; a result has three decimals (four inside a
 //     transform), a half rounded away from zero. Every product fits 32 bits (scale x millionths under 2**32); the one
@@ -27,8 +27,8 @@ typedef int i32;
 // A function kept a function of its own. Put in line, the larger ones leave the compiler short of pointer registers
 // in op1f_map_range, and it then counts with an index register (`I3 += M2`), which counts straight on only while its
 // length register is zero. That holds wherever compiled code is called, but the picture loader's place is one where
-// nothing of ours leans on it; out of line the question does not come up (tools/tests/test_packs_p2.py reads the
-// listing for it).
+// nothing of ours leans on it; out of line the question does not come up (a test of the PC's reads the listing for
+// it).
 #ifdef OP1F_HOST
 #define OP1F_APART
 #else

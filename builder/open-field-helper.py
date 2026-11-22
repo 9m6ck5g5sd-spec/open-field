@@ -1,47 +1,59 @@
 #!/usr/bin/env python3
-"""open-field helper for Linux: the file work of the install, on the OP-1 Field's disk.
+"""open-field helper for Linux and macOS: the file work of the install, on the OP-1 Field's disk.
 
-  python3 -I open-field-helper.py --page <the page's mark>          # the unit over USB, the folder ~/open-field
-  python3 -I open-field-helper.py --folder <folder> --page <mark>   # another shared folder
-  python3 -I open-field-helper.py --source <folder>                 # a folder of this computer stands for the unit's disk
-  python3 -I open-field-helper.py --list-only                       # the unit over USB: print what is seen, change nothing
+  python3 -I open-field-helper.py --page <mark> --folder-name <name>     # the unit over USB, the folder looked for
+  python3 -I open-field-helper.py --page <mark> --folder <folder>        # the folder named outright
+  python3 -I open-field-helper.py --folder <folder> --source <folder>    # a folder stands for the unit's disk
+  python3 -I open-field-helper.py --list-only                            # print what is seen of the unit, change nothing
 
 A web page cannot reach the unit's files, so this does it. The unit shows its disk while its bootloader's drive mode
 is open (hold COM while switching it on, press 3, then 2). The helper works with the install page
-through one folder of this computer, the shared folder:
+through one folder of this computer, the working folder the owner picked on the page (any folder):
 
   1. it finds the unit, copies your own firmware file off (upgrade/firmware/blackfin/bin/os.ldr), takes the log files
-     off into the shared folder, lists the disk, and waits;
+     off into the working folder, lists the disk, and waits;
   2. the page builds the new firmware file, works out whether the write lands, and writes a plan into the folder;
   3. this puts the new file on the unit as os.ldr (and a pad file and pack files when the plan says so), lists the
      disk again, holds the listing against the plan row for row, and reads every file it copied back against its
      SHA-256. Then it says READY TO WRITE.
 
 It decides nothing about the write's placement: the page does, and this only compares. It is the same work as the
-Windows helper, open-field-helper.ps1, with the same files in the shared folder and the same lines.
+Windows helper, open-field-helper.ps1, with the same files in the working folder and the same lines.
 
 The unit over USB. The unit shows its disk over MTP (Media Transfer Protocol). The helper speaks MTP itself, through
-the system's library libusb-1.0 (on Debian and Ubuntu the package libusb-1.0-0, which is usually there); nothing is
-installed. It changes a unit only when the unit's USB product id is in the helper's list KNOWN_PRODUCTS (0x0102).
-With any other id the helper only reads from the unit: a full run finds the unit and stops before it takes anything
-off, with a line that says so. --list-only prints what the helper sees of the unit (its ids, its MTP interface, every
-file and folder) and changes nothing, on the unit or on this computer: send what it prints to the open-field project.
+the system's library libusb-1.0 (on Debian and Ubuntu the package libusb-1.0-0, which is usually there; on a Mac
+Homebrew's: brew install libusb); the helper installs nothing. It changes a unit only when the unit's USB product id
+is in the helper's list KNOWN_PRODUCTS (0x0102). With any other id the helper only reads from the unit: a full run
+finds the unit and stops before it takes anything off, with a line that says so. --list-only prints what the helper
+sees of the unit (its ids, its MTP interface, every file and folder) and changes no file, on the unit or on this
+computer: send what it prints to the open-field project.
 
-What has run on a unit. One unit, on OS 1.7.3 with the bootloader 1000.1.1, from one computer with Linux Mint. Its USB
-id was 2367:0102 in the normal disk mode and in the bootloader's drive mode. The helper listed its disk, read only, in
-both modes. That computer needed no udev rule. One whole install then ran: the helper copied the original OS 1.7.3
-file off, took the log files off, put os.ldr, a pad file, the folder user/pk, four feature packs and base.pack on the
-unit, and read each back with the plan's SHA-256. The page agreed that the write could be made. The owner made the
+What has run on a unit. This version has run on stand-ins only, in its tests. What follows was reported of the helper
+of open-field 0.3, which had a fixed working folder (open-field in the home folder) and left user/pkin as it was.
+
+One unit, on OS 1.7.3 with the bootloader 1000.1.1, from one computer with Linux Mint. Its USB
+id was 2367:0102 in the normal disk mode and in the bootloader's drive mode. The 0.3 helper listed its disk, read only,
+in both modes. That computer needed no udev rule. One whole install then ran: the 0.3 helper copied the original OS
+1.7.3 file off, took the log files off, put os.ldr, a pad file, the folder user/pk, four feature packs and base.pack on
+the unit, and read each back with the plan's SHA-256. The page agreed that the write could be made. The owner made the
 write with the unit's keys, and the unit started with open-field.
 
 One unit with the bootloader 1000.2.0, its screen saying OS 1.7.3+1 and its firmware file the original 1.7.3, from
-one computer with macOS and Homebrew's libusb (2026-11-20): the helper copied the original file off, took the log
-files off, replaced the os.ldr at the top level, put a pad file, the folder user/pk and base.pack on the unit, read
-each back with the plan's SHA-256 and said READY TO WRITE. The owner made the write, and it landed the first time.
+one computer with macOS and Homebrew's libusb (2026-11-20): the 0.3 helper, changed for the Mac, copied the original
+file off, took the log files off, replaced the os.ldr at the top level, put a pad file, the folder user/pk and
+base.pack on the unit, read each back with the plan's SHA-256 and said READY TO WRITE. The owner made the write, and
+it landed the first time.
 
-Not tried on a unit: any other unit or distribution, a pack replaced or old pad files taken off, the way back, a unit
-whose drive the desktop's file manager holds, a computer that needs the udev rule. These paths of the helper have run
-on stand-ins only, in its tests.
+Not tried on a unit, by either: any other unit, distribution or Mac, a pack replaced or old pad files taken off, the
+way back, a unit whose drive the desktop's file manager holds, a computer that needs the udev rule. And nothing that
+came after 0.3 was tried on a unit: the search for the working folder and its question, the emptying of user/pkin, and
+on a Mac the messages and the ending of ptpcamerad as they are now.
+
+On a Mac one thing often stands in the way: ptpcamerad, the system's camera helper, takes an MTP device by itself, and
+the system starts it again when it ends. When, and only when, the Mac refuses to open or claim the unit, the helper
+says one line, ends it with /usr/bin/killall ptpcamerad (never as another user) and tries again, five times. Image
+Capture, Photos, OpenMTP and Android File Transfer hold the unit too: quit them. A Mac may also ask whether Terminal
+may read the Desktop, Documents and Downloads folders: a folder it refuses is passed over in the search.
 
 Two things on Linux can stand in the way, and the helper says which:
   - The computer does not let you open the unit. A udev rule gives the device to the person at the screen. Put the
@@ -53,27 +65,38 @@ Two things on Linux can stand in the way, and the helper says which:
     Leave the file manager away from the unit until the helper says READY TO WRITE: a program that adds a file to the
     unit's disk spoils the plan.
 
-What it changes on the unit, and nothing else: it takes off the files directly in "logs", and the pad files of
-earlier installs (open-field-pad.bin, open-field-pad-2.bin, ...) at the top level. It writes os.ldr at the top level,
-the pad file the plan names, the folder user/pk when the plan says so, and the pack files the plan names into user/pk.
-Every one of these changes passes one gate first (the class Gate), which refuses anything else. It never deletes a
-folder, and it writes nothing before it has listed the disk again and found it as the plan was made from. It works
-only on the bootloader's raw disk: the unit's normal disk mode has the same USB product id, so a disk with no folder
-user or upgrade at its top stops the run before anything is read off it.
+What it changes on the unit, and nothing else: it takes off the files directly in "logs", the pad files of
+earlier installs (open-field-pad.bin, open-field-pad-2.bin, ...) at the top level, and the files directly in user/pkin,
+the waiting folder where the install page leaves pack files over USB MIDI (its note .apply among them). It writes
+os.ldr at the top level, the pad file the plan names, the folder user/pk when the plan says so, and the pack files the
+plan names into user/pk. Every one of these changes passes one gate first (the class Gate), which refuses anything
+else. It never deletes a folder, and it writes nothing before it has listed the disk again and found it as the plan
+was made from. It works only on the bootloader's raw disk: the unit's normal disk mode has the same USB product id,
+so a disk with no folder user or upgrade at its top stops the run before anything is read off it.
 
-On this computer, each folder of a run in the shared folder (to-unit-, read-back-, incoming-, logs-, old-pads-, with
-the run's time) is made new, and so is every file the helper puts in one: anything of that name already there, a link
-included, stops the run.
+On this computer, each folder of a run in the working folder (to-unit-, read-back-, incoming-, logs-, old-pads-,
+old-pkin-, with the run's time) is made new: anything of that name already there, a link included, stops the run.
+Every file the helper puts in one is made new too. A file taken off the unit gets a number in its name when this
+computer has that name already (a Mac's disk takes LOG.txt and log.txt for one), and it leaves the unit only when that
+copy is whole. A backup of your firmware file is never written over: with both its names taken, the run stops.
+What comes from the unit, a name, the plan or an error is shown and logged with its control characters written out.
 
 --page, or the environment's OPEN_FIELD_PAGE, is the install page's mark: the page writes it into the folder it chose
 (page.json), and this checks it before anything else, so that the two never work in two different folders. Without a
-mark nothing is checked. --wait-minutes is how long it waits for the plan (60), --find-seconds how long for the unit
-(180).
+mark nothing is checked. --folder-name, or the environment's OPEN_FIELD_FOLDER, is that folder's name. A browser tells
+a page a folder's name and never its path, so this looks for the folder: one of that name that holds the page's mark,
+in the current folder, the home folder, Desktop, Documents and Downloads (on Linux also those three as
+user-dirs.dirs names them), each and one level below. With exactly one such folder it works there. With none or
+several it asks once for the folder's path, on /dev/tty, and checks the mark of that folder. --folder names the
+folder outright (no search). --no-ask stops where the question would come, and so does a run with no terminal.
+--wait-minutes is how long it waits for the plan (60), --find-seconds how long for the unit (180).
 
-The exit status: 0 ready to write (with --list-only: listed), 1 stopped (the lines say why), 2 the mark was refused,
-the command line is wrong, or the system is not Linux.
+The exit status: 0 ready to write (with --list-only: listed), 1 stopped (the lines say why), 2 nothing was done: no
+working folder was found or given, the mark was refused, the command line is wrong, or the system is neither Linux
+nor macOS.
 Standard library only; Python 3.8 or later. The page serves this as one file, so everything is in it. It runs as well
-when Python reads it from standard input (python3 -I - --page <mark>): it never reads standard input itself.
+when Python reads it from standard input (python3 -I - --page <mark>): it never reads standard input itself, and asks its
+one question on /dev/tty.
 """
 
 import argparse
@@ -82,17 +105,21 @@ import contextlib
 import ctypes as ct
 import ctypes.util
 import datetime
+import errno
 import hashlib
 import json
 import math
 import os
 import re
+import shlex
 import shutil
 import stat
+import string
 import struct
 import subprocess
 import sys
 import time
+import unicodedata
 
 HELPER_VERSION = 1
 # The original OS 1.7.3 file, as the builder's manifest names it: the only file kept under the name "yours".
@@ -100,9 +127,24 @@ ORIGINAL_SHA = "d134eb1ac7ad88e8370d988329cd5d7419f016005b1d269034f9cf7166fad0ec
 NAMES = {"stock": "os-1.7.3-yours.ldr", "image": "open-field-os.ldr", "helper": "helper.json", "before": "listing-before.json",
          "after": "listing-after.json", "plan": "plan.json", "packs": "packs", "page": "page.json"}
 STOCK_FROM = "upgrade/firmware/blackfin/bin/os.ldr"     # the owner's own firmware file on the unit: read, never written
-PAD = re.compile(r"open-field-pad(-[0-9]+)?\.bin\Z", re.IGNORECASE)    # the name of a pad file the helper puts on
+# A name on the unit is compared in capitals or small letters of ASCII alone: Python's own small letters take a
+# dotless i, a dotted I and a Kelvin sign for an i and a k, and then another file than the helper's would be taken.
+PAD = re.compile(r"open-field-pad(-[0-9]+)?\.bin\Z", re.IGNORECASE | re.ASCII)    # a pad file the helper puts on
+PACK_END = re.compile(r"\.pack\Z", re.IGNORECASE | re.ASCII)      # the end of a pack file's name
+ASCII_SMALL = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
 PACK_FOLDER = "user/pk"                                 # where the pack files go
+WAITING_FOLDER = "user/pkin"                            # where pack files wait: emptied before the listing
 PACK_NAME_BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]')    # a character a file name on the unit cannot have (install.mjs)
+TTY = "/dev/tty"        # where the one question is asked: standard input is the pipe this file came through
+KILLALL = "/usr/bin/killall"
+MAC_TRIES = 5           # how often ptpcamerad is ended and the refused step tried again
+# What is never shown as it came: the controls C0, DEL and C1, what breaks a line or turns the writing's direction,
+# and half of a surrogate pair.
+NOT_SHOWABLE = re.compile("[\x00-\x1f\x7f-\x9f\u2028\u2029\u202a-\u202e\u2066-\u2069\ud800-\udfff]")
+# An error that is one name's, not the disk's: the next file can still work.
+NAME_ERRORS = (errno.EEXIST, errno.ENAMETOOLONG, errno.EILSEQ, errno.EINVAL, errno.EISDIR, errno.ELOOP)
+NEVER_AGAIN = (errno.ENOSPC, errno.EDQUOT, errno.EROFS) if hasattr(errno, "EDQUOT") else (errno.ENOSPC, errno.EROFS)
+ENDS_RUN = ("local", "changed", "broken", "gone")       # a DiskError's kinds after which no next file can work
 SECOND = 1.0            # the length of a second, in seconds, for every wait and pause: a test makes it shorter
 
 MORE_THAN_ONE = "more than one OP-1 is connected: connect only the unit you are installing on"
@@ -113,8 +155,22 @@ NOT_BOOTLOADER = ("the drive that showed is not the bootloader's drive: it has n
                   "If the unit is in its normal disk mode, switch it off, hold COM while switching it on, press 3, then 2; "
                   "then run the command again")
 BOOTLOADER_TOP = ("user", "upgrade")    # the bootloader's raw disk has at least one of these folders at its top
-NOT_LINUX = ("STOPPED: this helper is for Linux, and this system is not Linux. On Windows, use the PowerShell helper, "
-             "open-field-helper.ps1. Nothing was done.")
+NOT_HERE = ("STOPPED: this helper is for Linux and macOS, and this system is neither. On Windows, use the PowerShell "
+            "helper, open-field-helper.ps1. Nothing was done.")
+NOT_CHOSEN = ("STOPPED: the install page did not choose this folder: ",
+              "On the install page, step 3, pick your working folder again,",
+              "then copy the line of step 4 again and run it. Nothing was done.")
+MAY_NOT_READ = ("STOPPED: this window may not read the folder: ",
+                "Allow it to (on a Mac: System Settings, Privacy & Security, Files and Folders), or pick another folder on the install page.",
+                "Then run the command again. Nothing was done.")
+GIVE_FOLDER = " Drag the folder into this window, or type its path, and press Enter.\nThe working folder: "
+RUN_WITH_FOLDER = 'Run the command again with --folder and the path of your working folder at its end: --folder "the folder\'s path"'
+WAITING_LEFT = (" file(s) stay in user/pkin on the unit and would meet the new base.pack. "
+                "Delete them in the unit's drive, then run the command again")
+READY = ("READY TO WRITE.",
+         "Now restart your OP-1 in bootloader mode: turn it off, then turn it on while holding COM.",
+         "Do NOT restart it in normal mode until the install is finished, otherwise you will have to start again.",
+         "Step 7 of the install page has the rest.")
 NOTHING_MORE = "Nothing more is done. The unit is as this line finds it; read the lines above. Run the command again to start over."
 
 
@@ -122,12 +178,45 @@ NOTHING_MORE = "Nothing more is done. The unit is as this line finds it; read th
 
 class DiskError(Exception):
     """A disk could not do what was asked. Its text is a plain sentence for the owner. `kind` says which failure it
-    is: the transport over USB gives one of absent, several, permission, busy, gone, refused, reply, local, usage,
-    library, unproven, broken, usb; anything else is "other"."""
+    is: the transport over USB gives one of absent, no storage, several, permission, busy, gone, refused, reply, local,
+    usage, library, unproven, broken, changed, name, usb; anything else is "other"."""
 
     def __init__(self, message, kind="other"):
         super().__init__(message)
         self.kind = kind
+
+
+class OwnLines(str):
+    """A text of the helper's own whose line breaks are meant. Nothing of the unit, a plan, a name or an error is in it."""
+
+
+def shown(text):
+    """A text as it may be printed and logged: every sign of NOT_SHOWABLE written out, as \\u001b is. Only an
+    OwnLines keeps its line breaks, so no name makes a line of its own."""
+    escape = lambda part: NOT_SHOWABLE.sub(lambda m: "\\u%04x" % ord(m.group()), part)
+    if isinstance(text, OwnLines):
+        return OwnLines("\n".join(escape(part) for part in text.split("\n")))
+    return escape(str(text))
+
+
+def after(prefix, text):
+    """prefix + text, and an OwnLines stays one."""
+    return (OwnLines if isinstance(text, OwnLines) else str)(prefix + text)
+
+
+def words_of(error):
+    """An error's words, an OwnLines as it was made."""
+    if isinstance(error, DiskError):
+        return error.args[0]
+    return str(error) or type(error).__name__
+
+
+def ascii_lower(name):
+    return name.translate(ASCII_SMALL)
+
+
+def local_kind(error):
+    return "name" if error.errno in NAME_ERRORS else "local"
 
 
 class Disk:
@@ -137,6 +226,7 @@ class Disk:
     """
 
     name = ""       # what helper.json says in "unit"
+    broken = False  # True once nothing more can be asked of the disk
 
     def children(self, folder_path):
         """The direct children of a folder: [(name, is_dir, size)]. A file's size is its exact byte count, a folder's 0.
@@ -145,7 +235,7 @@ class Disk:
 
     def read(self, path, local_path):
         """Copies the file at path to local_path, a file made new (anything of that name there, a link included,
-        is a DiskError), and gives its byte count."""
+        is a DiskError and is left as it is), and gives its byte count. A failed read leaves no file of its own."""
         raise NotImplementedError
 
     def write(self, local_path, folder_path, name):
@@ -177,7 +267,8 @@ class FolderDisk(Disk):
     """A folder of this computer that stands for the unit's disk (--source): the check of this helper with no unit.
 
     Its entries are the folder's own, dot files included, with their real sizes. A symbolic link is never followed:
-    it is listed as a file of the link's own size, and reading through it is refused.
+    it is listed as a file of the link's own size, and reading through it is refused. Where this computer's disk
+    takes capitals and small letters as one (a Mac's usually does), the stand-in does too; the unit's disk does not.
     """
 
     def __init__(self, root, shown_as=None):
@@ -214,10 +305,13 @@ class FolderDisk(Disk):
         try:
             dst = new_file(local_path)
         except OSError as e:
-            raise DiskError("the copy of " + path + " could not be made new on this computer (" + str(e.strerror) + ")", "local")
+            raise DiskError("the copy of " + path + " could not be made new on this computer (" + str(e.strerror) + ")", local_kind(e))
         try:
-            with open(local, "rb") as src, dst:
-                shutil.copyfileobj(src, dst, 1 << 20)
+            try:
+                with dst, open(local, "rb") as src:
+                    shutil.copyfileobj(src, dst, 1 << 20)
+            except OSError as e:
+                raise DiskError("the copy of " + path + " could not be written on this computer (" + str(e.strerror) + ")", "local")
         except BaseException:
             with contextlib.suppress(OSError):
                 os.remove(local_path)
@@ -252,36 +346,42 @@ class FolderDisk(Disk):
 #
 # MTP (Media Transfer Protocol) is how the unit shows its disk in the bootloader's disk mode (hold COM while switching
 # it on, press 3, then 2). libusb-1.0 is the system's library for talking to a USB device; it is loaded with ctypes,
-# so no package is installed. Debian and Ubuntu have it as libusb-1.0-0, which is usually there.
+# so no package is installed. Debian and Ubuntu have it as libusb-1.0-0, which is usually there; a Mac gets it with
+# Homebrew (brew install libusb).
 #
 # UsbDisk offers the helper's Disk interface and nothing more: list one folder, copy one file off, send one file,
 # make one folder, remove one file. A path is names joined with "/"; "" is the top of the unit's first storage. Names
 # are matched exactly: capitals count. A file is sent by removing a file of exactly that name first, never a folder.
 # No other change is made to the unit, and usb_list_only sends no operation that changes anything.
 #
-# An object is removed by one function only, _delete. It asks the unit about the object again right before, and
+# Before every change the unit is asked about the cached handle of each folder on the way, _confirm: is it that
+# folder, by that name, in that place. An object is removed by one function only, _delete. It asks the unit about the
+# object again right before, and
 # removes it only when it is a plain file of the expected name in the expected folder, and not lost+found. The handles
 # 0 and 0xFFFFFFFF are never taken from the unit: to MTP they mean "no object" and "every object".
 #
-# The unit is found by the vendor id of teenage engineering and an interface that speaks MTP. When a unit's product id
-# is not in KNOWN_PRODUCTS, the transport only reads from it: listing and copying off work, and sending, making a
+# The unit is found by the vendor id of teenage engineering and an interface that speaks MTP; beside one with a
+# product id of KNOWN_PRODUCTS, a device with another id is let be. A unit with no storage yet is waited for.
+# When a unit's product id is not in KNOWN_PRODUCTS, the transport only reads from it: listing and copying off work, and sending, making a
 # folder and removing a file are refused.
 #
 # Every failure is a DiskError with a plain message for the owner, and a `kind` the helper can act on:
-# absent, several, permission, busy, gone, refused, reply, local, usage, library, unproven, broken, usb.
+# absent, no storage, several, permission, busy, gone, refused, reply, local, name, usage, changed, library, unproven,
+# broken, usb.
 #
 # The transport is ported from open-xy's tooling/usbmtp.py at commit f10f6bd.
 # Copyright (c) 2026 Open-XY contributors. MIT licence: builder/open-xy.LICENSE.
 # Changed here: the Disk interface by paths with a cache of handles; files streamed to and from the computer's disk;
 # the 64-bit size property; the device found without opening it first, so a missing permission and a busy interface
-# are told apart; an MTP interface needs its three endpoints; messages for the OP-1 Field on Linux; a read-only mode.
+# are told apart; an MTP interface needs its three endpoints; messages for the OP-1 Field on Linux and
+# on macOS; a read-only mode.
 
 # The unit.
 VENDOR = 0x2367          # teenage engineering
-# The product ids the helper may change a unit with. 0x0102 is the id of the one unit this helper has run on (OS 1.7.3):
-# it listed that unit's disk in both disk modes and made one whole install on it. Every other path has run on stand-ins
-# only. The same id shows in the unit's normal disk mode, so the id alone never lets a run go on: bootloader_drive()
-# decides that.
+# The product ids the helper may change a unit with. 0x0102 is the id reported from the runs of open-field 0.3's
+# helper (OS 1.7.3): on Linux it listed a unit's disk in both disk modes, and an install was made on it. This version
+# has run on stand-ins only. The same id shows in the unit's normal disk mode, so the id alone never lets a run go on:
+# bootloader_drive() decides that.
 KNOWN_PRODUCTS = (0x0102,)
 UNIT_NAME = 'OP-1'       # What helper.json says in "unit", as the Windows helper does.
 
@@ -316,10 +416,12 @@ LIBUSB_BUSY, LIBUSB_TIMEOUT, LIBUSB_PIPE = -6, -7, -9
 LIBUSB_ERRORS = {-1: 'input/output error', -2: 'invalid parameter', -3: 'access denied', -4: 'no such device',
                  -5: 'not found', -6: 'busy', -7: 'timed out', -8: 'overflow', -9: 'stalled',
                  -10: 'interrupted', -11: 'out of memory', -12: 'not supported'}
-LIBRARY_NAMES = ('libusb-1.0.so.0', 'libusb-1.0.so',
-                 '/opt/homebrew/lib/libusb-1.0.0.dylib', '/usr/local/lib/libusb-1.0.0.dylib')   # the last two: macOS, Homebrew
+LINUX_LIBRARIES = ('libusb-1.0.so.0', 'libusb-1.0.so')
+MAC_LIBRARIES = ('/opt/homebrew/lib/libusb-1.0.0.dylib', '/usr/local/lib/libusb-1.0.0.dylib',
+                 '/opt/local/lib/libusb-1.0.0.dylib')   # Homebrew on Apple and on Intel processors; MacPorts
 
-# What the owner reads.
+# What the owner reads. MAC is looked at when a text is needed, so that no text of the one system shows on the other.
+MAC = sys.platform == 'darwin'
 NOT_FOUND = NOT_SHOWN
 SEVERAL = MORE_THAN_ONE
 PERMISSION = ('the unit is connected (bus {bus:03d}, device {address:03d}, product id {product:04x}), but this user '
@@ -331,18 +433,30 @@ PERMISSION = ('the unit is connected (bus {bus:03d}, device {address:03d}, produ
 BUSY = ('the desktop\'s file manager holds the unit: it opens an MTP device by itself, and then the helper cannot. '
         'Unmount "OP-1" there (the eject sign beside it in Files), or run gio mount -l to see its mtp:// address '
         'and unmount it with gio mount -u mtp://... (that address); then run the command again')
-MAC = sys.platform == 'darwin'
-if MAC:   # macOS: no udev; Image Capture's ptpcamerad, or an MTP app, takes the device instead.
-    PERMISSION = BUSY = ('the unit is connected (bus {bus:03d}, device {address:03d}, product id {product:04x}), but another program '
-                         'holds it. Quit Image Capture, Photos, OpenMTP and Android File Transfer, run killall ptpcamerad, '
-                         'then run the command again')
+HELD_MAC = ('the unit is connected (bus {bus:03d}, device {address:03d}, product id {product:04x}), but another '
+            'program holds it. Quit Image Capture, Photos, OpenMTP and Android File Transfer, run killall ptpcamerad, '
+            'then run the command again')
+ENDS_CAMERA_HELPER = ('The Mac refuses the unit: most often its camera helper, ptpcamerad, holds it. '
+                      'The helper ends ptpcamerad now and tries again.')
+NO_LIBRARY = ('the helper needs the library libusb-1.0, and this computer does not have it. '
+              'On Debian and Ubuntu: sudo apt install libusb-1.0-0')
+NO_LIBRARY_MAC = ('the helper needs the library libusb-1.0, and this Mac does not have it. With Homebrew '
+                  '(https://brew.sh): brew install libusb (then run the command again)')
+BAD_LIBRARY_MAC = ('the helper needs the library libusb-1.0, and the one at {path} does not load in this Python (it '
+                   'may be made for the other type of processor, Apple or Intel). With a Homebrew for this Mac\'s own '
+                   'processor: brew install libusb (then run the command again)')
 GONE = ('the unit went away while the helper was working with it ({action}). Check the cable and that the unit '
         'still shows the bootloader\'s disk mode. The unit is as this moment left it')
 SILENT = ('the unit stopped answering ({action}). Check the cable and that the unit still shows the bootloader\'s '
           'disk mode. The unit is as this moment left it')
-UNPROVEN = ('this unit\'s USB product id is 0x{product:04x}. This helper has run on a unit with the id 0x0102 only, '
-            'so it only reads from this one and changes nothing. Run the helper with --list-only and send what it '
+UNPROVEN = ('this unit\'s USB product id is 0x{product:04x}. An earlier helper (open-field 0.3\'s) was '
+            'tried with the id 0x0102 only, so this helper only reads from this unit and changes nothing. '
+            'Run the helper with --list-only and send what it '
             'prints to the open-field project')
+NO_STORAGE = ('the unit shows no storage, so this computer sees nothing of its disk. Hold COM while switching it on, '
+              'press 3, then 2, with the cable in; then run the command again')
+CHANGED = ('the unit changed: the folder %s is no longer where it was listed, so nothing in it is changed. '
+           'Run the command again')
 BROKEN = ('the session with the unit broke at an earlier failure, and the helper sends nothing more in it. Run the '
           'command again')
 
@@ -503,12 +617,29 @@ def interfaces_of(config):
 
 
 def load_libusb():
-    for name in (ctypes.util.find_library('usb-1.0'),) + LIBRARY_NAMES:
-        if name:
-            with contextlib.suppress(OSError):
-                return ct.CDLL(name)
-    raise DiskError('the helper needs the library libusb-1.0, and this computer does not have it. '
-                    'On Debian and Ubuntu: sudo apt install libusb-1.0-0', 'library')
+    names = MAC_LIBRARIES if MAC else LINUX_LIBRARIES
+    with contextlib.suppress(OSError):
+        found = ctypes.util.find_library('usb-1.0')
+        if found:
+            names = (found,) + names
+    will_not_load = None
+    for name in names:
+        try:
+            return ct.CDLL(name)
+        except OSError:
+            if will_not_load is None and os.path.isabs(name) and os.path.exists(name):
+                will_not_load = name    # there, and not for this Python: the other processor type, most often
+    if not MAC:
+        raise DiskError(NO_LIBRARY, 'library')
+    raise DiskError(BAD_LIBRARY_MAC.format(path=will_not_load) if will_not_load else NO_LIBRARY_MAC, 'library')
+
+
+def end_ptpcamerad():
+    """macOS's camera helper, ended: only the user's own, by the system's killall, whatever the PATH says. Its
+    standard input is not the helper's, which may be the pipe this file came through."""
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
+        subprocess.run([KILLALL, 'ptpcamerad'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=10)
 
 
 class Libusb:
@@ -638,9 +769,11 @@ class Libusb:
 
 class Usb:
     """The bulk transfers to the one unit's MTP interface, claimed through libusb.
-    `libusb` is for tests: an object with the calls of Libusb."""
+    `libusb` is for tests: an object with the calls of Libusb. `note(text)` says a line to the owner."""
 
-    def __init__(self, libusb=None):
+    def __init__(self, libusb=None, note=None):
+        self.note = note if note is not None else (lambda text: terminal(text, 'Yellow'))
+        self.told = False           # True once the line about ptpcamerad was said
         self.libusb = libusb if libusb is not None else Libusb()
         self.handle = self.number = None
         try:
@@ -651,15 +784,33 @@ class Usb:
 
     def _failure(self, code, action):
         """A libusb code as the DiskError the owner reads."""
-        if code == LIBUSB_ACCESS:
-            return DiskError(PERMISSION.format(bus=self.bus, address=self.address, product=self.product), 'permission')
-        if code == LIBUSB_BUSY:
-            return DiskError(BUSY.format(bus=self.bus, address=self.address, product=self.product), 'busy')
+        if code in (LIBUSB_ACCESS, LIBUSB_BUSY):
+            if MAC:
+                text = HELD_MAC
+            else:
+                text = PERMISSION if code == LIBUSB_ACCESS else BUSY
+            return DiskError(OwnLines(text.format(bus=self.bus, address=self.address, product=self.product)),
+                             'permission' if code == LIBUSB_ACCESS else 'busy')
         if code in (LIBUSB_NO_DEVICE, LIBUSB_IO):
             return DiskError(GONE.format(action=action), 'gone')
         if code == LIBUSB_TIMEOUT:
             return DiskError(SILENT.format(action=action), 'gone')
         return DiskError('%s failed: libusb says %s' % (action, LIBUSB_ERRORS.get(code, 'error %d' % code)), 'usb')
+
+    def _retried(self, call):
+        """`call` is the opening or the claim, and gives (code, what it got). On a Mac, and only when it is refused,
+        the owner is told once, ptpcamerad is ended, and the call made again: launchd starts ptpcamerad again."""
+        result = call()
+        tries = MAC_TRIES if MAC else 0
+        while tries and result[0] in (LIBUSB_ACCESS, LIBUSB_BUSY):
+            if not self.told:
+                self.told = True
+                self.note(ENDS_CAMERA_HELPER)
+            end_ptpcamerad()
+            time.sleep(0.3 * SECOND)
+            result = call()
+            tries -= 1
+        return result
 
     def _open(self):
         libusb = self.libusb
@@ -680,10 +831,13 @@ class Usb:
                     message += ('. (A device of teenage engineering is on bus %03d, device %03d, but this computer '
                                 'could not read what it offers.)' % (device.bus, device.address))
                 raise DiskError(message, 'absent')
+            known = [each for each in found if each[0].product in KNOWN_PRODUCTS]
+            if known:       # Another MTP device of the maker, beside the OP-1: not the helper's business.
+                found = known
             require(len(found) == 1, SEVERAL, 'several')
             device, (self.number_wanted, self.inbound, self.outbound, self.packet, self.triple) = found[0]
             self.vendor, self.product, self.bus, self.address = device.vendor, device.product, device.bus, device.address
-            code, handle = libusb.open(device.ref)
+            code, handle = self._retried(lambda: libusb.open(device.ref))
             if code != 0:
                 raise self._failure(code, 'opening the unit')
             self.handle = handle
@@ -697,13 +851,7 @@ class Usb:
             if code != 0:
                 raise self._failure(code, 'choosing the unit\'s configuration')
         libusb.auto_detach(self.handle)   # Only Linux has kernel drivers to detach; none is expected on MTP.
-        code = libusb.claim(self.handle, self.number_wanted)
-        for _ in range(5 if MAC else 0):   # macOS's ptpcamerad grabs MTP devices and launchd restarts it: kill, retry.
-            if code not in (LIBUSB_ACCESS, LIBUSB_BUSY):
-                break
-            subprocess.run(['killall', 'ptpcamerad'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            time.sleep(0.3)
-            code = libusb.claim(self.handle, self.number_wanted)
+        code, _ = self._retried(lambda: (libusb.claim(self.handle, self.number_wanted), None))
         if code != 0:
             raise self._failure(code, 'taking the unit\'s MTP interface')
         self.number = self.number_wanted
@@ -765,16 +913,18 @@ Entry = collections.namedtuple('Entry', 'handle dir size')
 class UsbDisk(Disk):
     """The unit's first storage over MTP. `transport` is for tests: an object with write(bytes), read() -> bytes,
     cancel(transaction), close(), `packet` and `product`, as Usb has. `read_only` refuses, before sending, every
-    operation that would change the unit; so does a product id that is not in KNOWN_PRODUCTS."""
+    operation that would change the unit; so does a product id that is not in KNOWN_PRODUCTS. `note(text)` says a
+    line to the owner while the unit is opened."""
 
-    def __init__(self, transport=None, read_only=False):
+    def __init__(self, transport=None, read_only=False, note=None):
         self.name = UNIT_NAME
         self.read_only = read_only
-        self.transport = transport if transport is not None else Usb()
+        self.transport = transport if transport is not None else Usb(note=note)
         self.transaction = 0
         self.storage = None
         self.storages = []
         self.broken = False
+        self.cause = None        # The first failure's words: what broke the session, for every later refusal.
         self.session = False     # True once the unit has a session open: close() then ends it
         self._forget()
         try:
@@ -783,7 +933,7 @@ class UsbDisk(Disk):
                 self._expect(opened, 'open a session')
             self.session = True
             self.storages = read_handles(self._expect(self._run(STORAGE_IDS), 'name its storages')[1], 'a storage')
-            require(self.storages, 'the unit shows no storage')
+            require(self.storages, NO_STORAGE, 'no storage')    # Not there yet: waited for, as the unit itself is.
             self.storage = self.storages[0]
         except BaseException:   # The session is closed and the interface given back before the error leaves.
             self.close()
@@ -882,7 +1032,8 @@ class UsbDisk(Disk):
         if code not in READING:
             self._may_change()
         require(self.transport is not None, 'the session with the unit is closed', 'usage')
-        require(not self.broken, BROKEN, 'broken')
+        if self.broken:
+            raise DiskError(self.cause or BROKEN, 'broken')
         transaction = self.transaction
         self.transaction += 1
         try:
@@ -902,8 +1053,8 @@ class UsbDisk(Disk):
                 kind, reply, tid, payload = self._receive(limit)
             require(kind == RESPONSE and tid == transaction, 'the unit sent a reply the helper did not ask for')
             return reply, phase, list(struct.unpack_from('<%dI' % (len(payload) // 4), payload))
-        except BaseException:
-            self.broken = True
+        except BaseException as error:
+            self.broken, self.cause = True, words_of(error)
             # Cancel the transaction so the unit is idle again, even after Ctrl+C.
             with contextlib.suppress(Exception):
                 self.transport.cancel(transaction)
@@ -912,7 +1063,7 @@ class UsbDisk(Disk):
     # Objects and the cache.
 
     def _forget(self):
-        """Drop the cache of handles: done after every change."""
+        """Drop the cache of handles: done after every file or folder sent. A removal drops its own entry alone."""
         self._handles = {'': Entry(ROOT, True, 0)}
 
     def _info(self, handle, action):
@@ -968,6 +1119,31 @@ class UsbDisk(Disk):
         require(entry.dir, 'on the unit, %s is a file, not a folder' % folder_path, 'usage')
         return entry
 
+    @staticmethod
+    def _inside(info, parent):
+        """True when the ObjectInfo says the object is in that folder. An object at the top of the storage names the
+        parent 0, as the MTP spec says and as the unit answered (2026-11-20, a unit with bootloader 1000.2.0). ROOT,
+        0xFFFFFFFF, means "the top" only as a parameter of GetObjectHandles; it is taken here too, for a unit that
+        answers with it."""
+        return info.parent == parent or (parent == ROOT and info.parent in (NO_OBJECT, ROOT))
+
+    def _chain(self, folder_path):
+        """The cached handles of a folder and of every folder on its way: [(path, name, handle)]."""
+        names = split_path(folder_path)
+        paths = ['/'.join(names[:depth]) for depth in range(1, len(names) + 1)]
+        return [(path, name, self._find(path).handle) for path, name in zip(paths, names)]
+
+    def _confirm(self, chain):
+        """Right before a change in a folder: the unit is asked whether each handle of its chain still is that
+        folder, by that name, in that place. If not, nothing is changed in it."""
+        parent = ROOT
+        for path, name, handle in chain:
+            reply, data, _ = self._run(OBJECT_INFO, [handle])
+            require(reply == OK, CHANGED % path, 'changed')
+            info = read_object_info(data)
+            require(info.folder and info.name == name and self._inside(info, parent), CHANGED % path, 'changed')
+            parent = handle
+
     # The Disk interface.
 
     def children(self, folder_path):
@@ -980,14 +1156,17 @@ class UsbDisk(Disk):
         try:
             sink = new_file(local_path)
         except OSError as error:
-            raise DiskError('the copy of %s could not be made new on this computer: %s' % (path, error), 'local')
+            raise DiskError('the copy of %s could not be made new on this computer: %s' % (path, error), local_kind(error))
         try:
             try:
                 with sink:
                     count = self._expect(self._run(GET_OBJECT, [entry.handle], limit=entry.size, sink=sink),
                                          'give %s' % path)[1]
             except OSError as error:
-                raise DiskError('the copy of %s could not be written on this computer: %s' % (path, error), 'local')
+                failed = DiskError('the copy of %s could not be written on this computer: %s' % (path, error), 'local')
+                if self.broken:
+                    self.cause = words_of(failed)
+                raise failed
             require(count == entry.size, '%s came off the unit with %s bytes; the unit lists %d'
                     % (path, count, entry.size))
         except BaseException:   # No part of a file is left behind as if it were the file; only the helper's own.
@@ -996,22 +1175,22 @@ class UsbDisk(Disk):
             raise
         return count
 
-    def _delete(self, handle, parent, name, path):
+    def _delete(self, handle, parent, name, path, size=None):
         """Remove one file: the only place that sends DeleteObject. `parent` is the handle of the folder it should
-        be in. The unit is asked about the object again first, and anything but a plain file of exactly that name in
-        exactly that folder is refused; so are lost+found and the handles 0 and 0xFFFFFFFF, whoever asks."""
+        be in. The unit is asked about that folder, then about the object, first, and anything but a plain file of
+        exactly that name in exactly that folder (and of `size`, when given: the bytes that were copied) is refused;
+        so are lost+found and the handles 0 and 0xFFFFFFFF, whoever asks."""
         require(handle not in NOT_HANDLES, 'the helper never removes the object numbered %#010x (%s): to the unit '
                 'that number names no single object' % (handle, path), 'usage')
         require(name not in SPECIAL_NAMES, 'the helper never removes %s' % path, 'usage')
+        self._confirm(self._chain(path.rpartition('/')[0]))
         info = self._info(handle, 'describe %s' % path)
         require(not info.folder and info.format != FOLDER_FORMAT and info.association == 0,
                 'the helper removes files only, and to the unit %s is a folder' % path, 'usage')
-        # A file at the top of the storage: its ObjectInfo names the parent 0, as the MTP spec says and as the unit
-        # answered (2026-11-20, a unit with bootloader 1000.2.0). ROOT, 0xFFFFFFFF, means "the top" only as a
-        # parameter of GetObjectHandles; it is taken here too, for a unit that answers with it.
-        top = parent == ROOT and info.parent in (NO_OBJECT, ROOT)
-        require(info.name == name and (info.parent == parent or top),
-                'the unit changed: %s is no longer where it was listed, so nothing is removed' % path, 'usage')
+        require(info.name == name and self._inside(info, parent),
+                'the unit changed: %s is no longer where it was listed, so nothing is removed' % path, 'changed')
+        require(size is None or info.size == min(size, LARGE),
+                'the unit changed: %s is not of the size it was copied with, so it is not removed' % path, 'changed')
         self._expect(self._run(DELETE_OBJECT, [handle, 0]), 'remove %s' % path)
 
     def write(self, local_path, folder_path, name):
@@ -1026,12 +1205,14 @@ class UsbDisk(Disk):
         with source:
             require(size <= LARGE - 12, '%s is too large to send over MTP (4 GiB or more)' % path, 'usage')
             folder = self._folder(folder_path)
+            chain = self._chain(folder_path)
             try:
                 there = dict(self._list(folder_path, folder.handle))
                 if name in there:
                     require(not there[name].dir, 'the unit has a folder named %s where the file goes' % path, 'usage')
                     self._delete(there[name].handle, folder.handle, name, path)
                     self._forget()
+                self._confirm(chain)
                 info = object_info(self.storage, name, size, folder.handle)
                 self._expect(self._run(SEND_OBJECT_INFO, [self.storage, folder.handle], info), 'take %s' % path)
                 self._expect(self._run(SEND_OBJECT, [], (source, size)), 'store %s' % path)
@@ -1043,10 +1224,12 @@ class UsbDisk(Disk):
         self._may_change()
         path = folder_path + '/' + name if folder_path else name
         folder = self._folder(folder_path)
+        chain = self._chain(folder_path)
         try:
             there = dict(self._list(folder_path, folder.handle))
             require(name not in there, 'the unit already has a %s named %s'
                     % ('folder' if there.get(name, Entry(0, False, 0)).dir else 'file', path), 'usage')
+            self._confirm(chain)
             info = object_info(self.storage, name, 0, folder.handle, folder=True)
             self._expect(self._run(SEND_OBJECT_INFO, [self.storage, folder.handle], info), 'make the folder %s' % path)
         finally:
@@ -1060,15 +1243,17 @@ class UsbDisk(Disk):
         *above, name = path.split('/')
         parent = self._handles['/'.join(above)].handle   # Known: _find listed it on the way.
         try:
-            self._delete(entry.handle, parent, name, path)
+            self._delete(entry.handle, parent, name, path, entry.size)
         finally:
-            self._forget()
+            # This one object alone leaves the cache: forgetting all would list the folder again for every file of
+            # it. _confirm and _delete ask the unit about the cached handles before each change.
+            self._handles.pop(path, None)
 
 
-def usb_list_only(out, transport=None):
+def usb_list_only(out, transport=None, note=None):
     """The helper's --list-only: open the unit, print what it is, everything on it and whether it looks like the
     bootloader's drive, close. The disk is opened to read only, so no operation that changes the unit can be sent."""
-    disk = UsbDisk(transport, read_only=True)
+    disk = UsbDisk(transport, read_only=True, note=note or (lambda text: out.write(text + '\n')))
     try:
         usb = disk.transport
         out.write('Vendor id %04x, product id %04x, bus %03d, device %03d.\n'
@@ -1077,7 +1262,7 @@ def usb_list_only(out, transport=None):
         out.write('Storage ids: %s. The first is used.\n' % ', '.join('%08x' % s for s in disk.storages))
         rows = get_listing(disk)
         for row in rows:
-            out.write(json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n')
+            out.write(shown(json.dumps(row, ensure_ascii=False, separators=(',', ':'))) + '\n')
         folders = sum(1 for row in rows if row['dir'])
         out.write('%d files, %d folders.\n' % (len(rows) - folders, folders))
         top = [(row['path'], row['dir'], 0) for row in rows if '/' not in row['path']]
@@ -1090,12 +1275,13 @@ def usb_list_only(out, transport=None):
         disk.close()
 
 
-def find_unit():
-    """The unit over USB as a UsbDisk, or None while no unit shows. DiskError when more than one shows (kind
+def find_unit(note=None):
+    """The unit over USB as a UsbDisk, or None while no unit shows; a unit with no storage yet is a DiskError of
+    kind "no storage", which is waited for. DiskError when more than one shows (kind
     "several"), when this computer does not let the helper open it ("permission"), when another program holds it
     ("busy"), or when libusb is missing ("library")."""
     try:
-        return UsbDisk()
+        return UsbDisk(note=note)
     except DiskError as e:
         if e.kind == "absent":
             return None
@@ -1123,20 +1309,42 @@ def bootloader_drive(top):
     return any(is_dir and name in BOOTLOADER_TOP for name, is_dir, _ in top)
 
 
+def once(note):
+    """note(text), said the first time alone for each text: what is asked every two seconds says its line once."""
+    said = set()
+
+    def say(text):
+        if text not in said:
+            said.add(text)
+            note(text)
+    return say
+
+
 def wait_for_unit(seconds, note):
-    """find_unit() asked every two seconds until a unit shows; `note` gets the waiting line once."""
+    """find_unit() asked every two seconds until a unit shows; `note` gets the waiting line once, and once what the
+    transport says while it opens the unit, however often that is."""
     deadline = time.monotonic() + seconds * SECOND
-    told = False
+    note = once(note)
+    missing = NOT_SHOWN
     while True:
-        disk = find_unit()
+        try:
+            disk = find_unit(note)
+        except DiskError as e:
+            if e.kind != "no storage":
+                raise
+            disk, missing = None, words_of(e)
         if disk is not None:
             return disk
+        note(WAITING)               # before the deadline is looked at: a first search may take longer than that
         if time.monotonic() > deadline:
-            raise DiskError(NOT_SHOWN)
-        if not told:
-            note(WAITING)
-            told = True
+            raise DiskError(missing)
         time.sleep(2 * SECOND)
+
+
+def waiting_place(folder):
+    """True for the waiting folder user/pkin alone, as the unit may spell it: capitals or small letters, ASCII only
+    (a Kelvin sign is a "k" in small letters, and no k)."""
+    return ascii_lower(folder) == WAITING_FOLDER
 
 
 class Gate:
@@ -1145,8 +1353,8 @@ class Gate:
     is named exactly, letter for letter: "user/PK" is not "user/pk".
 
     The rules, by phase:
-      "taking off" (before the first listing): remove a file directly in the top-level folder logs, or a top-level
-        file whose name is a pad file's;
+      "taking off" (before the first listing): remove a file directly in the top-level folder logs, a top-level
+        file whose name is a pad file's, or a file directly in user/pkin, once that folder was found;
       "putting" (only once the plan was checked and the disk listed again as the plan was made from): write os.ldr at
         the top, write the plan's pad file at the top, make user/pk when the plan says so, write a pack file the plan
         names into user/pk.
@@ -1157,6 +1365,7 @@ class Gate:
         self.disk = disk
         self.phase = "looking"
         self.logs = None                # the top-level logs folder's own name, once found
+        self.waiting = None             # user/pkin as the unit names it, while it is emptied
         self.pad = None                 # the plan's pad file's name
         self.make = False               # the plan makes user/pk
         self.packs = set()              # the names of the plan's pack files
@@ -1174,7 +1383,9 @@ class Gate:
         if self.phase == "taking off" and action == "remove_file":
             if folder == "" and PAD.match(name):
                 return True
-            return self.logs is not None and folder == self.logs and folder.lower() == "logs"
+            if self.waiting is not None and folder == self.waiting and waiting_place(folder):
+                return True
+            return self.logs is not None and folder == self.logs and ascii_lower(folder) == "logs"
         if self.phase == "putting":
             if action == "write" and folder == "" and (name == "os.ldr" or (self.pad is not None and name == self.pad and PAD.match(name))):
                 return True
@@ -1206,12 +1417,13 @@ class Gate:
 
 def find_child(disk, folder, name):
     """A child of a folder by its name: (its own name, is_dir, size), or None.
-    The exact name first; else the one child whose name is the same in small letters, when there is exactly one."""
+    The exact name first; else the one child whose name is the same in ASCII's small letters, when there is exactly
+    one."""
     kids = disk.children(folder)
     for kid in kids:
         if kid[0] == name:
             return kid
-    alike = [kid for kid in kids if kid[0].lower() == name.lower()]
+    alike = [kid for kid in kids if ascii_lower(kid[0]) == ascii_lower(name)]
     return alike[0] if len(alike) == 1 else None
 
 
@@ -1291,22 +1503,67 @@ def sha_file(path):
     return h.hexdigest()
 
 
-def plain(text):
-    """A text that can be printed and written as UTF-8, whatever bytes a file name had."""
-    return text.encode("utf-8", "backslashreplace").decode("utf-8")
+def free_name(folder, name):
+    """A path in folder that nothing has: the name itself, else with -2, -3 ... before its end. This computer's disk
+    may take two of the unit's names for one, and then the second gets a name of its own."""
+    stem, end = os.path.splitext(name)
+    path, number = os.path.join(folder, name), 1
+    while os.path.lexists(path):
+        number += 1
+        path = os.path.join(folder, "%s-%d%s" % (stem, number, end))
+    return path
+
+
+def whole_copy(path, size):
+    """True when path is a regular file of exactly that size."""
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISREG(st.st_mode) and st.st_size == size
+
+
+def discard(folder, made):
+    """The helper's own copies removed, and their folder when nothing else is in it."""
+    for path in made:
+        with contextlib.suppress(OSError):
+            os.remove(path)
+    with contextlib.suppress(OSError):
+        os.rmdir(folder)
+
+
+def keep_new(copy, kept):
+    """The copy put under the name kept, and never in the place of anything there. False when the name is taken."""
+    try:
+        os.link(copy, kept)             # one step, and it refuses a name that is taken
+    except OSError:
+        if os.path.lexists(kept):
+            return False
+        os.rename(copy, kept)           # a disk with no hard links
+        return True
+    os.remove(copy)
+    return True
 
 
 def save_text(path, text):
-    """Written beside and renamed, so that the page, which reads the folder every second, never reads half a file.
-    UTF-8, no byte order mark. A .part that is there is removed first, and the new one is made new: a link left
-    there is never written through."""
+    """Written beside and put in the old file's place in one step, so that the page, which reads the folder every
+    second, never reads half a file and never finds none. Where the swap is refused while the page holds the file, it
+    is tried again a few times. UTF-8, no byte order mark. A .part that is there is removed first, and the new one is
+    made new: a link left there is never written through."""
     part = path + ".part"
     if os.path.lexists(part):
         os.remove(part)
     fd = os.open(part, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
     with open(fd, "w", encoding="utf-8", newline="") as f:
         f.write(text)
-    os.replace(part, path)
+    for left in range(19, -1, -1):
+        try:
+            os.replace(part, path)
+            return
+        except OSError as e:
+            if not left or e.errno in NEVER_AGAIN:
+                raise
+            time.sleep(0.05 * SECOND)
 
 
 def stage_copy(local, staged):
@@ -1332,23 +1589,173 @@ COLORS = {"Red": "31", "Green": "32", "Yellow": "33", "Cyan": "36"}
 
 
 def terminal(line, color=""):
+    line = shown(line)          # before the colour, which is an escape of the helper's own
     if color and sys.stdout.isatty():
         line = "\033[" + COLORS[color] + "m" + line + "\033[0m"
-    print(plain(line), flush=True)
+    coding = getattr(sys.stdout, "encoding", None) or "utf-8"     # a folder may have any name
+    print(line.encode(coding, "backslashreplace").decode(coding), flush=True)
 
 
 def read_mark(folder):
     """The id in the page's page.json, or None."""
+    path = os.path.join(folder, NAMES["page"])
     try:
-        with open(os.path.join(folder, NAMES["page"]), "r", encoding="utf-8-sig") as f:
+        if not os.path.isfile(path):        # a pipe of that name is never waited on
+            return None
+        with open(path, "r", encoding="utf-8-sig") as f:
             mark = json.load(f).get("id")
         return None if mark is None else str(mark)
     except (OSError, ValueError, AttributeError):
         return None
 
 
+def mark_is(folder, page):
+    mark = read_mark(folder)
+    return mark is not None and mark.lower() == page.lower()
+
+
+def may_not_read(folder):
+    """True when the system refuses this window the folder or its page.json (a Mac's privacy setting does)."""
+    path = os.path.join(folder, NAMES["page"])
+    try:
+        with os.scandir(folder):
+            pass
+        if os.path.isfile(path):
+            with open(path, "rb"):
+                pass
+    except PermissionError:
+        return True
+    except (OSError, ValueError):
+        pass
+    return False
+
+
+# ---------------------------------------------------------------- the working folder
+
+def folded(name):
+    """A name to compare: a Mac gives names decomposed (an accent as a sign of its own), and letters' case is no matter."""
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFD", name).casefold())
+
+
+def user_dirs(home):
+    """Desktop, Documents and Downloads by the names this Linux gives them (user-dirs.dirs), where it names them."""
+    config = os.environ.get("XDG_CONFIG_HOME", "")
+    if not os.path.isabs(config):
+        config = os.path.join(home, ".config")
+    path = os.path.join(config, "user-dirs.dirs")
+    out = []
+    try:
+        if not os.path.isfile(path):
+            return out
+        with open(path, "r", encoding="utf-8", errors="surrogateescape") as f:
+            for line in f:
+                m = re.match(r'\s*XDG_(DESKTOP|DOCUMENTS|DOWNLOAD)_DIR="((?:[^"\\]|\\.)*)"', line)
+                if not m:
+                    continue
+                value = re.sub(r"\\(.)", r"\1", m.group(2))
+                if value == "$HOME" or value.startswith("$HOME/"):
+                    value = home + value[len("$HOME"):]
+                if os.path.isabs(value):
+                    out.append(value)
+    except OSError:
+        pass
+    return out
+
+
+def search_places(linux):
+    """The places an owner makes a folder in: the current folder, the home folder, Desktop, Documents, Downloads."""
+    places = []
+    with contextlib.suppress(OSError):      # the current folder may be gone, or refused
+        places.append(os.getcwd())
+    home = os.path.expanduser("~")
+    if os.path.isabs(home):
+        places += [home] + [os.path.join(home, n) for n in ("Desktop", "Documents", "Downloads")]
+        if linux:
+            places += user_dirs(home)
+    return places
+
+
+def find_folders(name, page, linux):
+    """The folders that may be the one the page picked: of the name given and holding the mark given, among the
+    places searched, each and one level below. Each folder once, by what it really is, and by its real path. A folder
+    that cannot be read is passed over."""
+    wanted = folded(name) if name else None
+    found = {}
+    for root in search_places(linux):
+        if not os.path.isdir(root):
+            continue
+        candidates = [(os.path.basename(os.path.normpath(root)), root)]
+        with contextlib.suppress(OSError):
+            with os.scandir(root) as entries:
+                for e in entries:
+                    with contextlib.suppress(OSError):
+                        if e.is_dir():
+                            candidates.append((e.name, e.path))
+        for own, path in candidates:
+            if wanted is not None and folded(own) != wanted:
+                continue
+            if page and not mark_is(path, page):
+                continue
+            with contextlib.suppress(OSError):
+                real = os.path.realpath(path)
+                st = os.stat(real)          # a Mac's disk takes two spellings for one folder
+                found.setdefault((st.st_dev, st.st_ino) if st.st_ino else real, real)
+    return list(found.values())
+
+
+def ask_terminal(question):
+    """The answer typed at the terminal (its line as it came, "" when none came), or None with no terminal.
+    Standard input is never read: it is the pipe when the helper comes through one."""
+    try:
+        with open(TTY, "r+b", buffering=0) as tty:
+            tty.write(question.encode("utf-8", "backslashreplace"))
+            return os.fsdecode(tty.readline() or b"")
+    except OSError:
+        return None
+
+
+def typed_path(text):
+    """A path as typed, or as dragging a folder into a terminal pastes it: in quotes, or with a backslash before a
+    space or another sign, and a space after it."""
+    text = text.strip("\r\n").lstrip()
+    path = text.rstrip()
+    if path and not os.path.isdir(os.path.expanduser(path)):
+        with contextlib.suppress(ValueError):       # a quote with no end: the text as it stands
+            parts = shlex.split(text)
+            if len(parts) == 1:
+                path = parts[0]
+    return os.path.expanduser(path)
+
+
+def choose_folder(name, page, linux, no_ask, echo, ask):
+    """The working folder, looked for, or asked once; None when there is none, and nothing is done."""
+    hits = find_folders(name, page, linux) if name or page else []
+    if len(hits) == 1:
+        return hits[0]
+    what = 'the working folder "' + name + '"' if name else "the working folder"
+    if hits:
+        why = "Found " + str(len(hits)) + " folders that could be " + what + "."
+    else:
+        why = "Could not find " + what + " by itself."
+    answered = None if no_ask else ask(OwnLines(shown(why) + GIVE_FOLDER))
+    if answered is None:
+        echo("STOPPED: " + why + " Nothing was done.", "Red")
+        echo(RUN_WITH_FOLDER, "Red")
+        return None
+    folder = typed_path(answered)
+    if not folder.strip():
+        echo("STOPPED: no folder was given. Nothing was done.", "Red")
+        return None
+    if not os.path.isdir(folder) and not may_not_read(folder):
+        echo("STOPPED: there is no such folder: " + folder + ". Nothing was done.", "Red")
+        return None
+    return folder
+
+
+# ---------------------------------------------------------------- the plan's names
+
 def local_file(folder, name):
-    """A file the plan names in the shared folder, or None when the name is not a plain one inside it.
+    """A file the plan names in the working folder, or None when the name is not a plain one inside it.
     Safer than the Windows helper, which takes the name as it stands: no absolute name, no "..", nothing outside,
     and no symbolic link."""
     if not isinstance(name, str) or not name or name.startswith("/") or "\\" in name or "\x00" in name:
@@ -1366,7 +1773,7 @@ def local_file(folder, name):
 
 
 def pack_leaf_problem(name):
-    return (not isinstance(name, str) or name in ("", ".", "..") or not name.lower().endswith(".pack")
+    return (not isinstance(name, str) or name in ("", ".", "..") or not PACK_END.search(name)
             or bool(PACK_NAME_BAD.search(name)) or len(name) > 120)
 
 
@@ -1396,16 +1803,21 @@ class Helper:
     # -- the lines, the state
 
     def say(self, text, color=""):
-        line = time.strftime("%H:%M:%S") + "  " + text
+        text = shown(text)
+        line = after(time.strftime("%H:%M:%S") + "  ", text)
         self.echo(line, color)
         self.state["lines"].append(text)
+        lost = "the helper's log file " + os.path.basename(self.log) + " cannot be written ("
         try:
             fd = os.open(self.log, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o644)
         except OSError as e:
-            raise LogLost("the helper's log file " + os.path.basename(self.log) + " cannot be written (" + str(e.strerror)
-                          + "): something else stands in its place")
-        with open(fd, "a", encoding="utf-8") as f:
-            f.write(plain(line) + "\n")
+            raise LogLost(lost + str(e.strerror) + ")"
+                          + (": something else stands in its place" if e.errno in NAME_ERRORS else ""))
+        try:
+            with open(fd, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except OSError as e:
+            raise LogLost(lost + str(e.strerror) + ")")
 
     def save_state(self, now):
         self.state["state"] = now
@@ -1413,11 +1825,18 @@ class Helper:
         save_text(os.path.join(self.folder, NAMES["helper"]), json.dumps(self.state, indent=1))
 
     def stop(self, why):
-        self.say("STOPPED: " + why, "Red")
-        self.say(NOTHING_MORE, "Red")
-        self.state["message"] = why
-        self.save_state("stopped")
+        self.last_words(why, [after("STOPPED: ", why), NOTHING_MORE])
         raise Stopped(why)
+
+    def last_words(self, why, lines):
+        """A stop's lines and state. Its cause is what the owner reads, also when this computer takes no more
+        writing (a full disk): say() prints a line before it logs it."""
+        self.state["message"] = shown(why)
+        for line in lines:
+            with contextlib.suppress(LogLost, OSError):
+                self.say(line, "Red")
+        with contextlib.suppress(OSError):
+            self.save_state("stopped")
 
     def at(self, name):
         return os.path.join(self.folder, name)
@@ -1437,23 +1856,29 @@ class Helper:
     # -- the run
 
     def run(self):
-        os.makedirs(self.folder, exist_ok=True)
-        self.folder = os.path.abspath(self.folder)
+        try:
+            os.makedirs(self.folder, exist_ok=True)
+            self.folder = os.path.abspath(self.folder)
+        except OSError as e:
+            self.echo("STOPPED: the working folder " + self.folder + " cannot be used (" + str(e.strerror) + "). Nothing was done.", "Red")
+            return 1
         self.run_id = time.strftime("%Y-%m-%d_%H-%M-%S")
         self.log = self.at("helper-" + self.run_id + ".log")
         self.state = {"helper": HELPER_VERSION, "run": self.run_id, "page": self.page or None, "state": "starting", "time": None,
-                      "folder": self.folder, "unit": None, "stock": None, "logs": None, "oldPads": None, "listing": None,
+                      "folder": self.folder, "unit": None, "stock": None, "logs": None, "oldPads": None,
+                      "waiting": None, "listing": None,
                       "checks": [], "lines": [], "message": None}
         try:
             try:
                 os.close(os.open(self.log, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644))
             except OSError as e:
                 raise LogLost("the helper's log file " + os.path.basename(self.log) + " could not be made new in the folder ("
-                              + str(e.strerror) + "): something of that name is there already")
+                              + str(e.strerror) + ")"
+                              + (": something of that name is there already" if e.errno in NAME_ERRORS else ""))
             return self.work()
         except LogLost as e:
             self.echo("STOPPED: " + str(e), "Red")
-            self.state["message"] = str(e)
+            self.state["message"] = shown(str(e))
             with contextlib.suppress(Exception):
                 self.save_state("stopped")
             return 1
@@ -1470,20 +1895,13 @@ class Helper:
         except Stopped:
             return 1
         except DiskError as e:
-            return self.stop_quietly(str(e))
+            return self.stop_quietly(words_of(e))
         except KeyboardInterrupt:
             return self.stop_quietly("the helper was interrupted at this computer")
         except LogLost:
             raise
         except Exception as e:
-            try:
-                self.say("STOPPED by an error: " + str(e), "Red")
-                self.state["message"] = str(e)
-                self.save_state("stopped")
-            except LogLost:
-                raise
-            except Exception:
-                self.echo("STOPPED by an error: " + str(e), "Red")
+            self.last_words(words_of(e), ["STOPPED by an error: " + words_of(e)])
             return 1
         finally:
             if self.gate is not None:
@@ -1509,7 +1927,7 @@ class Helper:
         else:
             disk = wait_for_unit(self.find_seconds, lambda text: self.say(text, "Yellow"))
         self.gate = gate = Gate(disk)
-        self.state["unit"] = disk.name
+        self.state["unit"] = shown(disk.name)
         self.say("Found the unit's drive (" + disk.name + ").", "Green")
         # A unit over USB that the transport only reads stops here, before anything is taken off it.
         if self.given is None and not self.source:
@@ -1524,6 +1942,7 @@ class Helper:
         gate.phase = "taking off"
         self.logs(gate)
         self.old_pads(gate)
+        self.waiting_files(gate)
         gate.phase = "looking"
 
         # ---- 4. the disk, listed ----
@@ -1556,7 +1975,7 @@ class Helper:
 
         # ---- 7. the files onto the unit ----
         # Every file is copied into to-unit-<run> first, and the copy is held to the plan's SHA-256 and sent: a file
-        # of the shared folder changed or swapped after the plan was checked never reaches the unit.
+        # of the working folder changed or swapped after the plan was checked never reaches the unit.
         stage = self.new_folder(self.at("to-unit-" + self.run_id))
         self.new_folder(os.path.join(stage, "packs"))
 
@@ -1615,9 +2034,11 @@ class Helper:
             wanted.append((pad["name"], pad["sha256"]))
         wanted += [(pk["path"], pk["sha256"]) for pk in packs]
         for path, sha in wanted:
-            if not self.read_back(path, sha, back):
-                self.stop(path + " does not read back from the unit with the SHA-256 of the file sent")
-            self.state["checks"].append(path + " read back: " + sha)
+            same, cause = self.read_back(path, sha, back)
+            if not same:
+                self.stop(path + " does not read back from the unit with the SHA-256 of the file sent"
+                          + (": " + cause if cause else ""))
+            self.state["checks"].append(shown(path + " read back: " + sha))
             self.say(path + " read back from the unit: the same bytes.", "Green")
         for d in (stage, back):
             shutil.rmtree(d, ignore_errors=True)
@@ -1625,9 +2046,8 @@ class Helper:
         self.state["message"] = "ready to write"
         self.save_state("ready")
         self.echo("", "")
-        self.say("READY TO WRITE.", "Green")
-        self.say("On the unit: press 2 to close the drive, then switch the unit off. Leave it off until the write;", "Green")
-        self.say("a start in between writes to its disk, and the placement no longer holds. The install page has the keys of the write.", "Green")
+        for line in READY:
+            self.say(line, "Green")
 
     # ---- 2. your own firmware file, copied off ----
     def stock(self, gate):
@@ -1640,11 +2060,12 @@ class Helper:
         copy = os.path.join(incoming, "os.ldr")
         try:
             got = gate.read(join(bin_folder, item[0]), copy)
-        except DiskError:
-            got = -1
-        if got != item[2] or not os.path.isfile(copy) or os.path.getsize(copy) != got:
-            shutil.rmtree(incoming, ignore_errors=True)
-            self.stop("the firmware file did not come off the unit")
+        except DiskError as e:
+            discard(incoming, [])
+            self.stop("the firmware file did not come off the unit: " + words_of(e))
+        if got != item[2] or not whole_copy(copy, got):
+            discard(incoming, [copy])
+            self.stop("the firmware file did not come off the unit: its copy is not of the " + str(item[2]) + " bytes the unit lists")
         sha = sha_file(copy)
         size = os.path.getsize(copy)
         original = sha == ORIGINAL_SHA
@@ -1653,12 +2074,13 @@ class Helper:
         kept = self.at(name)
         if os.path.isfile(kept) and sha_file(kept) == sha:
             os.remove(copy)
-        else:
-            if os.path.lexists(kept):
-                name = "os-1.7.3-yours-" + self.run_id + ".ldr"
-                kept = self.at(name)
-            os.replace(copy, kept)
-        shutil.rmtree(incoming, ignore_errors=True)
+        elif not keep_new(copy, kept):
+            first, name = name, "os-1.7.3-yours-" + self.run_id + ".ldr"
+            if not keep_new(copy, self.at(name)):
+                discard(incoming, [copy])
+                self.stop("the copy of your firmware file has no name left in the folder: " + first + " and " + name
+                          + " are there already, and neither is written over. Move them away, then run the command again")
+        discard(incoming, [])
         self.state["stock"] = {"file": name, "bytes": size, "sha256": sha, "original": original, "from": STOCK_FROM}
         if original:
             self.say("Your own firmware file is copied off: " + name + " (the original OS 1.7.3 file, " + str(size) + " bytes).", "Green")
@@ -1666,40 +2088,64 @@ class Helper:
             self.say("The unit's upgrade folder holds another file than the original OS 1.7.3 one (" + str(size) + " bytes); it is copied off as "
                      + name + ". The page takes the original from this folder (" + NAMES["stock"] + ") if it is there, or asks for it.", "Yellow")
 
-    def move_off(self, gate, path, size, local_dir):
-        """A file taken off the unit: copied into local_dir, and removed from the unit only when the copy is whole.
-        True when it was taken off."""
-        local = os.path.join(local_dir, path.rsplit("/", 1)[-1])
+    def ends_run(self, error):
+        """True after a failure with which no next file, and no other try, can work."""
+        return self.gate.disk.broken or error.kind in ENDS_RUN
+
+    def move_off(self, gate, path, size, local_dir, local_name=None):
+        """A file taken off the unit: copied into local_dir under a name of its own (local_name or the file's, with a
+        number when that is taken), and removed from the unit only when that copy is whole. Gives (the whole copy or
+        None, why the file stayed or None). A failure after which nothing can work is raised. A local file that this
+        call did not make is never removed: a disk that cannot make or fill a copy takes its own part file away."""
+        local = free_name(local_dir, local_name if local_name is not None else path.rsplit("/", 1)[-1])
         try:
             got = gate.read(path, local)
-        except DiskError:
-            got = -1
-        if got != size:
-            if os.path.lexists(local):
+        except DiskError as e:
+            if self.ends_run(e):
+                raise
+            return None, words_of(e)
+        if got != size:             # read() gives a count only for a file it made new
+            with contextlib.suppress(OSError):
                 os.remove(local)
-            return False
+            return None, "its copy has " + str(got) + " bytes, and the unit lists " + str(size)
+        if not whole_copy(local, size):
+            return None, "its copy is not whole on this computer"
         try:
             gate.remove_file(path)
-        except (DiskError, OSError):
-            return False            # left on the unit, and counted so: never a stop
-        return True
+        except DiskError as e:
+            if self.ends_run(e):
+                raise
+            return local, words_of(e)       # left on the unit, and counted so
+        except OSError as e:
+            return local, words_of(e)
+        return local, None
+
+    def take_off(self, gate, files, local_dir, numbered=False):
+        """Files taken off, [(path, size)]: (the copies made, the first cause of one that stayed or None)."""
+        copies, cause = [], None
+        for number, (path, size) in enumerate(files, 1):
+            local, stayed = self.move_off(gate, path, size, local_dir, str(number) if numbered else None)
+            if local is not None:
+                copies.append(local)
+            if stayed is not None and cause is None:
+                cause = path + ": " + stayed
+        return copies, cause
 
     # ---- 3. the log files, taken off ----
     def logs(self, gate):
         logs = find_child(gate, "", "logs")
         moved = left = 0
-        log_dir = None
+        log_dir = cause = None
         if logs is not None and logs[1]:
             gate.logs = logs[0]
             files = [kid for kid in gate.children(logs[0]) if not kid[1]]
             if files:
                 log_dir = self.new_folder(self.at("logs-" + self.run_id))
-                for name, _, size in files:
-                    self.move_off(gate, join(logs[0], name), size, log_dir)
+                copies, cause = self.take_off(gate, [(join(logs[0], name), size) for name, _, size in files], log_dir)
                 time.sleep(SECOND)
-                now = resolve_folder(gate, logs[0])
-                left = len([kid for kid in gate.children(now) if not kid[1]]) if now is not None else 0
-                moved = len([n for n in os.listdir(log_dir) if os.path.isfile(os.path.join(log_dir, n))])
+                if exact_folder(gate, logs[0]):
+                    left = len([kid for kid in gate.children(logs[0]) if not kid[1]])
+                moved = len(copies)
         self.state["logs"] = {"folder": os.path.basename(log_dir) if log_dir else None, "copied": moved, "left_on_unit": left}
         if moved == 0 and left == 0:
             self.say("The unit's logs folder holds no file.")
@@ -1707,6 +2153,8 @@ class Helper:
             self.say("The " + str(moved) + " log file(s) are taken off the unit into " + os.path.basename(log_dir) + ".", "Green")
         else:
             self.say(str(left) + " log file(s) stay on the unit (" + str(moved) + " copied). That is no fault: the plan counts the disk as it is.", "Yellow")
+        if left and cause:
+            self.say("  the first that stayed: " + cause, "Yellow")
 
     # ---- 3b. the pad files of earlier installs, taken off ----
     # A pad file serves one write only. The helper's own are taken off before the listing, as the logs are, so that
@@ -1717,19 +2165,54 @@ class Helper:
             return [kid for kid in gate.children("") if not kid[1] and PAD.match(kid[0])]
         found = pads()
         left = 0
+        cause = None
         if found:
             pad_dir = self.new_folder(self.at("old-pads-" + self.run_id))
-            for name, _, size in found:
-                self.move_off(gate, name, size, pad_dir)
+            copies, cause = self.take_off(gate, [(name, size) for name, _, size in found], pad_dir)
             time.sleep(SECOND)
             left = len(pads())
-            shutil.rmtree(pad_dir, ignore_errors=True)
+            discard(pad_dir, copies)
         self.state["oldPads"] = {"found": len(found), "taken_off": len(found) - left, "left_on_unit": left}
         if found:
             if left == 0:
                 self.say("The " + str(len(found)) + " pad file(s) of earlier installs are taken off the unit.", "Green")
             else:
                 self.say(str(left) + " pad file(s) of earlier installs stay on the unit. That is no fault: the plan counts the disk as it is.", "Yellow")
+                if cause:
+                    self.say("  the first that stayed: " + cause, "Yellow")
+
+    # ---- 3c. the waiting folder of the packs, emptied ----
+    # The install page sends pack files over USB MIDI into user/pkin, where they wait for the owner's T1 on the unit,
+    # and the unit keeps a note there (.apply) while it changes its packs. An install puts a base.pack on the unit,
+    # and a note left behind must never meet it: the very same base.pack file cannot be told from the one that wrote
+    # the note. The plan is made after the listing, so whether this run writes base.pack is not known yet; every run
+    # takes the files of user/pkin off, the note among them, before the listing, as it does the logs, so that the
+    # plan counts the disk without them. The folder itself stays. The copies are numbered, since this computer's disk
+    # may take two of the unit's names for one, and deleted, since the files are lost at the unit's next start anyway.
+    def waiting_files(self, gate):
+        place = resolve_folder(gate, WAITING_FOLDER)
+        if place is not None and not waiting_place(place):
+            place = None
+
+        def files():
+            if place is None or not exact_folder(gate, place):
+                return []
+            return [kid for kid in gate.children(place) if not kid[1]]
+        found = files()
+        left = 0
+        if found:
+            wait_dir = self.new_folder(self.at("old-pkin-" + self.run_id))
+            gate.waiting = place
+            copies, cause = self.take_off(gate, [(join(place, name), size) for name, _, size in found], wait_dir, True)
+            gate.waiting = None
+            time.sleep(SECOND)
+            left = len(files())
+            discard(wait_dir, copies)
+        self.state["waiting"] = {"found": len(found), "taken_off": len(found) - left, "left_on_unit": left}
+        if found:
+            if left:
+                self.stop(str(left) + WAITING_LEFT + (". The cause: " + cause if cause else ""))
+            self.say("The " + str(len(found)) + " file(s) waiting in user/pkin are taken off the unit.", "Green")
 
     # ---- 5. the page's plan ----
     def wait_for_plan(self):
@@ -1755,7 +2238,7 @@ class Helper:
             time.sleep(SECOND)
 
     def check_plan(self, plan):
-        """The plan held to this run and to the shared folder, in the Windows helper's order, with one more check
+        """The plan held to this run and to the working folder, in the Windows helper's order, with one more check
         between: every name it gives is one this helper takes. Gives the image, the pad (or None) and the packs, each
         with the local file."""
         kind = plan.get("plan")
@@ -1765,7 +2248,7 @@ class Helper:
         if not isinstance(before, dict) or str(before.get("sha256", "")).lower() != self.state["listing"]["sha256"]:
             self.stop("the plan was not made from this run's listing")
 
-        # Safer than the Windows helper, which takes the plan's names as they stand: a file in the shared folder is a
+        # Safer than the Windows helper, which takes the plan's names as they stand: a file in the working folder is a
         # plain name inside it, and a place on the unit is one of the few this helper ever writes.
         def file_of(step):
             path = local_file(self.folder, step.get("file")) if isinstance(step, dict) else None
@@ -1876,23 +2359,31 @@ class Helper:
     # A file the helper put on the unit, read back and held to its SHA-256; read again a few times, since a unit may
     # list a file with its size before the last of it has arrived.
     def read_back(self, path, sha, back):
+        """(True when the same bytes came back, the first cause when none came). A failure with which no other try
+        can work is raised, with its own words."""
         parent, _, leaf = path.rpartition("/")
+        cause = None
         for attempt in range(1, 6):
             kid = exact_child(self.gate, parent, leaf) if exact_folder(self.gate, parent) else None
             if kid is not None and not kid[1]:
                 copy = os.path.join(back, kid[0])
                 try:
                     got = self.gate.read(path, copy)
-                except DiskError:
-                    got = -1
-                if got == kid[2]:
-                    digest = sha_file(copy)
-                    os.remove(copy)
-                    if digest == sha:
-                        return True
-                    self.say("  " + path + " read back with another SHA-256 (" + digest[:12] + "...), try " + str(attempt) + " of 5", "Yellow")
+                except DiskError as e:
+                    if self.ends_run(e) or e.kind == "name":
+                        raise
+                    cause = cause or words_of(e)
+                else:
+                    if got == kid[2]:
+                        digest = sha_file(copy)
+                        os.remove(copy)
+                        if digest == sha:
+                            return True, None
+                        self.say("  " + path + " read back with another SHA-256 (" + digest[:12] + "...), try " + str(attempt) + " of 5", "Yellow")
+                    else:
+                        os.remove(copy)     # read() made it: the next try makes it new again
             time.sleep(2 * SECOND)
-        return False
+        return False, cause
 
 
 # ---------------------------------------------------------------- the command line
@@ -1915,38 +2406,47 @@ def list_only(find_seconds, echo):
     """--list-only: the transport's usb_list_only, once the unit shows (asked every two seconds, up to find_seconds).
     The unit is opened to read only. Nothing is made or written on this computer, and nothing changes on the unit."""
     deadline = time.monotonic() + find_seconds * SECOND
-    told = False
+    note = once(lambda text: echo(text, "Yellow"))
+    missing = NOT_SHOWN
     while True:
         try:
-            usb_list_only(EchoLines(echo))
+            usb_list_only(EchoLines(echo), note=note)
             return 0
         except DiskError as e:
-            if e.kind != "absent":
-                echo("STOPPED: " + str(e), "Red")
+            if e.kind == "no storage":
+                missing = words_of(e)
+            elif e.kind != "absent":
+                echo(after("STOPPED: ", words_of(e)), "Red")
                 return 1
-        if time.monotonic() > deadline:
-            echo("STOPPED: " + NOT_SHOWN, "Red")
+        except Exception as e:
+            echo("STOPPED by an error: " + str(e), "Red")
             return 1
-        if not told:
-            echo(WAITING, "Yellow")
-            told = True
+        note(WAITING)
+        if time.monotonic() > deadline:
+            echo("STOPPED: " + missing, "Red")
+            return 1
         time.sleep(2 * SECOND)
 
 
-def main(argv=None, disk=None, echo=terminal, system=None):
+def main(argv=None, disk=None, echo=terminal, system=None, ask=None):
     """The helper's run. `disk`, from a test, takes the place of --source; `echo(line, color)` prints a line;
-    `system`, from a test, takes the place of sys.platform."""
-    # Before anything is read or made: this helper is for Linux only.
-    if not (sys.platform if system is None else system).startswith(("linux", "darwin")):
-        echo(NOT_LINUX, "Red")
+    `system`, from a test, takes the place of sys.platform, and `ask(question)` that of the question on /dev/tty."""
+    system = sys.platform if system is None else system
+    write_line = echo
+    echo = lambda line, color: write_line(shown(line), color)       # every line passes here, whoever wrote it
+    # Before anything is read or made: this helper is for Linux and macOS only.
+    if not system.startswith(("linux", "darwin")):
+        echo(NOT_HERE, "Red")
         return 2
     ap = argparse.ArgumentParser(prog="open-field-helper.py", description="The open-field install's file work on the unit's disk.")
-    ap.add_argument("--folder", default="", help="the shared folder (default ~/open-field)")
+    ap.add_argument("--folder", default="", help="the working folder, named outright (no search)")
+    ap.add_argument("--folder-name", default="", help="the working folder's name, to look for it (else the environment's OPEN_FIELD_FOLDER)")
+    ap.add_argument("--no-ask", action="store_true", help="stop where the folder's path would be asked for")
     ap.add_argument("--source", default="", help="a folder of this computer that stands for the unit's disk")
     ap.add_argument("--page", default="", help="the install page's mark (else the environment's OPEN_FIELD_PAGE)")
     ap.add_argument("--wait-minutes", type=int, default=60, help="how long to wait for the page's plan")
     ap.add_argument("--find-seconds", type=int, default=180, help="how long to wait for the unit")
-    ap.add_argument("--list-only", action="store_true", help="the unit over USB: print what is found and stop; no change anywhere")
+    ap.add_argument("--list-only", action="store_true", help="the unit over USB: print what is found and stop; no file is changed anywhere")
     try:
         args = ap.parse_args(argv)
     except SystemExit as e:
@@ -1958,16 +2458,21 @@ def main(argv=None, disk=None, echo=terminal, system=None):
             echo("--list-only is for the unit over USB; it takes no --source", "Red")
             return 2
         return list_only(find_seconds, echo)
-    folder = args.folder or os.path.join(os.path.expanduser("~"), "open-field")
     page = args.page or os.environ.get("OPEN_FIELD_PAGE", "")
-    # The page's mark, before anything is made or written: the folder the page chose must be this one.
-    if page:
-        mark = read_mark(folder)
-        if mark is None or mark.lower() != page.lower():
-            echo("STOPPED: the install page did not choose this folder: " + folder, "Red")
-            echo("In the page, step 3, choose the folder open-field in your home folder (make it there if it is not there yet),", "Red")
-            echo("then copy the page's line again and run it. Nothing was done.", "Red")
+    folder = args.folder
+    # The folder the page picked: named, or looked for by its name and the page's mark, or asked for.
+    if not folder:
+        name = args.folder_name or os.environ.get("OPEN_FIELD_FOLDER", "")
+        folder = choose_folder(name, page, system.startswith("linux"), args.no_ask, echo, ask or ask_terminal)
+        if folder is None:
             return 2
+    # The page's mark, before anything is made or written: the folder the page chose must be this one.
+    if page and not mark_is(folder, page):
+        lines = MAY_NOT_READ if may_not_read(folder) else NOT_CHOSEN
+        echo(lines[0] + folder, "Red")
+        for line in lines[1:]:
+            echo(line, "Red")
+        return 2
     return Helper(folder, args.source, page, wait_minutes, find_seconds, echo, disk).run()
 
 
