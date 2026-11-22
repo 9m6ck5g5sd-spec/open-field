@@ -92,7 +92,7 @@ The pad file may stay on the unit; it served only this write. The next install t
 
 The easiest way is the install page's packs section: switch the unit on as usual, plug it in, press **connect**, press **add** on the packs you want and send the change. The unit asks on its own screen: T1 confirms, T2 cancels. By hand:
 
-1. Get the feature file, `8 tracks.pack` say. The feature files are not kept in this repository: the packs of the listing are offered by the install page's packs section, and this project's own four features lie in the repository [open-field-packs](https://github.com/LaP0573/open-field-packs), beside this one. A pack that is not listed comes from wherever its author shares it. You can also build this project's own from this repository with one command ([build.md](build.md)).
+1. Get the feature file, `8 tracks.pack` say. The feature files are not kept in this repository: the packs of the listing are offered by the install page's packs section, and this project's own four features lie in the repository [open-field-packs](https://github.com/LaP0573/open-field-packs), beside this one, with their sources. A pack that is not listed comes from wherever its author shares it. You can also build this project's own four from their sources, with one command in open-field-packs ([its README](https://github.com/LaP0573/open-field-packs#building-them) has it).
 2. Put the unit into its disk mode, as you do to copy samples. It shows a folder `packs`.
 3. Copy the file into `packs`.
 4. Leave the disk mode and switch the unit off and on.

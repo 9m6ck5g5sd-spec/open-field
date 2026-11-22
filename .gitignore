@@ -13,7 +13,7 @@
 __pycache__/
 *.pyc
 
-# Finished feature files are not kept in this repository (README.md). A build writes them into out/. The one pack
+# No feature is kept in this repository (README.md). A build writes base.pack and the examples into out/. The one pack
 # file kept here is base.pack beside the install page, which puts it on every unit it installs; the build holds it to
 # packs/built.json.
 *.pack

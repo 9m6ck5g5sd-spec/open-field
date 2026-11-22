@@ -69,7 +69,7 @@ python -I tools/pack_build.py check --pack out/examples/trampolines.pack
 
 ## The recipe
 
-A recipe is a small JSON file that says what a pack is built from. `examples/wink/recipe.json` is a small one with a card, `examples/trampolines/recipe.json` one with a table of changes, and `packs/lfo.json` one that uses most fields.
+A recipe is a small JSON file that says what a pack is built from. `examples/wink/recipe.json` is a small one with a card, `examples/trampolines/recipe.json` one with a table of changes, and [the recipe of `lfo`](https://github.com/LaP0573/open-field-packs/blob/main/lfo/recipe.json), in open-field-packs, one that uses most fields.
 
 | Field | What |
 | --- | --- |

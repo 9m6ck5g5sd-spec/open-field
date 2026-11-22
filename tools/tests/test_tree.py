@@ -27,7 +27,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 TOOLS = os.path.join(ROOT, "tools")
 STOCK = os.environ.get("OPEN_FIELD_STOCK", "")
 TOOLCHAIN = os.path.join(ROOT, "open-xy", "local", "toolchain", "bin")
-PACKS = ("8 tracks", "base", "fx train", "lfo", "sidechain")                  # the base, base.pack, and the four features
+PACKS = ("base",)                                                            # the base, base.pack: a feature lives in a repository of its own
 EXAMPLES = ("crush", "dub", "echo", "fold", "list", "ping", "pluck", "sketch", "wink", "yoyo")      # the examples with a card and no place of the firmware
 LEVELS = {"wink": 1, "yoyo": 2, "list": 3, "sketch": 4, "echo": 5, "dub": 7, "crush": 10, "ping": 10, "pluck": 10, "fold": 10}      # the level each card asks for
 
@@ -159,15 +159,21 @@ class TheRecipes(unittest.TestCase):
         there = {"module/" + name for name in os.listdir(os.path.join(ROOT, "module")) if not name.endswith(".h")}
         self.assertEqual(there, used)
 
-    def test_a_feature_pack_needs_no_other_pack_and_the_base_through_its_card(self):
-        """Since the release of piece 12 the four features are packs with a card like anyone's: none needs another
-        pack, and each asks the base for a level of its card (works_with names the base no more)."""
-        for name in PACKS:
-            recipe = load("packs", name + ".json")
-            needed = [other["name"] for other in recipe["works_with"] if other["needed"]]
-            self.assertEqual(needed, [], name)
-            if name != "base":
-                self.assertGreaterEqual(recipe["card"]["level"], 1, name)
+    def test_the_tree_builds_the_base_and_no_feature(self):
+        """A feature is a pack in a repository of its own, the project's four in open-field-packs: no recipe, table,
+        place or kept file of one is here, and the base works with none of them."""
+        self.assertEqual(load("build.json")["packs"], list(PACKS))
+        self.assertEqual(sorted(os.listdir(os.path.join(ROOT, "packs"))), ["base.json", "built.json"])
+        self.assertEqual({table["part"] for table in load(*PROFILE.split("/"))["tables"]}, {"loader", "base"})
+        self.assertEqual({place["group"] for place in load(*PROFILE.split("/"))["patches"]}, {"image", "loader", "base"})
+        self.assertEqual([name for name in load("packs", "built.json")["files"] if name.endswith(".pack") and "/" not in name], ["base.pack"])
+        base = load("packs", "base.json")
+        self.assertEqual((base["works_with"], base["serves"], base["marks"]), ([], [], []))
+
+    def test_the_pages_for_pack_authors_point_at_the_packs_repository(self):
+        for page in ("README.md", "AGENTS.md", "docs/first-pack.md", "docs/base.md"):
+            self.assertIn("(https://github.com/", text(*page.split("/")), page)
+            self.assertIn("/open-field-packs", text(*page.split("/")), page)
 
     def test_the_base_offers_its_release_and_the_marks_of_its_levels(self):
         base = load("packs", "base.json")
@@ -176,14 +182,6 @@ class TheRecipes(unittest.TestCase):
         for mark in ["op1f_cards"] + ["op1f_level_%d" % level for level in range(1, 11)]:
             self.assertIn(mark, base["exports"])
         self.assertFalse(base["named"])                         # the start screen shows its release, not its name
-
-    def test_a_change_made_only_when_another_pack_is_away_is_in_the_pack_s_table(self):
-        profile = load(*PROFILE.split("/"))
-        tables = {table["part"]: {entry["address"] for entry in table["entries"]} for table in profile["tables"] if table["part"] != "loader"}
-        for name in PACKS:
-            for mark in load("packs", name + ".json")["marks"]:
-                self.assertIn(mark["site"], tables[name], name)
-                self.assertIn(mark["away"], PACKS)
 
     def test_every_picture_is_a_set_of_instructions_and_not_a_picture(self):
         """A pack carries how the unit is to put a picture together, never the picture."""
@@ -372,7 +370,7 @@ class ThePages(unittest.TestCase):
         found = finder.bindings()
         self.assertEqual(text("docs", "firmware-interfaces.md"), finder.render(found, finder.read_words()))
         words = finder.read_words()["functions"]
-        self.assertGreater(len(words), 40)
+        self.assertGreater(len(words), 35)                       # the words for what only a feature calls are in that feature's repository
         for address, held in words.items():
             self.assertRegex(address, r"^0x[0-9a-f]{8}$")
             self.assertIn(int(address, 16), found, "%s is described and no source binds it" % address)

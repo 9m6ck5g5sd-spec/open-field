@@ -4,7 +4,8 @@
 
 Everything here needs nothing but this tree: the pack files the check reads are made by tools/pack_build.py's own
 maker, with no compiler, and the downloads are answered from memory. One test needs more and is skipped without it:
-the listing held to the pack files a build gives (tools/build_all.py, which needs the toolchain: docs/build.md), in
+the entries whose files this repository builds (the base and the examples; a listed pack's file is built in its own
+repository) held to those files (tools/build_all.py, which needs the toolchain: docs/build.md), in
 out/packs/ and out/examples/, or in the folders named by the environment's OPEN_FIELD_PACKS, parted by the system's
 path separator.
 """
@@ -531,9 +532,11 @@ class ABundledEntry(unittest.TestCase):
 
 class TheListingHeldToBuiltFiles(unittest.TestCase):
     @unittest.skipUnless(built_folders(), "no built pack files: tools/build_all.py, or OPEN_FIELD_PACKS")
-    def test_every_entry_with_a_file_is_the_file_a_build_gives(self):
+    def test_every_entry_this_repository_builds_is_the_file_a_build_gives(self):
         with open(check.CATALOG, encoding="utf-8") as f:
             the_listing = json.load(f)
+        # a listed pack's file is built in its own repository: .github/workflows/listing.yml downloads and holds it
+        the_listing["packs"] = [entry for entry in the_listing["packs"] if entry["status"] != "listed"]
         said, in_order = run(copy.deepcopy(the_listing), folders=built_folders())
         self.assertTrue(in_order, said)
         self.assertEqual(said.count("its file held"), sum(1 for e in the_listing["packs"] if e.get("sha256") and e["status"] != "retired"))

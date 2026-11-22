@@ -174,6 +174,8 @@ What your pack can ask of the base comes in levels, each with an example:
 | 9 | A synth engine of your own in the unit's list of engines, with sounds of its own | [`pluck`](../examples/pluck/README.md), [`fold`](../examples/fold/README.md) |
 | 10 | The value as the sound plays it, LFOs and all, for your page to draw | the four of levels 8 and 9 |
 
+When the examples are too small for what you are after, look at [open-field-packs](https://github.com/LaP0573/open-field-packs). It holds four real packs on cards with their sources: `lfo` (level 4), `8 tracks` and `sidechain` (level 7) and `fx train` (level 8). It is also the model for a repository of your own: a folder a pack, and a `build.py` that builds them with the tools and headers of this one at a commit it names.
+
 [The base](base.md) has levels 1 to 3: the card, the order in which keys are offered, the threads, the folders and files, the text. Levels 4 to 10 each have a page of their own: [level 4](level-4.md), [level 5](level-5.md), [level 6](level-6.md), [level 7](level-7.md), [level 8](level-8.md), [level 9](level-9.md), [level 10](level-10.md).
 
 A picture of your own is instructions too. `tools/picture_make.py` makes the picture on your computer from a copy of your unit's picture folder and says what it holds; `tools/picture_delta.py` works out the stretches of a picture of the second kind.
@@ -184,7 +186,7 @@ To offer your pack to every owner on the install page, add it to [the listing](c
 
 ## 7. A pack that changes the firmware
 
-Some features cannot be had through the base: they have to stand in the firmware's own code, where it does something. `8 tracks` is such a feature. A pack of that kind carries a **table of changes**: where the running firmware is changed, and which function of the pack goes there. The loader makes the changes at every start, and only where a checksum says the firmware is the one the pack was made for.
+Some features cannot be had through the base: they have to stand in the firmware's own code, where it does something. `8 tracks` is such a feature ([its sources](https://github.com/LaP0573/open-field-packs/tree/main/8%20tracks)). A pack of that kind carries a **table of changes**: where the running firmware is changed, and which function of the pack goes there. The loader makes the changes at every start, and only where a checksum says the firmware is the one the pack was made for.
 
 The smallest such pack is `trampolines`, in `examples/trampolines/` ([its page](../examples/trampolines/README.md)). It adds nothing you can see or hear: it stands at two functions of the firmware, counts, and writes one line into the log. It needs no base.
 
