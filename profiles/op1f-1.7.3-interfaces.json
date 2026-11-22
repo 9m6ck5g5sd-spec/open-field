@@ -79,42 +79,6 @@
    "what": "Goes to a place in a file opened with `file_open`. The offset is 64 bits wide and is handed over as two words, the low one first. `from`: 0 counts from the file's start, 1 from the present place, 2 from the file's end. Gives back the low word of the new place.",
    "thread": "As `file_open`."
   },
-  "0x8fc22180": {
-   "name": "fopen",
-   "group": "files",
-   "what": "The second family, which the tape's code uses. Opens a file with a mode as C has it (`rb`, `w+b`). Gives back a descriptor, which may be 0; a negative number when the open failed, after a line of its own in the log. To ask whether a file is there, use `file_size`, which writes no line.",
-   "thread": "Not the audio thread."
-  },
-  "0x8fc2214c": {
-   "name": "fread",
-   "group": "files",
-   "what": "Reads `count` items of `size` bytes from a file opened with `fopen`. Gives back the number of items read.",
-   "thread": "As `fopen`."
-  },
-  "0x8fc220b8": {
-   "name": "fwrite",
-   "group": "files",
-   "what": "Writes `count` items of `size` bytes to a file opened with `fopen`. Gives back the number of items written, and writes a line into the log itself when it fails.",
-   "thread": "As `fopen`."
-  },
-  "0x8fc220a0": {
-   "name": "fclose",
-   "group": "files",
-   "what": "Closes a file opened with `fopen`.",
-   "thread": "As `fopen`."
-  },
-  "0x8fc222f4": {
-   "name": "rename",
-   "group": "files",
-   "what": "Gives a file another path, over a file that is there already. Our code writes a file under a spare name and renames it over the real one, so that a power cut leaves the old file or the new one, never half of one.",
-   "thread": "As `fopen`."
-  },
-  "0x8fcbc350": {
-   "name": "file_mtime",
-   "group": "files",
-   "what": "A number for when the file was last written; 0 when there is no such file. Our code only compares two such numbers: of two files, the one written later never has the smaller number. What the number counts in has not been established.",
-   "thread": "Not the audio thread."
-  },
   "0x8c05206c": {
    "name": "make_folders",
    "group": "files",
@@ -173,12 +137,6 @@
    "name": "json_int",
    "group": "json",
    "what": "A number as an `int`. It takes all three kinds of number. For any other kind it gives back 0 and writes a line into the log.",
-   "thread": "As `json_ctor`."
-  },
-  "0x8c084b94": {
-   "name": "json_bool",
-   "group": "json",
-   "what": "A value of the kind true-or-false as 1 or 0.",
    "thread": "As `json_ctor`."
   },
   "0x8c084c22": {
@@ -258,12 +216,6 @@
    "group": "memory",
    "what": "Gives back a block got with `alloc` at `0x8fcc5744`.",
    "thread": "As `alloc`."
-  },
-  "0x8fcc5a68": {
-   "name": "heap_malloc",
-   "group": "memory",
-   "what": "A block of one of two large heaps that the firmware itself hardly uses, by the heap's number, 0 or 1. Our code takes large blocks there once and keeps them: the tape's cache for tracks 5 to 8 from heap 1, the effect train's private regions from heap 0. Gives back 0 when the heap has no room.",
-   "thread": "Not the audio thread. Ours: the tape's set-up at the start, and the display thread."
   },
   "0x8fcc51fc": {
    "name": "heap_free",

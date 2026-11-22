@@ -71,12 +71,13 @@ python -I tools/build_all.py --out out-new --update
 
 | What | Where |
 | --- | --- |
-| A place where the firmware is changed | `profiles/op1f-1.7.3.json`. The tables in `module/` and the page `docs/changes.md` are made from it, never written by hand |
-| A feature's code | `module/`, built by its recipe in `packs/` |
+| A place where the loader or the base changes the firmware | `profiles/op1f-1.7.3.json`. The tables in `module/` and the page `docs/changes.md` are made from it, never written by hand. A pack has a profile of its own |
+| The loader's and the base's code | `module/`, built by `build.json` and `packs/base.json` |
+| The code of `8 tracks`, `fx train`, `lfo` and `sidechain` | Not here: in [open-field-packs](https://github.com/LaP0573/open-field-packs), a folder each. A change to one of them is a pull request there |
 | A small pack to learn from | `examples/wink/`, `examples/yoyo/`, `examples/list/`, `examples/sketch/`, `examples/echo/`, `examples/dub/`, `examples/crush/`, `examples/ping/`, `examples/pluck/` and `examples/fold/`, one or two for each level of the base, and `examples/trampolines/` for a pack that changes places of the firmware |
 | What the base offers a pack | `module/build_r6e_card.h`, and [docs/base.md](docs/base.md) with the pages of levels 4 to 10 |
 | A function of the firmware our code calls | Bound in the source that calls it; listed in `docs/firmware-interfaces.md`, which is made from the sources and `profiles/op1f-1.7.3-interfaces.json` |
-| A screen of ours | The instructions in `pictures/`. A pack carries instructions, never a picture made from the device's own |
+| A screen of the base | The instructions in `pictures/`. A pack carries instructions of its own, never a picture made from the device's own |
 | The tools for reading your own firmware file | `tools/`, used as [docs/methods.md](docs/methods.md) says |
 | The install pages | `builder/` |
 | The packs the install page offers | `catalog/packs.json`, checked by `tools/catalog_check.py` ([docs/catalog.md](docs/catalog.md)) |

@@ -825,7 +825,7 @@ class TheTreeAsItStands(unittest.TestCase):
             listed = self.record("analysis", "bootloader_ldr_allstrings.txt")
             self.assertEqual((listed["verdict"], listed["counts"]), ("refused", {"text": 577}))
             self.assertIn("577 different phrases of the image, 20672 bytes of them: its texts in bulk", listed["findings"][0]["what"])
-        self.assertIn("quote", self.record("module", "build_s_bench.s")["counts"])                      # a comment that quotes the entry
+        self.assertIn("listing", self.record("module", "build_s_bench.s")["counts"])                    # comments that quote the listing
         self.assertIn("site", self.record("profiles", "op1f-1.7.0.json")["counts"])                     # every place's "before"
 
     def test_this_steps_own_files_pass(self):

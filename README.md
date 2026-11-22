@@ -14,6 +14,8 @@ Extra features for the OP-1 Field, added to the firmware that is already on your
 - **The base** (`base.pack`). The shared pack every feature relies on: one file that every unit with open-field has. It is also what any pack can build on: a call every frame, pictures, a page with keys and knobs, folders and files.
 - **Feature files** ("packs"). Each feature is one file that you copy onto the unit like a sample. With the file there, the feature is there at the next start. Delete the file and the feature is gone.
 
+This project's own four live in a repository of their own, [open-field-packs](https://github.com/LaP0573/open-field-packs), sources and finished files:
+
 | Feature file | What it adds |
 | --- | --- |
 | `8 tracks.pack` | Tape tracks 5 to 8, with everything tracks 1 to 4 do. The original firmware can still read your tapes. |
@@ -23,7 +25,7 @@ Extra features for the OP-1 Field, added to the firmware that is already on your
 
 Each works by itself or together with the others, beside `base.pack`. With them on the unit, the start screen reads `1.7.3 - open-field 0.12`: the main version, then open-field and the release of the base.
 
-`base.pack` comes with the install: the install page puts it on the unit with the new firmware file, from `builder/base.pack` beside the page. The feature files are not kept in this repository. Their authors share them, and you copy them onto the unit in its disk mode ([the guide](docs/guide.md#adding-a-feature)), or you build them from the sources here with one command ([docs/build.md](docs/build.md)). **A pack is a program that can read and write the files on your unit: take packs only from people you trust.** Holding the help key while you switch on starts the unit with no packs.
+`base.pack` comes with the install: the install page puts it on the unit with the new firmware file, from `builder/base.pack` beside the page. The feature files are not kept in this repository, and neither are their sources. Their authors share them, and you copy them onto the unit in its disk mode ([the guide](docs/guide.md#adding-a-feature)). The four above can also be built from their sources, with one command in open-field-packs. **A pack is a program that can read and write the files on your unit: take packs only from people you trust.** Holding the help key while you switch on starts the unit with no packs.
 
 ## What is not here, and never will be
 
@@ -38,10 +40,10 @@ A check that runs before every commit refuses a file that holds bytes of the fir
 **To use it**
 
 - Install it and use it: [docs/guide.md](docs/guide.md).
-- See exactly what is changed in the firmware: [docs/changes.md](docs/changes.md).
-- Build it yourself from the sources: [docs/build.md](docs/build.md).
+- See exactly what the loader and the base change in the firmware: [docs/changes.md](docs/changes.md). What a pack changes is in that pack's own profile: for the four, `profile.json` in each one's folder in [open-field-packs](https://github.com/LaP0573/open-field-packs).
+- Build the loader, the base and the examples yourself from the sources: [docs/build.md](docs/build.md).
 
-**To write a feature of your own, or to change one**
+**To write a feature of your own**
 
 1. [A first pack](docs/first-pack.md): build a small example, put it on your unit, read its lines in the log, change it.
 2. [The base](docs/base.md): what it offers a pack, level by level. A call every frame and pictures, a page with keys and knobs, folders and files and text, painting and pages that stack, a sequencer of your own, a place in the sound and working memory, values kept in tapes and sounds, an effect of your own, a synth engine of your own, and the value as the sound plays it. And what it does not offer yet.
@@ -49,6 +51,8 @@ A check that runs before every commit refuses a file that holds bytes of the fir
 4. [Methods](docs/methods.md): how to find, check and use a place in your own firmware, for a feature that has to stand in it.
 5. [The firmware's functions our code uses](docs/firmware-interfaces.md): what each takes and gives back.
 6. [The listing](docs/catalog.md): how a pack of yours is offered to every owner on the install page.
+
+When the examples get too small to learn from, read [open-field-packs](https://github.com/LaP0573/open-field-packs): four real packs on cards, with their sources, built with this repository's tools and headers. To change one of those four, send the change there.
 
 **To send a change in**: [CONTRIBUTING.md](CONTRIBUTING.md). **If you are a coding assistant**: [AGENTS.md](AGENTS.md).
 
@@ -76,10 +80,10 @@ A check that runs before every commit refuses a file that holds bytes of the fir
 | `builder/` | The page that guides an install, the builder, and `base.pack`, which the page puts on the unit. They run in the browser from these files. |
 | `catalog/` | The listing of packs: what the install page will offer. |
 | `.github/` | The checks a host runs on every change, the templates for a report and for a change, and the publishing of the install page on the host's pages. |
-| `module/` | The sources of the loader, of the base and of the features: C++ and assembly for the Blackfin processor. |
-| `packs/` | One recipe for `base.pack` and for each feature file: what it is built from. |
+| `module/` | The sources of the loader and of the base, and the headers a pack includes: C++ and assembly for the Blackfin processor. |
+| `packs/` | The recipe of `base.pack`: what it is built from. And the kept size and SHA-256 of what this repository builds. |
 | `examples/` | Small packs that build, as models for one of your own: `wink`, `yoyo`, `list`, `sketch`, `echo`, `dub`, `crush`, `ping`, `pluck` and `fold`, one or two for each level of the base, and `trampolines`, which changes places of the firmware. |
-| `pictures/` | Instructions by which the unit puts our screens together from its own pictures. |
+| `pictures/` | The base's instructions by which the unit puts its screens together. |
 | `profiles/` | Where the firmware is changed: addresses, lengths and checksums. No bytes of the firmware. |
 | `linker/` | The linker scripts. |
 | `tools/` | The build tools, the tools for reading your own firmware file, and the check before a commit. |

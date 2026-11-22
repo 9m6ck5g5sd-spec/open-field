@@ -1,25 +1,9 @@
 {
- "about": "What a build of this tree gives: the size and the SHA-256 of each finished pack file (base.pack, the shared pack every other relies on, and the four features), of the loader (our piece inside the firmware file, as linked and as the file the installer's builder uses) and of the example packs. tools/build_all.py holds its results to these, and its option --update writes them anew after a change that is meant to change them.",
+ "about": "What a build of this tree gives: the size and the SHA-256 of base.pack (the shared pack every other relies on), of the loader (our piece inside the firmware file, as linked and as the file the installer's builder uses) and of the example packs. tools/build_all.py holds its results to these, and its option --update writes them anew after a change that is meant to change them.",
  "files": {
-  "8 tracks.pack": {
-   "bytes": 106548,
-   "sha256": "4779bda0d21fc61245aebd1e434011d0c341a91e3ba16f37c759e1264c2da666"
-  },
   "base.pack": {
    "bytes": 291049,
    "sha256": "4a60a3a5e10737ffaf17d95cf6f75b17cce0a03226f22c1a161c007730617f2e"
-  },
-  "fx train.pack": {
-   "bytes": 505416,
-   "sha256": "bc88433ed295383944bc62d84452db226ea7d35f19565652d3338b3dcd1126ee"
-  },
-  "lfo.pack": {
-   "bytes": 430318,
-   "sha256": "62d6464407751dd9556d4e59462e31d7c87acd8b77c6f91682a65f45035baee4"
-  },
-  "sidechain.pack": {
-   "bytes": 107850,
-   "sha256": "2268639259142f81e703c24d6446e3be74406a6d5ce708b21b964cd8232f723e"
   },
   "loader.bin": {
    "bytes": 25876,

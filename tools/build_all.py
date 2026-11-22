@@ -12,8 +12,8 @@ What it does, from `build.json`:
   1. holds the files that are made from others to what they are made from: the table sources and the change list to
      the profile (tools/table_build.py, tools/change_list.py), the page of the firmware's functions to the sources
      (tools/interfaces.py), and each example's table to the example's own profile;
-  2. builds the five packs from their recipes (tools/pack_build.py build3) into <out>/packs: the base, base.pack,
-     which every unit with open-field needs, and the four features;
+  2. builds the base from its recipe (tools/pack_build.py build3) into <out>/packs: base.pack, which every unit with
+     open-field needs. A feature is built in the repository it lives in;
   3. builds each example pack from its own recipe into <out>/examples;
   4. builds the loader, our small piece inside the firmware file (tools/module_build.py), into build/;
   5. copies the loader's binary into <out> under the name `build.json` gives it under `blob`,
