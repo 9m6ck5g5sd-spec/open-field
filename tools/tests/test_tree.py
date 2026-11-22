@@ -689,7 +689,9 @@ class ThePageSStorage(unittest.TestCase):
     def test_a_unit_on_os_1_7_0_is_sent_to_the_page_kept_for_it(self):
         self.assertIn('const OLDER_OS = ["1.7.0", "1.7.0+0"];', self.page)
         self.assertIn("} else if (blOk && OLDER_OS.includes(id.os_version)) {", self.page)
-        self.assertIn('<a href=\\"./1.7.0/\\">the page for OS 1.7.0</a>', self.page)
+        # the refusal is built of nodes, as the versions in it come from the device: the link's address is a constant
+        self.assertIn('link.href = "./1.7.0/"; link.textContent = "the page for OS 1.7.0";', self.page)
+        self.assertIn('spanOf("warn", stop, link, ", kept as it was, is the one for it.', self.page)      # and it is in the refusal
 
 
 class TheCheckByForm(unittest.TestCase):

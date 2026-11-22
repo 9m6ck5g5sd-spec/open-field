@@ -789,12 +789,19 @@
     if (basePack) $("startWords").textContent = os + " - open-field " + basePack.release;
     show("planBl", newer); show("stopNote", !newer); show("stopNote20", newer);
   }
+  // step 1's words are nodes, never markup: the versions in them come from the device
+  function spanOf(cls, ...parts) {
+    const span = document.createElement("span");
+    span.className = cls;
+    span.replaceChildren(...parts);
+    return span;
+  }
   function passedWords(bl, os) {
     const read = "Bootloader " + bl + ", OS " + os + ". ";
-    if (bootloaderKey(bl) !== "1000.2.0") return "<span class='ok'>" + read + "Both are fine. ✔</span>";
-    return "<span class='ok'>" + read + "You can use it.</span> <span class='warn'>Only one install has been reported on this bootloader, from a Mac on an earlier release. " +
+    if (bootloaderKey(bl) !== "1000.2.0") return [spanOf("ok", read + "Both are fine. ✔")];
+    return [spanOf("ok", read + "You can use it."), " ", spanOf("warn", "Only one install has been reported on this bootloader, from a Mac on an earlier release. " +
       "Windows and the way back haven't been tried on it. If the placement is wrong for your OP-1, the write can fail. " +
-      "On 1000.1.1 that erases the spare copy of the firmware, and on 1000.2.0 nobody has seen what it does.</span>";
+      "On 1000.1.1 that erases the spare copy of the firmware, and on 1000.2.0 nobody has seen what it does.")];
   }
 
   // A step is greyed only while it cannot be done yet, and marked done when what it asks for is seen to be done.
@@ -917,7 +924,7 @@
     const fits = (g) => !!g && typeof g === "object" && g.firmware === FIRMWARE && SUPPORTED_BL.includes(g.bl || "") &&
       (g.os === null || SUPPORTED_OS.includes(g.os)) && g.mark === PAGE_ID;
     if (gate && !fits(gate)) { gate = null; try { sessionStorage.removeItem(GATE_KEY); } catch { /* nothing kept */ } }
-    if (gate) { $("gate").innerHTML = passedWords(gate.bl, gate.os || "not said"); show("devBox"); showBootloader(); }
+    if (gate) { $("gate").replaceChildren(...passedWords(gate.bl, gate.os || "not said")); show("devBox"); showBootloader(); }
     refresh();
   }
   // The page holds the bootloader's MIDI ports only while it asks it something, and gives every port of the OP-1 back
@@ -955,20 +962,22 @@
         PAGE_ID = newMark();                         // a helper started before this find carries an older mark
         gate = { firmware: FIRMWARE, bl: id.bl_version, os: id.os_version || null, unit: id.serial, mark: PAGE_ID, used: null };
         sessionStorage.setItem(GATE_KEY, JSON.stringify(gate));
-        $("gate").innerHTML = passedWords(id.bl_version, id.os_version || "not said by the bootloader (the check of your firmware file in step 5 decides)");
+        $("gate").replaceChildren(...passedWords(id.bl_version, id.os_version || "not said by the bootloader (the check of your firmware file in step 5 decides)"));
         forgetRun(); show("devBox"); showBootloader(); refresh();
         showCommand(); $("copied").textContent = "";
         if (folderHandle) await useFolder(folderHandle);         // the new mark into the folder
       } else if (blOk && OLDER_OS.includes(id.os_version)) {
         const olderPage = bootloaderKey(id.bl_version) === "1000.1.1";      // the page kept for 1.7.0 takes that bootloader alone
-        $("gate").innerHTML = "<span class='warn'>Your OP-1 runs OS " + id.os_version + ", and this page is for OS 1.7.3 only. Stop here on this OP-1. " + (olderPage ?
-          "<a href=\"./1.7.0/\">the page for OS 1.7.0</a>, kept as it was, is the one for it. Or update your OP-1 to OS 1.7.3 itself " +
-          "(not a later build) with Teenage Engineering's own update first, then come back to this page." :
-          "The page for OS 1.7.0 can't be used either, as it doesn't take bootloader " + id.bl_version + ".") + "</span>";
+        const stop = "Your OP-1 runs OS " + id.os_version + ", and this page is for OS 1.7.3 only. Stop here on this OP-1. ";
+        const link = document.createElement("a");
+        link.href = "./1.7.0/"; link.textContent = "the page for OS 1.7.0";
+        $("gate").replaceChildren(olderPage ? spanOf("warn", stop, link, ", kept as it was, is the one for it. Or update your OP-1 to OS 1.7.3 itself " +
+          "(not a later build) with Teenage Engineering's own update first, then come back to this page.") :
+          spanOf("warn", stop + "The page for OS 1.7.0 can't be used either, as it doesn't take bootloader " + id.bl_version + "."));
         log("refused: OS " + id.os_version + (olderPage ? "; the page for it is ./1.7.0/" : " with bootloader " + id.bl_version + ", which the page for it doesn't take"), "warn");
       } else {
-        $("gate").innerHTML = "<span class='warn'>" + (blOk ? "OS " + id.os_version + " isn't 1.7.3" : "Bootloader " + (id.bl_version || "?") + " isn't 1000.1.1 or 1000.2.0") +
-          ". open-field is made for OS 1.7.3 with bootloader 1000.1.1 or 1000.2.0 only. Stop here on this OP-1.</span>";
+        $("gate").replaceChildren(spanOf("warn", (blOk ? "OS " + id.os_version + " isn't 1.7.3" : "Bootloader " + (id.bl_version || "?") + " isn't 1000.1.1 or 1000.2.0") +
+          ". open-field is made for OS 1.7.3 with bootloader 1000.1.1 or 1000.2.0 only. Stop here on this OP-1."));
         log("refused: not the supported versions", "warn");
       }
     } catch (e) { $("findStatus").textContent = ""; log("couldn't reach your OP-1: " + (e.message || e), "warn"); }
@@ -984,10 +993,16 @@
       const id = await session.connect();
       if (!gate || id.serial !== gate.unit) {
         dropGate();
-        $("gate").innerHTML = "<span class='warn'>That isn't the OP-1 step 1 found, so nothing was sent to it. Press find my OP-1 again.</span>";
+        $("gate").replaceChildren(spanOf("warn", "That isn't the OP-1 step 1 found, so nothing was sent to it. Press find my OP-1 again."));
         return;
       }
-      if (!SUPPORTED_BL.includes(id.bl_version || "")) throw new Error("the bootloader answered " + (id.bl_version || "no version") + ", not 1000.1.1 or 1000.2.0");
+      // both as step 1 read them, a +0 aside (the OS by the same rule): an unsupported answer differs too
+      if (bootloaderKey(id.bl_version) !== bootloaderKey(gate.bl) || bootloaderKey(id.os_version) !== bootloaderKey(gate.os)) {
+        dropGate();
+        $("gate").replaceChildren(spanOf("warn", "Your OP-1 doesn't answer as it did in step 1, so nothing was sent to it. Press find my OP-1 again."));
+        log("couldn't switch it on: your OP-1 answered bootloader " + (id.bl_version || "no version") + ", OS " + (id.os_version || "no version") + ", not as in step 1", "warn");
+        return;
+      }
       await session.enable();
       await new Promise((r) => setTimeout(r, 500));   // the message on its way out before the port is closed
       log("sent. Reboot your OP-1 with COM held, and 3. dev menu shows", "ok");
@@ -1148,7 +1163,7 @@
     if (!h || h.page !== PAGE_ID) {
       if (helperNow !== null || ready) { helperNow = null; ready = false; refresh(); }
       const waits = gate && h && (h.state === "starting" || h.state === "listed");
-      status("helperStatus", "wait", waits ? OLDER_WAITS : h ? "The folder holds an earlier run of the helper. Run the new line of step 4." : "No word from the helper yet. Run the line of step 4.");
+      status("helperStatus", "wait", waits ? OLDER_WAITS : h ? "The folder holds an earlier run of the helper. " + (gate ? "Run the new line of step 4." : "Start again from step 1.") : "No word from the helper yet. Run the line of step 4.");
       status("putStatus", "", "Waiting for step 5.");
       return;
     }
