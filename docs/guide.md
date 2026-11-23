@@ -24,10 +24,9 @@ Read the whole page before you begin. The install changes the firmware of your u
 
 ### A unit on OS 1.7.0
 
-open-field was made for OS 1.7.0 first. A unit still on OS 1.7.0 has two ways:
+open-field is for OS 1.7.3 only. Update a unit still on OS 1.7.0 first, with Teenage Engineering's own update, to OS 1.7.3 or `1.7.3+1`, and then install open-field from this page as on any unit. The update writes the maker's firmware: if the unit ran open-field for 1.7.0, the loader is gone after it, and the unit is on the original firmware of the new version.
 
-- **Update the unit to OS 1.7.3** with Teenage Engineering's own update, as they offer it, and then install open-field from this page as on any unit. The update writes the maker's firmware: if the unit ran open-field for 1.7.0, the loader is gone after it, and the unit is on the original OS 1.7.3. Check which version the update gives before you run it: it has to be OS 1.7.3 itself. Do not run one that gives `1.7.3+1`, which may come with another bootloader. A unit that is already on `1.7.3+1` can use this page ([below](#a-unit-that-shows-1731)).
-- **Stay on OS 1.7.0** and use the page kept for it: the install page links to it above its install steps ("Still on OS 1.7.0?"). It is the release of before, kept as it was, and it will not change. Use it only on a unit that was never updated to 1.7.3: on a unit that was, it stops at its own first step. It also takes bootloader 1000.1.1 only.
+**`1.7.3+1` comes with a new bootloader, 1000.2.0.** It is more locked down than 1000.1.1 and doesn't let the unit go back to an older OS version. This page takes it, but only one install on it has been reported ([below](#a-unit-that-shows-1731)). Updating to it is at your own risk. Check which version the update gives before you run it.
 
 **Pack files left from OS 1.7.0.** A pack file is made for one firmware. The loader for 1.7.3 leaves out every pack file made for 1.7.0 and starts everything else; the start screen counts what it left out at the end of its line, `(4 left out)` for four such files. Nothing breaks, but those features do not run. Two ways to set it right:
 
@@ -40,7 +39,7 @@ If your unit is already on `1.7.3+1`, you can use this page. A copy of that vers
 
 Expect the label to stay through the install and the way back. Wherever this guide quotes `1.7.3` on the start screen, such a unit shows `1.7.3+1` in its place: after a good install `1.7.3+1 - open-field 0.12`, after the way back `1.7.3+1`.
 
-`1.7.3+1` may come with bootloader **1000.2.0**. The page reads the version in step 1 and plans the write for it. Know how little that rests on:
+`1.7.3+1` comes with bootloader **1000.2.0**. The page reads the version in step 1 and plans the write for it. Know how little that rests on:
 
 - Three of the numbers the page plans with are the contributor's reading of that bootloader. The rest of the calculation is 1000.1.1's, assumed for 1000.2.0. The contributor reported that one write with them, on one unit, landed (2026-11-20). The maintainer has not read that bootloader or tried a unit with it.
 - If those numbers, or that assumption, are wrong for your unit, the write can land in the wrong place. With 1000.1.1 such a write stops, and the stop erases the unit's spare copy of its firmware, as [Write](#write) says under the install. What 1000.2.0 does with one has not been seen.
@@ -48,7 +47,7 @@ Expect the label to stay through the install and the way back. Wherever this gui
 - The install was reported from a Mac, on open-field 0.3 with an earlier form of the helper. The base and packs of 0.12 and the helper as it is now have not been tried on 1000.2.0.
 - The way back to the original firmware has not been tried there. Windows with 1000.2.0 has not been tried at all.
 
-If that is too little for you, wait. And do not update, change or write anything to get `1.7.3+1` or 1000.2.0: open-field needs neither.
+If that is too little for you, wait. And on a unit already on OS 1.7.3, do not update, change or write anything to get `1.7.3+1` or 1000.2.0: open-field needs neither.
 
 ## Two rules before anything else
 

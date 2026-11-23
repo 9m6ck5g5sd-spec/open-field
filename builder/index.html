@@ -503,7 +503,6 @@
             <p class="note"><b>Unofficial, and at your own risk.</b> open-field isn't made, endorsed or supported by Teenage Engineering, and it isn't affiliated with them. A firmware change can leave a unit unable to start for good, and installing this will void the warranty of your device. Whether to do it is your decision alone.</p>
             <p class="warn hidden" id="notWindows" data-on="other">The install needs a computer: Windows, a Mac or Linux. It won't work on a phone or a tablet.</p>
             <p class="warn hidden" data-on="mac">Installing from a Mac has been reported once, in Chrome, on an earlier release. This one hasn't been tried there.</p>
-            <p class="note" id="olderOs">Still on OS 1.7.0? <a href="./1.7.0/">Use the page kept for it.</a></p>
             <p class="note" id="loaderInfo">Loading…</p>
             <p class="warn hidden" id="loadError"></p>
           </div>
@@ -698,10 +697,10 @@
     "1000.2.0", "1000.2.0+0"];                       // one install reported on it, from a Mac (2026-11-20)
   const FIRMWARE = "1.7.3";                          // the one firmware this page builds for: the original OS 1.7.3
   const SUPPORTED_OS = [FIRMWARE, FIRMWARE + "+0", FIRMWARE + "+1"];    // a label proves nothing: step 5's SHA-256 check decides
-  const OLDER_OS = ["1.7.0", "1.7.0+0"];             // a unit on it is sent to the page kept for it, ./1.7.0/
+  const OLDER_OS = ["1.7.0", "1.7.0+0"];             // a unit on it is told to update to OS 1.7.3 first
   window.openFieldFirmware = FIRMWARE;              // the live list of packs (the second script) keeps its record under it
-  // The browser's storage of this tab is shared with the page kept for OS 1.7.0 (the same site): this page's keys carry
-  // its firmware, so that neither page takes what the other one stored.
+  // The site served a page for OS 1.7.0 before, and its keys may still be in a browser's storage: this page's keys carry
+  // its firmware, so that it never takes what that page stored.
   const GATE_KEY = "open-field-gate-" + FIRMWARE, PAGE_KEY = "open-field-page-" + FIRMWARE;
   let manifest = null, loader = null, session = null, folder = null, folderHandle = null, keptStock = null;
   let basePack = null;      // the page's own base.pack, {bytes, sha256, version, release}, checked against base-pack.json
@@ -796,12 +795,13 @@
     span.replaceChildren(...parts);
     return span;
   }
+  const AGAIN = "If you update this OP-1 or switch to another one, press find my OP-1 again.";
   function passedWords(bl, os) {
     const read = "Bootloader " + bl + ", OS " + os + ". ";
-    if (bootloaderKey(bl) !== "1000.2.0") return [spanOf("ok", read + "Both are fine. ✔")];
+    if (bootloaderKey(bl) !== "1000.2.0") return [spanOf("ok", read + "Both are fine. ✔"), " ", AGAIN];
     return [spanOf("ok", read + "You can use it."), " ", spanOf("warn", "Only one install has been reported on this bootloader, from a Mac on an earlier release. " +
       "Windows and the way back haven't been tried on it. If the placement is wrong for your OP-1, the write can fail. " +
-      "On 1000.1.1 that erases the spare copy of the firmware, and on 1000.2.0 nobody has seen what it does.")];
+      "On 1000.1.1 that erases the spare copy of the firmware, and on 1000.2.0 nobody has seen what it does."), " ", AGAIN];
   }
 
   // A step is greyed only while it cannot be done yet, and marked done when what it asks for is seen to be done.
@@ -967,14 +967,12 @@
         showCommand(); $("copied").textContent = "";
         if (folderHandle) await useFolder(folderHandle);         // the new mark into the folder
       } else if (blOk && OLDER_OS.includes(id.os_version)) {
-        const olderPage = bootloaderKey(id.bl_version) === "1000.1.1";      // the page kept for 1.7.0 takes that bootloader alone
-        const stop = "Your OP-1 runs OS " + id.os_version + ", and this page is for OS 1.7.3 only. Stop here on this OP-1. ";
-        const link = document.createElement("a");
-        link.href = "./1.7.0/"; link.textContent = "the page for OS 1.7.0";
-        $("gate").replaceChildren(olderPage ? spanOf("warn", stop, link, ", kept as it was, is the one for it. Or update your OP-1 to OS 1.7.3 itself " +
-          "(not a later build) with Teenage Engineering's own update first, then come back to this page.") :
-          spanOf("warn", stop + "The page for OS 1.7.0 can't be used either, as it doesn't take bootloader " + id.bl_version + "."));
-        log("refused: OS " + id.os_version + (olderPage ? "; the page for it is ./1.7.0/" : " with bootloader " + id.bl_version + ", which the page for it doesn't take"), "warn");
+        // one refusal for every bootloader: the site served a page for OS 1.7.0 before, and no longer does
+        $("gate").replaceChildren(spanOf("warn", "Your OP-1 runs OS " + id.os_version + ", and this page is for OS 1.7.3 only. Stop here on this OP-1. " +
+          "Update it to OS 1.7.3 or 1.7.3+1 with Teenage Engineering's own update first, then come back to this page. " +
+          "1.7.3+1 comes with a new bootloader, 1000.2.0, that is more locked down and doesn't let your OP-1 go back to an older OS version: " +
+          "updating to it is at your own risk."));
+        log("refused: OS " + id.os_version + "; update to OS 1.7.3 or 1.7.3+1 first", "warn");
       } else {
         $("gate").replaceChildren(spanOf("warn", (blOk ? "OS " + id.os_version + " isn't 1.7.3" : "Bootloader " + (id.bl_version || "?") + " isn't 1000.1.1 or 1000.2.0") +
           ". open-field is made for OS 1.7.3 with bootloader 1000.1.1 or 1000.2.0 only. Stop here on this OP-1."));
@@ -1522,7 +1520,7 @@
     if (fw !== FW) {
       setMoment("other");
       $("otherHead").textContent = "this page is for OS " + FW;
-      $("otherWords").textContent = fw === "1.7.0" ? "Your OP-1 runs open-field on OS 1.7.0. The packs list here only works with OS " + FW + ". The page for OS 1.7.0 is kept as it was, and it has no packs list." :
+      $("otherWords").textContent = fw === "1.7.0" ? "Your OP-1 runs open-field on OS 1.7.0, and the packs list here only works with OS " + FW + ". Nothing was changed." :
         "Your OP-1 runs open-field on a firmware this page doesn't know. Nothing was changed.";
       return;
     }
